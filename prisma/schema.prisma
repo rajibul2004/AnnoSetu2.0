@@ -1,0 +1,524 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  extensions = [postgis]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model User {
+  id       String  @id @default(cuid())
+  email    String  @unique
+  password String?
+
+  emailVerifiedAt DateTime?
+
+  role     Role     @default(individual)
+  language Language @default(english)
+  timezone String   @default("Asia/Kolkata")
+
+  dietaryPreferences FoodTag[]
+  notifications      Boolean   @default(true)
+
+  isActive  Boolean   @default(true)
+  deletedAt DateTime?
+
+  lastLogin DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+
+  individualProfile IndividualProfile?
+  restaurantProfile RestaurantProfile?
+  ngoProfile        NgoProfile?
+
+  foods              Food[]
+  reservationsPlaced Reservation[]  @relation("reserver")
+  reservationsServed Reservation[]  @relation("supplier")
+  reviews            Review[]
+  foodReports        FoodReport[]
+  notification       Notification[]
+
+  @@index([role, isActive])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model IndividualProfile {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  name             String
+  phone            String?
+  address          String?
+  bio              String    @default("")
+  profileImage     String    @default("")
+  gender           Gender?
+  dateOfBirth      DateTime?
+  cookingExpertise String?
+
+  allergenAlerts Allergen[]
+
+  latitude  Float?
+  longitude Float?
+  location  Unsupported("geography(Point,4326)")?
+
+  acceptedDisclaimer Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([location])
+  @@map("individual_profiles")
+}
+
+model RestaurantProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  restaurantName String
+  restaurantType String?
+  phone          String?
+  address        String?
+  bio            String  @default("")
+  profileImage   String  @default("")
+  website        String?
+  fssaiLicense   String?
+  gstNumber      String?
+
+  latitude  Float?
+  longitude Float?
+  location  Unsupported("geography(Point,4326)")?
+
+  acceptedDisclaimer Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([location])
+  @@map("restaurant_profiles")
+}
+
+model NgoProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  ngoName         String
+  ngoType         String?
+  registrationId  String?
+  establishedYear Int?
+  phone           String?
+  address         String?
+  bio             String  @default("")
+  profileImage    String  @default("")
+  website         String?
+
+  latitude  Float?
+  longitude Float?
+  location  Unsupported("geography(Point,4326)")?
+
+  acceptedDisclaimer Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([location])
+  @@map("ngo_profiles")
+}
+
+model Food {
+  id String @id @default(cuid())
+
+  supplierId String
+
+  name        String  @db.VarChar(100)
+  description String? @db.VarChar(500)
+
+  quantity     Int          @default(1)
+  availableQty Int          @default(1)
+  quantityUnit QuantityUnit @default(servings)
+
+  isDonation    Boolean @default(false)
+  price         Float   @default(0)
+  originalPrice Float?
+  discountPct   Int     @default(0)
+
+  isHomeCooked     Boolean      @default(false)
+  isRaw            Boolean      @default(false)
+  cuisineType      CuisineType?
+  allergens        Allergen[]
+  tags             FoodTag[]
+  safetyGuidelines String       @default("Consume within 2 hours of pickup. Store in refrigerator if not consuming immediately.")
+  safetyVerified   Boolean      @default(false)
+
+  images FoodImage[]
+
+  pickupAddress String?
+  latitude      Float?
+  longitude     Float?
+  location      Unsupported("geography(Point,4326)")?
+
+  preparedAt DateTime @default(now())
+  expiresAt  DateTime
+
+  isActive  Boolean   @default(true)
+  deletedAt DateTime?
+
+  viewCount        Int   @default(0)
+  reservationCount Int   @default(0)
+  averageRating    Float @default(0)
+  reviewCount      Int   @default(0)
+
+  reportCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  supplier     User          @relation(fields: [supplierId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  reservations Reservation[]
+  reviews      Review[]
+  reports      FoodReport[]
+
+  @@index([supplierId])
+  @@index([expiresAt])
+  @@index([isActive, deletedAt, expiresAt])
+  @@index([cuisineType])
+  @@index([location])
+  @@map("foods")
+}
+
+model FoodImage {
+  id           String  @id @default(cuid())
+  foodId       String
+  url          String
+  isPrimary    Boolean @default(false)
+  displayOrder Int     @default(0)
+
+  food Food @relation(fields: [foodId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([foodId, displayOrder])
+  @@map("food_images")
+}
+
+model Reservation {
+  id String @id @default(cuid())
+
+  foodId     String
+  reserverId String
+  supplierId String
+
+  quantity Int @default(1)
+
+  pricePerUnit    Float @default(0)
+  totalPrice      Float @default(0)
+  discountApplied Int   @default(0)
+
+  status        ReservationStatus @default(pending)
+  paymentStatus PaymentStatus     @default(pending)
+
+  cancellationReason CancellationReason?
+  cancellationNote   String?
+
+  pickupTime       DateTime
+  pickupAddress    String
+  pickupCode       String?   @unique
+  readyAt          DateTime?
+  actualPickupTime DateTime?
+
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  razorpayRefundId  String?
+
+  acceptedTerms Boolean @default(false)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  cancelledAt DateTime?
+
+  food     Food    @relation(fields: [foodId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  reserver User    @relation("reserver", fields: [reserverId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  supplier User    @relation("supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  review   Review?
+
+  @@index([foodId])
+  @@index([reserverId, status])
+  @@index([supplierId, status])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([pickupTime])
+  @@index([pickupCode])
+  @@map("reservations")
+}
+
+model Review {
+  id            String @id @default(cuid())
+  foodId        String
+  reviewerId    String
+  reservationId String @unique
+
+  rating  Int
+  comment String? @db.VarChar(1000)
+
+  isVisible Boolean   @default(true)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  food        Food        @relation(fields: [foodId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  reviewer    User        @relation(fields: [reviewerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([foodId])
+  @@index([reviewerId])
+  @@index([reservationId])
+  @@index([isVisible, deletedAt])
+  @@map("reviews")
+}
+
+model FoodReport {
+  id         String @id @default(cuid())
+  foodId     String
+  reporterId String
+
+  reason ReportReason
+  note   String?      @db.VarChar(500)
+  status ReportStatus @default(pending)
+
+  resolvedBy String?
+  resolvedAt DateTime?
+  resolution String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  food     Food @relation(fields: [foodId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([foodId, status])
+  @@index([reporterId])
+  @@index([status])
+  @@map("food_reports")
+}
+
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+
+  type     NotificationType
+  priority Priority         @default(medium)
+
+  title     String
+  message   String
+  data      Json    @default("{}")
+  actionUrl String?
+
+  isRead    Boolean @default(false)
+  isClicked Boolean @default(false)
+
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([userId, isRead, createdAt(sort: Desc)]) // unread count + list
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("notifications")
+}
+
+enum Role {
+  restaurant
+  individual
+  ngo
+  admin
+}
+
+enum Gender {
+  male
+  female
+  other
+  prefer_not @map("prefer-not")
+}
+
+enum Language {
+  english
+  bengali
+  hindi
+}
+
+enum FoodTag {
+  vegetarian
+  vegan
+  gluten_free @map("gluten-free")
+  dairy_free  @map("dairy-free")
+  halal
+  jain
+  eggless
+
+  spicy
+  mild
+  sweet
+  savory
+
+  homestyle
+  street_food @map("street-food")
+
+  low_calorie  @map("low-calorie")
+  high_protein @map("high-protein")
+
+  breakfast
+  lunch
+  dinner
+  snack
+
+  // Special
+  kids_friendly @map("kids-friendly")
+  festive
+}
+
+enum Allergen {
+  nuts
+  dairy
+  gluten
+  seafood
+  eggs
+  soy
+
+  sesame
+  shellfish
+  mustard
+  sulphites
+
+  other
+}
+
+enum CuisineType {
+  north_indian @map("north-indian")
+  south_indian @map("south-indian")
+  bengali
+  punjabi
+  gujarati
+
+  chinese
+  italian
+  mexican
+  thai
+  continental
+
+  fast_food   @map("fast-food")
+  street_food @map("street-food")
+  bakery
+  other
+}
+
+enum QuantityUnit {
+  servings
+  plates
+  kg
+  units
+  packets
+}
+
+enum ReservationStatus {
+  pending
+  confirmed
+  picked_up
+  cancelled
+  expired
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  refunded
+  failed
+}
+
+enum CancellationReason {
+  user_cancelled
+  supplier_cancelled
+  payment_failed
+  food_unavailable
+  expired
+  admin
+}
+
+enum NotificationType {
+  reservation_request
+  reservation_confirmed
+  pickup_code_generated
+  pickup_reminder
+  food_expiring
+  payment_success
+  payment_failed
+  review_received
+  report_received
+  system_alert
+}
+
+enum Priority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum ReportReason {
+  unsafe
+  misleading
+  expired
+  spam
+  other
+}
+
+enum ReportStatus {
+  pending
+  reviewed
+  actioned
+  dismissed
+}

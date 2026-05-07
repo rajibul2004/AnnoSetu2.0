@@ -1,0 +1,14 @@
+{
+  "home": {
+    "title": "Save Food!",
+    "subtitle": "Serve Community!",
+    "description": "Connect with restaurants and home cooks to rescue surplus food before it goes to waste.",
+    "searchButton": "Search",
+    "placeholders": [
+      "Search for pizza, biryani, pasta...",
+      "Find restaurants near you...",
+      "Discover home-cooked meals...",
+      "Browse donations in your area..."
+    ]
+  }
+}
