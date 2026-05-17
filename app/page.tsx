@@ -67,9 +67,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen w-full bg-transparent">
-      <div>
-        <ThemeToggle />
-      </div>
       <div className="w-full relative hero">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-10 w-64 h-64 bg-green-800 dark:bg-slate-200 rounded-full filter  blur-3xl animate-pulse"></div>
@@ -202,7 +199,7 @@ export default function HomePage() {
           >
             <path
               d="M0 120L60 105C120 90 240 60 360 45C480 30 600 30 720 37.5C840 45 960 60 1080 67.5C1200 75 1320 75 1380 75L1440 75V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z"
-              fill={isDark ? "#374151" : "#ffff"}
+              fill={isDark ? "#0A192F" : "#ffff"}
             />
           </svg>
         </div>
@@ -358,6 +355,13 @@ export default function HomePage() {
                 {/* ({activeListings}) */}0
               </span>
             </h2>
+            <Link
+              href="/all-food"
+              className="text-green-600 hover:text-green-700 font-medium flex items-center gap-2 group"
+            >
+              View All
+              <FaArrowRight className="group-hover:translate-x-1 transition-transform duration-200" />
+            </Link>
           </div>
         </motion.div>
 
