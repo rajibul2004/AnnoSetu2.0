@@ -388,7 +388,7 @@ export default function HomePage() {
             </p>
 
             <div className=" flex flex-col md:flex-row flex-wrap justify-center gap-4 w-[80%] mx-auto">
-              <Link href="/register?role=individual" className="flex-1">
+              <Link href="/auth/register?role=individual" className="flex-1">
                 <Button
                   type="button"
                   className={`flex w-full group items-center gap-2 bg-linear-to-r ${roleGradientMap.individual} hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200`}
@@ -397,7 +397,7 @@ export default function HomePage() {
                   <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
-              <Link href="/register?role=restaurant" className="flex-1">
+              <Link href="/auth/register?role=restaurant" className="flex-1">
                 <Button
                   type="button"
                   className={`flex w-full group items-center gap-2 bg-linear-to-r ${roleGradientMap.restaurant} hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200`}
@@ -406,7 +406,7 @@ export default function HomePage() {
                   <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
-              <Link href="/register?role=ngo" className="flex-1">
+              <Link href="/auth/register?role=ngo" className="flex-1">
                 <Button
                   type="button"
                   className={`flex w-full group items-center gap-2 bg-linear-to-r ${roleGradientMap.ngo} hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200`}

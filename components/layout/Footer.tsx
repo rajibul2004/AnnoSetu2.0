@@ -98,11 +98,11 @@ export default function Footer() {
             <ul className="space-y-3 pt-4">
               {[
                 { name: "Home", path: "/" },
-                { name: "About Us", path: "/about" },
-                { name: "How It Works", path: "/how-it-works" },
-                { name: "Food Safety", path: "/safety" },
-                { name: "Blog", path: "/blog" },
-                { name: "Contact", path: "/contact" },
+                { name: "About Us", path: "/public/about" },
+                { name: "How It Works", path: "/public/how-works" },
+                { name: "Food Safety", path: "/public/safety" },
+                { name: "Blog", path: "/public/blog" },
+                { name: "Contact", path: "/public/contact" },
               ].map((link) => (
                 <li key={link.name}>
                   <Link
@@ -200,6 +200,7 @@ export default function Footer() {
                     type="email"
                     placeholder="Your email address"
                     className="w-full px-4 py-3 dark:bg-gray-800 bg-gray-200 border border-gray-700 rounded-lg dark:text-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                    suppressHydrationWarning
                   />
                   <FaEnvelope
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
@@ -209,6 +210,7 @@ export default function Footer() {
                 <button
                   type="submit"
                   className="w-full  btn-primary font-medium py-3 px-4 "
+                  suppressHydrationWarning
                 >
                   Subscribe
                 </button>
@@ -281,6 +283,7 @@ export default function Footer() {
               onClick={scrollToTop}
               className="cursor-pointer w-10 h-10 dark:bg-gray-800 bg-gray-200 hover:bg-gradient-to-r hover:from-green-500 hover:to-green-700 rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition-all duration-300 group"
               aria-label="Scroll to top"
+              suppressHydrationWarning
             >
               <FaArrowUp className="group-hover:animate-bounce" />
             </button>

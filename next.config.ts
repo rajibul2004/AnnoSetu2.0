@@ -1,13 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins:["10.214.22.83"],
+  allowedDevOrigins:["172.30.144.1"],
   experimental:{
     serverActions:{
       allowedOrigins:[
-        "10.221.17.83:3000",
+        "172.30.144.1:3000",
         "localhost:3000",
-        "10.214.22.83:3000"
       ]
     }
   }
