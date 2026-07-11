@@ -1,0 +1,372 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =========================================================================
+// ENUMS
+// =========================================================================
+
+enum UserRole {
+  individual
+  restaurant
+  ngo
+  admin
+}
+
+enum Gender {
+  male
+  female
+  other
+  prefer_not
+}
+
+enum SupplierType {
+  restaurant
+  individual
+}
+
+enum QuantityUnit {
+  servings
+  plates
+  kg
+  units
+  packets
+}
+
+enum Allergen {
+  nuts
+  dairy
+  gluten
+  seafood
+  eggs
+  soy
+  other
+}
+
+enum FoodTag {
+  vegetarian
+  vegan
+  spicy
+  gluten_free
+  dairy_free
+  halal
+  homestyle
+}
+
+enum CuisineType {
+  indian
+  chinese
+  italian
+  mexican
+  bengali
+  fast_food
+  bakery
+  other
+}
+
+enum ReservationStatus {
+  pending
+  confirmed
+  picked_up
+  cancelled
+  expired
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  refunded
+  failed
+}
+
+enum NotificationType {
+  reservation_request
+  reservation_confirmed
+  pickup_code_generated
+  pickup_reminder
+  food_expiring
+  payment_success
+  payment_failed
+  review_received
+  system_alert
+}
+
+enum NotificationPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+// =========================================================================
+// AUTH (as already built — included here so this file is self-contained)
+// =========================================================================
+
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  password            String? // null for OAuth-only (e.g. Google) accounts
+  role                UserRole  @default(individual)
+  emailVerified       DateTime?
+  isActive            Boolean   @default(true)
+  deletedAt           DateTime?
+  lastLogin           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  individualProfile   IndividualProfile?
+  restaurantProfile   RestaurantProfile?
+  ngoProfile          NgoProfile?
+
+  // Food domain relations
+  suppliedFood        Food[]         @relation("FoodSupplier")
+  reservedFood        Food[]         @relation("FoodReservedBy")
+  reviews             Review[]
+  reservationsMade    Reservation[]  @relation("ReservationUser")
+  reservationsAsSupplier Reservation[] @relation("ReservationSupplier")
+  notifications       Notification[]
+}
+
+model IndividualProfile {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                 String
+  phone                String
+  address              String?
+  gender               Gender?
+  dateOfBirth          DateTime?
+  cookingExpertise     String?
+  bio                  String?   @default("")
+  profileImage         String?   @default("")
+  dietaryPreferences   String[]
+  language             String    @default("english")
+  notificationsEnabled Boolean   @default(true)
+  acceptedDisclaimer   Boolean
+  latitude             Float?
+  longitude            Float?
+}
+
+model RestaurantProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurantName     String
+  restaurantType     String?
+  fssaiLicense       String?
+  gstNumber          String?
+  phone              String
+  address            String?
+  website            String?
+  bio                String?  @default("")
+  profileImage       String?  @default("")
+  acceptedDisclaimer Boolean
+  latitude           Float?
+  longitude          Float?
+}
+
+model NgoProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ngoName            String
+  ngoType            String?
+  registrationId     String
+  establishedYear    Int?
+  phone              String
+  address            String?
+  website            String?
+  bio                String?  @default("")
+  profileImage       String?  @default("")
+  acceptedDisclaimer Boolean
+  latitude           Float?
+  longitude          Float?
+}
+
+// =========================================================================
+// FOOD
+// =========================================================================
+
+model Food {
+  id             String       @id @default(cuid())
+  name           String
+  description    String?
+
+  supplierType   SupplierType
+  supplierName   String
+  supplierId     String
+  supplier       User         @relation("FoodSupplier", fields: [supplierId], references: [id])
+
+  safetyVerified Boolean      @default(false)
+  isHomeCooked   Boolean      @default(false)
+  homeCookRating Float        @default(0)
+
+  quantity       Int
+  quantityUnit   QuantityUnit @default(servings)
+
+  isDonation     Boolean      @default(false)
+  price          Float        @default(0)
+  originalPrice  Float?
+  discount       Int?         @default(0)
+
+  isRaw          Boolean      @default(false)
+  allergens      Allergen[]
+
+  preparedAt     DateTime     @default(now())
+  expiresAt      DateTime
+
+  isActive       Boolean      @default(true)
+  isExpired      Boolean      @default(false)
+
+  // Denormalized reservation flags for fast list/filter queries — the
+  // authoritative reservation record (with pickup code, payment, status
+  // history, etc.) lives in the Reservation model below.
+  isReserved              Boolean  @default(false)
+  reservedQuantity        Int      @default(0)
+  isReservationCompleted  Boolean  @default(false)
+  reservedById            String?
+  reservedBy              User?    @relation("FoodReservedBy", fields: [reservedById], references: [id])
+  reservedAt              DateTime?
+
+  // Mongo stored this as GeoJSON { type: "Point", coordinates: [lng, lat] }.
+  // Postgres has no native geo point without PostGIS, so this is split into
+  // plain columns. Proximity search will need either the PostGIS extension
+  // or an app-level bounding-box query — flagging this as a follow-up, not
+  // silently solved here.
+  pickupLatitude  Float?
+  pickupLongitude Float?
+  pickupAddress   String?
+
+  images          FoodImage[]
+
+  safetyGuidelines String  @default("Consume within 2 hours of pickup. Store in refrigerator if not consuming immediately.")
+
+  reviews         Review[]
+  averageRating   Float    @default(0)
+  reviewCount     Int      @default(0)
+
+  tags            FoodTag[]
+  cuisineType     CuisineType?
+
+  views             Int @default(0)
+  reservationCount  Int @default(0)
+
+  reservations    Reservation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([expiresAt])
+  @@index([isActive, isExpired, isReserved])
+  @@index([supplierId, createdAt])
+  @@index([supplierType, isActive])
+  @@index([cuisineType])
+}
+
+model FoodImage {
+  id           String @id @default(cuid())
+  foodId       String
+  food         Food   @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  url          String
+  publicId     String?
+  thumbnailUrl String?
+
+  @@index([foodId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  foodId    String
+  food      Food     @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  // Mongoose's addReview() upserted by user — one review per user per food.
+  @@unique([foodId, userId])
+  @@index([foodId])
+}
+
+// =========================================================================
+// RESERVATION
+// =========================================================================
+
+model Reservation {
+  id         String            @id @default(cuid())
+
+  foodId     String
+  food       Food              @relation(fields: [foodId], references: [id])
+
+  userId     String
+  user       User              @relation("ReservationUser", fields: [userId], references: [id])
+
+  supplierId String
+  supplier   User              @relation("ReservationSupplier", fields: [supplierId], references: [id])
+
+  quantity   Int
+  totalPrice Float             @default(0)
+
+  status     ReservationStatus @default(pending)
+
+  pickupTime       DateTime
+  readyAt          DateTime?
+  actualPickupTime DateTime?
+  pickupCode       String?       @unique
+
+  pickupAddress    String
+  acceptedTerms    Boolean       @default(false)
+
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  razorpayRefundId  String?
+  paymentStatus     PaymentStatus @default(pending)
+
+  cancelledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([foodId])
+  @@index([userId])
+  @@index([supplierId])
+  @@index([status])
+}
+
+// =========================================================================
+// NOTIFICATION
+// =========================================================================
+
+model Notification {
+  id         String               @id @default(cuid())
+  userId     String
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type       NotificationType
+  title      String
+  message    String
+
+  // Mongo used Schema.Types.Mixed for arbitrary payload data (e.g.
+  // { pickupCode: "ANO-XXXX-XXXX" }). Postgres has a native Json type
+  // that maps directly — no data loss here.
+  data       Json?
+
+  isRead     Boolean              @default(false)
+  isClicked  Boolean              @default(false)
+  actionUrl  String?
+  priority   NotificationPriority @default(medium)
+  expiresAt  DateTime?
+
+  createdAt  DateTime             @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, isRead])
+}

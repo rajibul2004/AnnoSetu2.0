@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/provider/theme-provider";
+import QueryProvider from "@/components/provider/query-provider";
 import "./globals.css";
 import { ThemeDebug } from "./ThemeDebug";
 import Navbar from "@/components/layout/Navbar";
@@ -26,20 +27,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-    lang="en"
-      suppressHydrationWarning 
-    >
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning // ← prevents body-level mismatch warnings
       >
-        <ThemeProvider>
-          <Navbar/>
-          {children}
-          <Footer/>
-          <ThemeDebug />
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider>
+            <Navbar />
+            {children}
+            <Footer />
+            <ThemeDebug />
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );

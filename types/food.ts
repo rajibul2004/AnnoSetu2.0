@@ -1,45 +1,67 @@
-export interface FoodImage {
-  id: string
-  url: string
-  isPrimary: boolean
-  displayOrder: number
+export type QuantityUnit = "servings" | "plates" | "kg" | "units" | "packets";
+ 
+// Expanded to match every value the schema's Allergen enum actually
+// supports. The original UI only offered 7 of these 11 — sesame,
+// shellfish, mustard, and sulphites were never selectable at all.
+export type Allergen =
+  | "nuts"
+  | "dairy"
+  | "gluten"
+  | "seafood"
+  | "eggs"
+  | "soy"
+  | "sesame"
+  | "shellfish"
+  | "mustard"
+  | "sulphites"
+  | "other";
+ 
+ 
+export interface FoodImageDTO {
+  id: string;
+  url: string;
+  isPrimary: boolean;
+  displayOrder: number;
 }
-
-export interface FoodSupplier {
-  id: string
-  name: string | null
-  restaurantName?: string | null
-  ngoName?: string | null
-  profileImage?: string | null
+ 
+export interface SharedFoodDTO {
+  id: string;
+  name: string;
+  description: string | null;
+ 
+  supplierId: string;
+  // Not a DB column — the schema has no denormalized name on Food, so
+  // this is resolved server-side (see lib/supplier.ts) and attached here
+  // purely for display convenience.
+  supplierName: string;
+ 
+  quantity: number;
+  availableQty: number;
+  quantityUnit: QuantityUnit;
+ 
+  isDonation: boolean;
+  price: number;
+  originalPrice: number | null;
+  discountPct: number;
+ 
+  isHomeCooked: boolean;
+  isActive: boolean;
+  deletedAt: string | null;
+ 
+  expiresAt: string;
+ 
+  images: FoodImageDTO[];
+  averageRating: number;
+  reviewCount: number;
 }
-
-export interface Food {
-  id: string
-  name: string
-  description: string | null
-  quantity: number
-  availableQty?: number
-  quantityUnit: string
-  isDonation: boolean
-  price: number
-  originalPrice: number | null
-  discountPct: number
-  isHomeCooked: boolean
-  isRaw: boolean
-  cuisineType: string | null
-  allergens: string[]
-  tags: string[]
-  images: FoodImage[]
-  pickupAddress: string | null
-  address?: string
-  expiresAt: string
-  createdAt: string
-  supplierId: string
-  supplierType?: string
-  supplierName?: string
-  supplier?: FoodSupplier
-  isReserved?: boolean
-  averageRating?: number
-  reviewCount?: number
-  distance?: number
+ 
+// Derived, not stored — the schema dropped the isExpired/isReserved
+// booleans that used to live on Food directly.
+export function isFoodExpired(food: Pick<SharedFoodDTO, "expiresAt">): boolean {
+  return new Date(food.expiresAt).getTime() <= Date.now();
 }
+ 
+export function isFoodReserved(food: Pick<SharedFoodDTO, "availableQty">): boolean {
+  return food.availableQty <= 0;
+}
+ 
