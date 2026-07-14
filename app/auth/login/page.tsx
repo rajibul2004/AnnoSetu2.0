@@ -56,8 +56,6 @@ const Login = () => {
  
     setLoading(true);
     try {
-      // redirect: false lets us handle the error/success ourselves instead
-      // of a hard page navigation, so we can show a toast either way.
       const result = await signIn("credentials", {
         email: formData.email,
         password: formData.password,
@@ -65,9 +63,6 @@ const Login = () => {
       });
  
       if (!result || result.error) {
-        // NextAuth intentionally returns a generic "CredentialsSignin"
-        // error for any failed login (wrong email or wrong password) —
-        // this is deliberate so the API doesn't reveal which one was wrong.
         toast.error("Invalid email or password");
         return;
       }
@@ -231,7 +226,7 @@ const Login = () => {
             <p className="text-sm text-gray-600 dark:text-gray-300">
               New to Annosetu?{" "}
               <Link
-                href="/register"
+                href="/auth/register"
                 className="font-medium text-green-600 hover:text-green-700 transition-colors duration-200 inline-flex items-center gap-1 group"
               >
                 Create an account

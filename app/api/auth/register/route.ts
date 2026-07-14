@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/app/generated/prisma";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
  
-
 function normalizePhone(raw: string): string {
   const digitsOnly = raw.replace(/\D/g, "");
   if (digitsOnly.length === 12 && digitsOnly.startsWith("91")) {

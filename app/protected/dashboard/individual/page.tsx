@@ -1062,7 +1062,7 @@ function SupplierFoodCard({ food, index }: { food: SharedFoodDTO; index: number 
               Remove
             </Button>
           )}
-          <Link href={`/food/${food.id}`} className="flex-1">
+          <Link href={`/protected/food/${food.id}`} className="flex-1">
             <Button size="sm" className="w-full bg-linear-to-r from-purple-600 to-pink-600 text-xs">
               View Details
             </Button>

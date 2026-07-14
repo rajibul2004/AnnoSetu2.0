@@ -1,50 +1,52 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState, useCallback, useMemo } from "react"
-import dynamic from "next/dynamic"
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
 
 // Dynamically import Leaflet components with no SSR
 const MapContainer = dynamic(
   () => import("react-leaflet").then((mod) => mod.MapContainer),
-  { ssr: false }
-)
+  { ssr: false },
+);
 const TileLayer = dynamic(
   () => import("react-leaflet").then((mod) => mod.TileLayer),
-  { ssr: false }
-)
+  { ssr: false },
+);
 const Marker = dynamic(
   () => import("react-leaflet").then((mod) => mod.Marker),
-  { ssr: false }
-)
+  { ssr: false },
+);
 const ZoomControl = dynamic(
   () => import("react-leaflet").then((mod) => mod.ZoomControl),
-  { ssr: false }
-)
-import { useMap, useMapEvents } from "react-leaflet"
+  { ssr: false },
+);
+import { useMap, useMapEvents } from "react-leaflet";
+
+import "leaflet/dist/leaflet.css";
 
 // Types
 interface Position {
-  lat: number
-  lng: number
+  lat: number;
+  lng: number;
 }
 
 interface NominatimResult {
-  place_id: number
-  lat: string
-  lon: string
-  display_name: string
+  place_id: number;
+  lat: string;
+  lon: string;
+  display_name: string;
   address?: {
-    city?: string
-    town?: string
-    village?: string
-  }
+    city?: string;
+    town?: string;
+    village?: string;
+  };
 }
 
 interface LocationPickerProps {
-  isDark?: boolean
-  setFormData?: React.Dispatch<React.SetStateAction<any>>
-  useLocationAsAddress?: boolean
-  onLocationSelect?: (lat: number, lng: number, address: string) => void
+  isDark?: boolean;
+  setFormData?: React.Dispatch<React.SetStateAction<any>>;
+  useLocationAsAddress?: boolean;
+  onLocationSelect?: (lat: number, lng: number, address: string) => void;
 }
 
 // Theme definitions
@@ -82,7 +84,7 @@ const THEMES = {
     shadowMd: "0 4px 16px rgba(0,0,0,0.45)",
     tileUrl: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
   },
-}
+};
 
 // Helper: build CSS from theme
 function buildCSS(t: typeof THEMES.light) {
@@ -241,34 +243,47 @@ function buildCSS(t: typeof THEMES.light) {
   }
 
   @keyframes lpShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-  `
+  `;
 }
 
 // Inner components that rely on Leaflet (must be wrapped and used only after dynamic import)
 // These are defined as regular components, but since they are inside the parent, they will only be used client-side.
-function ClickHandler({ onSelect }: { onSelect: (lat: number, lng: number) => void }) {
+function ClickHandler({
+  onSelect,
+}: {
+  onSelect: (lat: number, lng: number) => void;
+}) {
   const mapEvents = useMapEvents({
     click(e) {
-      onSelect(e.latlng.lat, e.latlng.lng)
+      onSelect(e.latlng.lat, e.latlng.lng);
     },
-  })
-  return null
+  });
+  return null;
 }
 
 function FlyToLocation({ position }: { position: Position }) {
-  const map = useMap()
-  const prev = useRef(position)
+  const map = useMap();
+  const prev = useRef(position);
   useEffect(() => {
-    if (prev.current.lat !== position.lat || prev.current.lng !== position.lng) {
-      map.flyTo(position, Math.max(map.getZoom(), 14), { duration: 1.1 })
-      prev.current = position
+    if (
+      prev.current.lat !== position.lat ||
+      prev.current.lng !== position.lng
+    ) {
+      map.flyTo(position, Math.max(map.getZoom(), 14), { duration: 1.1 });
+      prev.current = position;
     }
-  }, [position, map])
-  return null
+  }, [position, map]);
+  return null;
 }
 
-function DraggableMarker({ position, onDragEnd }: { position: Position; onDragEnd: (lat: number, lng: number) => void }) {
-  const ref = useRef<any>(null)
+function DraggableMarker({
+  position,
+  onDragEnd,
+}: {
+  position: Position;
+  onDragEnd: (lat: number, lng: number) => void;
+}) {
+  const ref = useRef<any>(null);
   return (
     <Marker
       draggable
@@ -276,22 +291,22 @@ function DraggableMarker({ position, onDragEnd }: { position: Position; onDragEn
       ref={ref}
       eventHandlers={{
         dragend: () => {
-          const { lat, lng } = ref.current.getLatLng()
-          onDragEnd(lat, lng)
+          const { lat, lng } = ref.current.getLatLng();
+          onDragEnd(lat, lng);
         },
       }}
     />
-  )
+  );
 }
 
 // Debounce hook
 function useDebounce<T>(value: T, delay = 380): T {
-  const [deb, setDeb] = useState<T>(value)
+  const [deb, setDeb] = useState<T>(value);
   useEffect(() => {
-    const id = setTimeout(() => setDeb(value), delay)
-    return () => clearTimeout(id)
-  }, [value, delay])
-  return deb
+    const id = setTimeout(() => setDeb(value), delay);
+    return () => clearTimeout(id);
+  }, [value, delay]);
+  return deb;
 }
 
 // Main component
@@ -301,123 +316,146 @@ export default function LocationPicker({
   useLocationAsAddress = false,
   onLocationSelect,
 }: LocationPickerProps) {
-  const t = isDark ? THEMES.dark : THEMES.light
 
-  const [query, setQuery] = useState("")
-  const [results, setResults] = useState<NominatimResult[]>([])
-  const [searching, setSearching] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [copied, setCopied] = useState(false)
-  const [address, setAddress] = useState("")
-  const [showDrop, setShowDrop] = useState(false)
-  const [position, setPosition] = useState<Position>({ lat: 22.56263, lng: 88.36304 })
+   useEffect(() => {
+    import("leaflet").then((L) => {
+      delete (L.default.Icon.Default.prototype as any)._getIconUrl;
 
-  const markerPos = useMemo(() => position, [position])
-  const debQuery = useDebounce(query)
-  const cache = useRef<Record<string, NominatimResult[]>>({})
-  const dropRef = useRef<HTMLDivElement>(null)
+      L.default.Icon.Default.mergeOptions({
+        iconRetinaUrl: "/leaflet/marker-icon-2x.png",
+        iconUrl: "/leaflet/marker-icon.png",
+        shadowUrl: "/leaflet/marker-shadow.png",
+      });
+    });
+  }, []);
+
+  const t = isDark ? THEMES.dark : THEMES.light;
+
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<NominatimResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [address, setAddress] = useState("");
+  const [showDrop, setShowDrop] = useState(false);
+  const [position, setPosition] = useState<Position>({
+    lat: 22.56263,
+    lng: 88.36304,
+  });
+
+  const markerPos = useMemo(() => position, [position]);
+  const debQuery = useDebounce(query);
+  const cache = useRef<Record<string, NominatimResult[]>>({});
+  const dropRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (dropRef.current && !dropRef.current.contains(e.target as Node)) setShowDrop(false)
-    }
-    document.addEventListener("mousedown", handleClick)
-    return () => document.removeEventListener("mousedown", handleClick)
-  }, [])
+      if (dropRef.current && !dropRef.current.contains(e.target as Node))
+        setShowDrop(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   // Search suggestions
   useEffect(() => {
     if (debQuery.length < 3) {
-      setResults([])
-      setShowDrop(false)
-      return
+      setResults([]);
+      setShowDrop(false);
+      return;
     }
     if (cache.current[debQuery]) {
-      setResults(cache.current[debQuery])
-      setShowDrop(true)
-      return
+      setResults(cache.current[debQuery]);
+      setShowDrop(true);
+      return;
     }
 
-    const controller = new AbortController()
-    const { lat, lng } = position
+
+    const controller = new AbortController();
+    const { lat, lng } = position;
     const url =
       `https://nominatim.openstreetmap.org/search?format=json` +
       `&q=${encodeURIComponent(debQuery)}` +
       `&limit=6` +
       `&addressdetails=1` +
       `&viewbox=${lng - 1},${lat + 1},${lng + 1},${lat - 1}` +
-      `&bounded=1`
+      `&bounded=1`;
 
-    setSearching(true)
+    setSearching(true);
     fetch(url, {
       signal: controller.signal,
       headers: { "Accept-Language": "en", "User-Agent": "annosetu" },
     })
       .then((res) => res.json())
       .then((data: NominatimResult[]) => {
-        cache.current[debQuery] = data
-        setResults(data)
-        setShowDrop(true)
+        cache.current[debQuery] = data;
+        setResults(data);
+        setShowDrop(true);
       })
       .catch(() => {})
-      .finally(() => setSearching(false))
-    return () => controller.abort()
-  }, [debQuery, position])
+      .finally(() => setSearching(false));
+    return () => controller.abort();
+  }, [debQuery, position]);
 
   // Reverse geocode
-  const getAddress = useCallback(async (lat: number, lng: number): Promise<string> => {
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
-        { headers: { "Accept-Language": "en" } }
-      )
-      const data = await res.json()
-      return data.display_name || ""
-    } catch {
-      return ""
-    }
-  }, [])
+  const getAddress = useCallback(
+    async (lat: number, lng: number): Promise<string> => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+          { headers: { "Accept-Language": "en" } },
+        );
+        const data = await res.json();
+        return data.display_name || "";
+      } catch {
+        return "";
+      }
+    },
+    [],
+  );
 
   // Update location (called on map click / drag / search)
   const updateLocation = useCallback(
     async (lat: number, lng: number) => {
-      setPosition({ lat, lng })
-      setLoading(true)
-      setAddress("")
-      const addr = await getAddress(lat, lng)
-      setAddress(addr)
+      setPosition({ lat, lng });
+      setLoading(true);
+      setAddress("");
+      const addr = await getAddress(lat, lng);
+      setAddress(addr);
       if (onLocationSelect) {
-        onLocationSelect(lat, lng, addr)
+        onLocationSelect(lat, lng, addr);
       } else if (setFormData) {
         setFormData((prev: any) => ({
           ...prev,
           latitude: lat,
           longitude: lng,
-          address: useLocationAsAddress ? addr : prev?.address ?? "",
-        }))
+          address: useLocationAsAddress ? addr : (prev?.address ?? ""),
+        }));
       }
-      setLoading(false)
+      setLoading(false);
     },
-    [getAddress, setFormData, useLocationAsAddress, onLocationSelect]
-  )
+    [getAddress, setFormData, useLocationAsAddress, onLocationSelect],
+  );
 
   // Select from search result
   const handleSelect = (place: NominatimResult) => {
-    updateLocation(parseFloat(place.lat), parseFloat(place.lon))
-    setQuery(place.display_name.split(",")[0])
-    setResults([])
-    setShowDrop(false)
-  }
+    updateLocation(parseFloat(place.lat), parseFloat(place.lon));
+    setQuery(place.display_name.split(",")[0]);
+    setResults([]);
+    setShowDrop(false);
+  };
 
   // Copy coordinates
   const handleCopy = () => {
-    navigator.clipboard?.writeText(`${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1800)
-  }
+    navigator.clipboard?.writeText(
+      `${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`,
+    );
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
 
-  const placeName = address ? address.split(",")[0] : null
+  const placeName = address ? address.split(",")[0] : null;
 
   return (
     <>
@@ -435,7 +473,14 @@ export default function LocationPicker({
           />
           {searching && <span className="lp-spinner" />}
           {query && !searching && (
-            <button className="lp-clear" onClick={() => { setQuery(""); setResults([]); setShowDrop(false) }}>
+            <button
+              className="lp-clear"
+              onClick={() => {
+                setQuery("");
+                setResults([]);
+                setShowDrop(false);
+              }}
+            >
               ✕
             </button>
           )}
@@ -445,11 +490,18 @@ export default function LocationPicker({
                 <div className="lp-empty">No results found</div>
               ) : (
                 results.map((place) => (
-                  <div key={place.place_id} className="lp-result" onClick={() => handleSelect(place)}>
+                  <div
+                    key={place.place_id}
+                    className="lp-result"
+                    onClick={() => handleSelect(place)}
+                  >
                     <div className="lp-result-pin">📍</div>
                     <div style={{ minWidth: 0 }}>
                       <div className="lp-result-name">
-                        {place.address?.city || place.address?.town || place.address?.village || place.display_name.split(",")[0]}
+                        {place.address?.city ||
+                          place.address?.town ||
+                          place.address?.village ||
+                          place.display_name.split(",")[0]}
                       </div>
                       <div className="lp-result-sub">{place.display_name}</div>
                     </div>
@@ -462,8 +514,16 @@ export default function LocationPicker({
 
         {/* Map */}
         <div className="lp-map-shell">
-          <MapContainer center={position} zoom={13} zoomControl={false} style={{ height: 300, width: "100%" }}>
-            <TileLayer url={t.tileUrl} attribution='&copy; <a href="https://carto.com/">CARTO</a>' />
+          <MapContainer
+            center={position}
+            zoom={13}
+            zoomControl={false}
+            style={{ height: 300, width: "100%" }}
+          >
+            <TileLayer
+              url={t.tileUrl}
+              attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+            />
             <ClickHandler onSelect={updateLocation} />
             <FlyToLocation position={position} />
             <DraggableMarker position={markerPos} onDragEnd={updateLocation} />
@@ -473,7 +533,11 @@ export default function LocationPicker({
             <span className="lp-dot" />
             {placeName || "Selected"}
           </div>
-          <button className="lp-recenter" title="Re-center" onClick={() => updateLocation(position.lat, position.lng)}>
+          <button
+            className="lp-recenter"
+            title="Re-center"
+            onClick={() => updateLocation(position.lat, position.lng)}
+          >
             ⊕
           </button>
         </div>
@@ -484,7 +548,10 @@ export default function LocationPicker({
           <span className="lp-coords-val">
             {position.lat.toFixed(6)}, {position.lng.toFixed(6)}
           </span>
-          <button className={`lp-copy${copied ? " lp-copy-ok" : ""}`} onClick={handleCopy}>
+          <button
+            className={`lp-copy${copied ? " lp-copy-ok" : ""}`}
+            onClick={handleCopy}
+          >
             {copied ? "✓ copied" : "⎘ copy"}
           </button>
         </div>
@@ -497,10 +564,12 @@ export default function LocationPicker({
           ) : address ? (
             <span className="lp-addr-text">{address}</span>
           ) : (
-            <span className="lp-addr-muted">Click the map or search to select a location</span>
+            <span className="lp-addr-muted">
+              Click the map or search to select a location
+            </span>
           )}
         </div>
       </div>
     </>
-  )
+  );
 }

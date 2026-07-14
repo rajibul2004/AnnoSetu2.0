@@ -1,8 +1,5 @@
 export type QuantityUnit = "servings" | "plates" | "kg" | "units" | "packets";
- 
-// Expanded to match every value the schema's Allergen enum actually
-// supports. The original UI only offered 7 of these 11 — sesame,
-// shellfish, mustard, and sulphites were never selectable at all.
+
 export type Allergen =
   | "nuts"
   | "dairy"
@@ -15,7 +12,6 @@ export type Allergen =
   | "mustard"
   | "sulphites"
   | "other";
- 
  
 export interface FoodImageDTO {
   id: string;
@@ -30,9 +26,6 @@ export interface SharedFoodDTO {
   description: string | null;
  
   supplierId: string;
-  // Not a DB column — the schema has no denormalized name on Food, so
-  // this is resolved server-side (see lib/supplier.ts) and attached here
-  // purely for display convenience.
   supplierName: string;
  
   quantity: number;
@@ -55,8 +48,6 @@ export interface SharedFoodDTO {
   reviewCount: number;
 }
  
-// Derived, not stored — the schema dropped the isExpired/isReserved
-// booleans that used to live on Food directly.
 export function isFoodExpired(food: Pick<SharedFoodDTO, "expiresAt">): boolean {
   return new Date(food.expiresAt).getTime() <= Date.now();
 }
@@ -64,4 +55,52 @@ export function isFoodExpired(food: Pick<SharedFoodDTO, "expiresAt">): boolean {
 export function isFoodReserved(food: Pick<SharedFoodDTO, "availableQty">): boolean {
   return food.availableQty <= 0;
 }
+  
+export interface PublicFoodDTO {
+  id: string;
+  name: string;
+  description: string | null;
+  supplierId: string;
+  supplierName: string;
+  supplierType: "restaurant" | "individual" | "ngo" | "admin";
+  isHomeCooked: boolean;
+  quantity: number;
+  availableQty: number;
+  quantityUnit: QuantityUnit;
+  isDonation: boolean;
+  price: number;
+  originalPrice: number | null;
+  discountPct: number;
+  isRaw: boolean;
+  allergens: Allergen[];
+  cuisineType: string | null;
+  pickupAddress: string | null;
+  expiresAt: string;
+  images: FoodImageDTO[];
+  averageRating: number;
+  reviewCount: number;
+  distance: number | null;
+}
  
+export interface FoodListMeta {
+  total: number;
+  totalPages: number;
+  count: number;
+}
+
+ 
+export interface FoodReviewDTO {
+  id: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  reviewerName: string;
+}
+ 
+export interface FoodDetailDTO extends PublicFoodDTO {
+  safetyGuidelines: string;
+  viewCount: number;
+  supplierPhone: string | null;
+  supplierEmail: string | null;
+  reviews: FoodReviewDTO[];
+}

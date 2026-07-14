@@ -1,15 +1,23 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins:["172.30.144.1"],
+  turbopack: {
+    root: __dirname,
+  },
+  allowedDevOrigins:["10.185.60.83"],
   experimental:{
     serverActions:{
       allowedOrigins:[
-        "172.30.144.1:3000",
+        "10.185.60.83:3000",
         "localhost:3000",
       ]
     }
-  }
+  },
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "images.unsplash.com" },
+    ],
+  },
 };
 
 export default nextConfig;

@@ -815,7 +815,7 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
                           onChange={handleImageUpload}
                           className="hidden"
                         />
-                        <span className="inline-block px-6 py-3 bg-gradient-to-r from-green-500 to-amber-500 text-white dark:text-gray-900 rounded-xl font-medium hover:shadow-lg transition-all duration-300">
+                        <span className={`inline-block px-6 py-3 bg-gradient-to-r ${accentGradient} text-white dark:text-gray-900 rounded-xl font-medium hover:shadow-lg transition-all duration-300`}>
                           Choose Images
                         </span>
                       </label>
@@ -852,7 +852,7 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
             </AnimatePresence>
  
             <div className="flex justify-between gap-4">
-              {currentStep > 1 && (
+              {currentStep > 1 && currentStep<3 && (
                 <Button
                   type="button"
                   variant="outline"
@@ -861,6 +861,16 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
                 >
                   <FaArrowLeft className="mr-2" />
                   Previous
+                </Button>
+              )}
+              {currentStep===3 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCurrentStep((s) => s - 1)}
+                  className="flex-1"
+                >
+                  <FaArrowLeft className="mr-2" />
                 </Button>
               )}
  

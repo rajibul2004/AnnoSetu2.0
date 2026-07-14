@@ -14,6 +14,8 @@ import {
 import { motion } from "framer-motion";
 import Input from "@/components/common/Input";
 import Button from "@/components/common/Button";
+// import { useAuth } from "@/hooks/useAuth";
+
 // import { useAuth } from "@/context/AuthContext";
  
 // If your AuthContext already exports a typed hook, this import/type
@@ -52,7 +54,7 @@ const ForgotPassword: React.FC = () => {
  
     setLoading(true);
     try {
-      await resetPassword(email);
+      // await resetPassword(email);
       setIsSubmitted(true);
     } catch {
       setError("Something went wrong. Please try again.");

@@ -18,8 +18,10 @@ export async function PUT(
  
   const existing = await prisma.reservation.findUnique({ where: { id } });
  
-  // NOTE: field is `reserverId` in this schema, not `userId`.
-  if (!existing || existing.reserverId !== session.user.id) {
+  const isReserver = existing?.reserverId === session.user.id;
+  const isSupplier = existing?.supplierId === session.user.id;
+ 
+  if (!existing || (!isReserver && !isSupplier)) {
     return NextResponse.json(
       { success: false, message: "Reservation not found" },
       { status: 404 },
@@ -42,11 +44,10 @@ export async function PUT(
       data: {
         status: "cancelled",
         cancelledAt: new Date(),
-        cancellationReason: "user_cancelled",
+        cancellationReason: isSupplier ? "supplier_cancelled" : "user_cancelled",
       },
     }),
-    // Food has no isReserved/reservedById fields in this schema —
-    // availability is tracked purely via availableQty vs. quantity.
+
     prisma.food.update({
       where: { id: existing.foodId },
       data: { availableQty: { increment: existing.quantity } },
@@ -55,3 +56,4 @@ export async function PUT(
  
   return NextResponse.json({ success: true, data: reservation });
 }
+ 
