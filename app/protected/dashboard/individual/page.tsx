@@ -138,9 +138,14 @@ export default function UserDashboard() {
  
     switch (consumerTab) {
       case "upcoming":
-        return res.status === "confirmed" && pickupTime > now;
+        // Include both pending AND confirmed reservations in the upcoming tab
+        // so users can see reservations awaiting supplier confirmation too.
+        return (
+          (res.status === "confirmed" || res.status === "pending") &&
+          pickupTime > now
+        );
       case "past":
-        return res.status === "picked_up" || res.status === "cancelled" || pickupTime <= now;
+        return res.status === "picked_up" || pickupTime <= now;
       case "cancelled":
         return res.status === "cancelled";
       default:

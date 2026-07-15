@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/provider/theme-provider";
 import QueryProvider from "@/components/provider/query-provider";
 import "./globals.css";
-import { ThemeDebug } from "./ThemeDebug";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Toaster } from "react-hot-toast";
@@ -18,8 +17,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Annosetu",
-  description: "Food sharing platform",
+  title: "AnnaSetu — Share Food, Reduce Waste",
+  description:
+    "AnnaSetu connects food donors with those in need. Share surplus food, save money, and reduce waste — all in one place.",
 };
 
 export default function RootLayout({
@@ -31,14 +31,13 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        suppressHydrationWarning // ← prevents body-level mismatch warnings
+        suppressHydrationWarning
       >
         <QueryProvider>
           <ThemeProvider>
             <Navbar />
             {children}
             <Footer />
-            <ThemeDebug />
             <Toaster
               position="top-right"
               reverseOrder={false}

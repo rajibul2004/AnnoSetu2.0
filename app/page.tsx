@@ -434,7 +434,7 @@ export default function HomePage() {
                     isAuthenticated={isAuthenticated}
                     onReserve={(f) =>
                       router.push(
-                        isAuthenticated ? `/food/${f.id}/reserve` : "/login",
+                        isAuthenticated ? `/protected/food/${f.id}/reserve` : "/auth/login",
                       )
                     }
                   />

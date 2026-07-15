@@ -83,6 +83,11 @@ export const authConfig: NextAuthConfig = {
             role: user.role,
           }
         } catch (error) {
+          // Re-throw deactivation errors so the sign-in page can display
+          // a meaningful message instead of a generic "invalid credentials".
+          if (error instanceof Error && error.message === "Account is deactivated") {
+            throw error;
+          }
           console.error("Authorization error:", error)
           return null
         }

@@ -27,7 +27,7 @@ export default function IndividualAddFoodPage() {
   useEffect(() => {
     if (!loading && user && isRestaurant) {
       toast.error("Restaurants should use the restaurant add-food page");
-      router.push("/restaurant/add-food");
+      router.push("/protected/add-food/restaurant");
     }
   }, [user, isRestaurant, loading, router]);
  

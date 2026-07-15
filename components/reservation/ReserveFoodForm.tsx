@@ -80,7 +80,7 @@ export default function ReserveFoodForm() {
   const handleReserve = async () => {
     if (!isAuthenticated) {
       toast.error("Please login to reserve food");
-      router.push(`/login?next=/food/${params.id}/reserve`);
+      router.push(`/auth/login?next=/food/${params.id}/reserve`);
       return;
     }
     if (!acceptedTerms) {
@@ -104,7 +104,7 @@ export default function ReserveFoodForm() {
       // the NGO dashboard. Sending everyone to the reservation's own
       // status page instead sidesteps the role-routing question entirely
       // and is more useful than a dashboard anyway.
-      router.push(`/reservations/${result.id}`);
+      router.push(`/protected/reservation/${result.id}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to reserve food");
     }
@@ -556,7 +556,7 @@ export default function ReserveFoodForm() {
                       <FaInfoCircle className="inline mr-1 text-yellow-600 dark:text-yellow-300" />
                       Please{" "}
                       <button
-                        onClick={() => router.push(`/login?next=/food/${params.id}/reserve`)}
+                        onClick={() => router.push(`/auth/login?next=/food/${params.id}/reserve`)}
                         className="text-green-600 hover:text-green-700 font-medium underline"
                       >
                         login

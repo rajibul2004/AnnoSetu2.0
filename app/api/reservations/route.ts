@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveSupplierName, SUPPLIER_NAME_SELECT } from "@/lib/supplier";
+import { notifyReservationRequest } from "@/services/notificationService";
  
 export async function GET() {
   const session = await auth();
@@ -137,6 +138,14 @@ export async function POST(request: NextRequest) {
     }),
   ]);
  
+  // Fire-and-forget notification to the supplier (non-blocking)
+  void notifyReservationRequest(
+    food.supplierId,
+    session.user.name ?? session.user.email ?? "Someone",
+    food.name,
+    reservation.id,
+  );
+
   return NextResponse.json({ success: true, data: reservation }, { status: 201 });
 }
  

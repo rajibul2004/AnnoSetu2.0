@@ -5,7 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-// import NotificationBell from "@/components/common/NotificationBell";
+// import NotificationBell from "@/components/common/NotificationBell"; // old placeholder
+import NotificationBell from "@/components/notifications/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
 import {
   FaBars,
@@ -17,6 +18,7 @@ import {
   FaUserPlus,
   FaSignOutAlt,
   FaUserCircle,
+  FaBell,
 } from "react-icons/fa";
  
 export default function Navbar() {
@@ -80,7 +82,7 @@ export default function Navbar() {
           <div className="hidden md:flex items-center space-x-2">
             <ThemeToggle />
  
-            {/* {user && <NotificationBell />} */}
+            {user && <NotificationBell />}
  
             <Link
               href="/"
@@ -195,7 +197,8 @@ export default function Navbar() {
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center space-x-3">
             <ThemeToggle />
-            {/* {user && <NotificationBell />} */}
+            {user && <NotificationBell />}
+
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors duration-200"
@@ -278,6 +281,15 @@ export default function Navbar() {
                     >
                       <FaUserCircle className="text-lg" />
                       <span className="font-medium">Profile</span>
+                    </Link>
+ 
+                    <Link
+                      href="/protected/notifications"
+                      className="link flex items-center gap-3 px-4 py-3 hover:bg-green-100 dark:hover:bg-[#1a2639] rounded-lg transition-colors duration-200"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <FaBell className="text-lg" />
+                      <span className="font-medium">Notifications</span>
                     </Link>
  
                     <button

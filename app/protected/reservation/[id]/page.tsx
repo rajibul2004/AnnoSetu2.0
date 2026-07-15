@@ -75,7 +75,7 @@ export default function ReservationDetailPage() {
   const handleCancel = async () => {
     if (!window.confirm("Are you sure you want to cancel this reservation?")) return;
     await cancelReservation(reservation.id).catch(() => {});
-    if (reservation.isSupplierView) router.push("/restaurant/dashboard");
+    if (reservation.isSupplierView) router.push("/protected/dashboard/restaurant");
   };
  
   const handleCopyCode = () => {

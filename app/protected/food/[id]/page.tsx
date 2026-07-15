@@ -86,7 +86,7 @@ export default function FoodDetailsPage() {
   };
  
   const style = SUPPLIER_STYLES[food.supplierType] ?? SUPPLIER_STYLES.individual;
-  const dashboardHref = food.supplierType === "restaurant" ? "/restaurant/dashboard" : "/user/dashboard";
+  const dashboardHref = food.supplierType === "restaurant" ? "/protected/dashboard/restaurant" : "/protected/dashboard/individual";
  
   return (
     <div className="min-h-screen bg-transparent py-8">
