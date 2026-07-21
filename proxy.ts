@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import { authConfig } from "@/auth.config";
 
 /**
- * Next.js middleware — must live at the project root as `middleware.ts`.
+ * Next.js proxy — must live at the project root as `proxy.ts`.
  *
  * Uses a lightweight NextAuth instance (no PrismaAdapter) so it runs on
  * the Edge runtime. The `authConfig` providers include `bcryptjs`, which
