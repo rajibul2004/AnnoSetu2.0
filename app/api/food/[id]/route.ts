@@ -63,7 +63,25 @@ export async function GET(
     }
   }
 
-  const isAuthed = Boolean(session?.user);
+  let userReservationId: string | null = null;
+  const isOwner = session?.user?.id === food.supplierId;
+
+  if (session?.user && !isOwner) {
+    const reservation = await prisma.reservation.findFirst({
+      where: {
+        foodId: food.id,
+        reserverId: session.user.id,
+        status: { in: ["pending", "confirmed", "picked_up"] },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    });
+    if (reservation) {
+      userReservationId = reservation.id;
+    }
+  }
+
+  const canViewContact = isOwner || Boolean(userReservationId);
  
   return NextResponse.json({
     success: true,
@@ -93,8 +111,9 @@ export async function GET(
       distance,
       safetyGuidelines: food.safetyGuidelines,
       viewCount: food.viewCount + 1,
-      supplierPhone: isAuthed ? resolveSupplierPhone(food.supplier) : null,
-      supplierEmail: isAuthed ? food.supplier.email : null,
+      supplierPhone: canViewContact ? resolveSupplierPhone(food.supplier) : null,
+      supplierEmail: canViewContact ? food.supplier.email : null,
+      userReservationId,
       reviews: food.reviews.map((r) => ({
         id: r.id,
         rating: r.rating,

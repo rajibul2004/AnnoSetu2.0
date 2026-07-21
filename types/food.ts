@@ -52,8 +52,8 @@ export function isFoodExpired(food: Pick<SharedFoodDTO, "expiresAt">): boolean {
   return new Date(food.expiresAt).getTime() <= Date.now();
 }
  
-export function isFoodReserved(food: Pick<SharedFoodDTO, "availableQty">): boolean {
-  return food.availableQty <= 0;
+export function isFoodReserved(availableQty: number): boolean {
+  return availableQty <= 0;
 }
   
 export interface PublicFoodDTO {
@@ -98,9 +98,10 @@ export interface FoodReviewDTO {
 }
  
 export interface FoodDetailDTO extends PublicFoodDTO {
-  safetyGuidelines: string;
+  safetyGuidelines: string | null;
   viewCount: number;
   supplierPhone: string | null;
   supplierEmail: string | null;
   reviews: FoodReviewDTO[];
+  userReservationId?: string | null;
 }

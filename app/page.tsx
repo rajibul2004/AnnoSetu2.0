@@ -57,7 +57,7 @@ export default function HomePage() {
   const [mounted, setMounted] = useState(false);
   const isDark = mounted && resolvedTheme === "dark";
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const [search, setSearch] = useState("");
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -432,6 +432,7 @@ export default function HomePage() {
                   <FoodCard
                     food={food}
                     isAuthenticated={isAuthenticated}
+                    userRole={user?.role}
                     onReserve={(f) =>
                       router.push(
                         isAuthenticated ? `/protected/food/${f.id}/reserve` : "/auth/login",

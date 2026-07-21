@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   FaPlus,
@@ -20,7 +20,11 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { formatDate, formatTimeRemaining, formatPrice } from "@/lib/formatters";
 import { useAuth } from "@/hooks/useAuth";
 import { useMySharedFood, useDeleteFood } from "@/hooks/useFoodQueries";
-import { isFoodExpired, isFoodReserved, type SharedFoodDTO } from "@/types/food";
+import {
+  isFoodExpired,
+  isFoodReserved,
+  type SharedFoodDTO,
+} from "@/types/food";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,16 +50,18 @@ interface DashboardStats {
 // ---------------------------------------------------------------------------
 
 function calculateStats(sharedFoods: SharedFoodDTO[]): DashboardStats {
-  const completedListings = sharedFoods.filter(
-    (l) => isFoodReserved(l) || isFoodExpired(l),
-  );
-  const totalMealsShared = completedListings.reduce(
-    (sum, l) => sum + l.quantity,
+  // Fix: Meals shared is the quantity that has been claimed/picked up.
+  // (quantity - availableQty) represents the meals that were actually taken.
+  const totalMealsShared = sharedFoods.reduce(
+    (sum, l) => sum + (l.quantity - l.availableQty),
     0,
   );
-  const totalEarnings = sharedFoods
-    .filter((l) => !l.isDonation && isFoodReserved(l))
-    .reduce((sum, l) => sum + (l.price || 0), 0);
+
+  // Fix: Earnings is (quantity taken) * price
+  const totalEarnings = sharedFoods.reduce((sum, l) => {
+    if (l.isDonation || !l.price) return sum;
+    return sum + (l.quantity - l.availableQty) * l.price;
+  }, 0);
 
   const ratedListings = sharedFoods.filter((l) => l.reviewCount > 0);
   const avgRating =
@@ -67,9 +73,9 @@ function calculateStats(sharedFoods: SharedFoodDTO[]): DashboardStats {
   return {
     mealsShared: sharedFoods.length,
     active: sharedFoods.filter(
-      (f) => f.isActive && !isFoodExpired(f) && !isFoodReserved(f),
+      (f) => f.isActive && !isFoodExpired(f) && f.availableQty > 0,
     ).length,
-    reserved: sharedFoods.filter((f) => isFoodReserved(f)).length,
+    reserved: sharedFoods.filter((f) => f.quantity > f.availableQty).length,
     expired: sharedFoods.filter((f) => isFoodExpired(f) || !f.isActive).length,
     peopleFed: totalMealsShared * 2,
     earnings: totalEarnings,
@@ -91,32 +97,28 @@ export default function RestaurantDashboard() {
   const router = useRouter();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<FoodTab>("active");
-  const [stats, setStats] = useState<DashboardStats>({
-    mealsShared: 0,
-    active: 0,
-    reserved: 0,
-    expired: 0,
-    peopleFed: 0,
-    earnings: 0,
-    avgRating: 0,
-    totalImpact: 0,
-    communityRank: 42,
-    impactBadges: [],
-  });
-
   const { mySharedFood, isLoading } = useMySharedFood();
   const { deleteFood, isDeleting } = useDeleteFood();
 
-  useEffect(() => {
-    setStats(calculateStats(mySharedFood));
-  }, [mySharedFood]);
+  const stats = useMemo(() => calculateStats(mySharedFood), [mySharedFood]);
 
   const filteredFoods = mySharedFood.filter((food) => {
-    if (activeTab === "active")
-      return food.isActive && !isFoodExpired(food) && !isFoodReserved(food);
-    if (activeTab === "reserved") return isFoodReserved(food);
-    if (activeTab === "expired") return isFoodExpired(food) || !food.isActive;
-    return true;
+    const isExpired = new Date(food.expiresAt) <= new Date() || !food.isActive;
+    const hasReservations = food.quantity > food.availableQty;
+
+    if (activeTab === "expired") {
+      return isExpired;
+    }
+
+    if (activeTab === "reserved") {
+      return !isExpired && hasReservations;
+    }
+
+    if (activeTab === "active") {
+      return !isExpired && food.availableQty > 0;
+    }
+
+    return false;
   });
 
   const displayName =
@@ -125,7 +127,6 @@ export default function RestaurantDashboard() {
   return (
     <div className="min-h-screen bg-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
         {/* Hero Banner */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -200,7 +201,8 @@ export default function RestaurantDashboard() {
               label: "Total Listings",
               value: stats.mealsShared,
               icon: FaChartBar,
-              colors: "from-green-50 dark:from-green-950 to-green-100 dark:to-green-900 border-green-200 dark:border-green-700",
+              colors:
+                "from-green-50 dark:from-green-950 to-green-100 dark:to-green-900 border-green-200 dark:border-green-700",
               iconBg: "bg-green-500 dark:bg-green-400",
               textColor: "text-green-800 dark:text-green-100",
               valueColor: "text-green-900 dark:text-green-50",
@@ -209,7 +211,8 @@ export default function RestaurantDashboard() {
               label: "Active",
               value: stats.active,
               icon: FaCheckCircle,
-              colors: "from-blue-50 dark:from-blue-950 to-blue-100 dark:to-blue-900 border-blue-200 dark:border-blue-700",
+              colors:
+                "from-blue-50 dark:from-blue-950 to-blue-100 dark:to-blue-900 border-blue-200 dark:border-blue-700",
               iconBg: "bg-blue-500 dark:bg-blue-400",
               textColor: "text-blue-800 dark:text-blue-100",
               valueColor: "text-blue-900 dark:text-blue-50",
@@ -218,7 +221,8 @@ export default function RestaurantDashboard() {
               label: "Reserved",
               value: stats.reserved,
               icon: FaClock,
-              colors: "from-purple-50 dark:from-purple-950 to-purple-100 dark:to-purple-900 border-purple-200 dark:border-purple-700",
+              colors:
+                "from-purple-50 dark:from-purple-950 to-purple-100 dark:to-purple-900 border-purple-200 dark:border-purple-700",
               iconBg: "bg-purple-500 dark:bg-purple-400",
               textColor: "text-purple-800 dark:text-purple-100",
               valueColor: "text-purple-900 dark:text-purple-50",
@@ -227,7 +231,8 @@ export default function RestaurantDashboard() {
               label: "Expired",
               value: stats.expired,
               icon: FaTimesCircle,
-              colors: "from-orange-50 dark:from-orange-950 to-red-100 dark:to-orange-900 border-orange-200 dark:border-orange-700",
+              colors:
+                "from-orange-50 dark:from-orange-950 to-red-100 dark:to-orange-900 border-orange-200 dark:border-orange-700",
               iconBg: "bg-red-500 dark:bg-red-400",
               textColor: "text-orange-800 dark:text-orange-100",
               valueColor: "text-orange-900 dark:text-orange-50",
@@ -285,7 +290,7 @@ export default function RestaurantDashboard() {
             <div className="hidden md:flex">
               <button
                 onClick={() =>
-                  router.push("/protected/add-food/restaurant")
+                  router.push("/protected/add-food?role=restaurant")
                 }
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors"
               >
@@ -317,7 +322,7 @@ export default function RestaurantDashboard() {
             {activeTab === "active" && (
               <button
                 onClick={() =>
-                  router.push("/protected/add-food/restaurant")
+                  router.push("/protected/add-food?role=restaurant")
                 }
                 className="flex items-center gap-2 mx-auto px-5 py-2.5 border-2 border-green-600 text-green-600 dark:text-green-300 dark:border-green-300 font-semibold rounded-xl hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors"
               >
@@ -351,8 +356,9 @@ export default function RestaurantDashboard() {
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredFoods.map((food, index) => {
-                    const expired = isFoodExpired(food);
-                    const reserved = isFoodReserved(food);
+                    const expired =
+                      new Date(food.expiresAt) <= new Date() || !food.isActive;
+                    const reserved = food.quantity > food.availableQty;
                     return (
                       <motion.tr
                         key={food.id}
@@ -360,13 +366,32 @@ export default function RestaurantDashboard() {
                         animate={{ opacity: 1 }}
                         transition={{ delay: index * 0.04 }}
                         className="hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-                        onClick={() =>
-                          router.push(`/protected/food/${food.id}`)
-                        }
+                        onClick={() => {
+                          if (activeTab === "reserved") {
+                            router.push(`/protected/food/${food.id}/requests`);
+                          } else {
+                            router.push(`/protected/food/${food.id}`);
+                          }
+                        }}
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="shrink-0 h-10 w-10 bg-linear-to-r from-green-100 dark:from-green-800 to-amber-100 dark:to-amber-800 rounded-lg" />
+                            <div className="shrink-0 h-10 w-10 bg-linear-to-r from-green-100 dark:from-green-800 to-amber-100 dark:to-amber-800 rounded-lg overflow-hidden">
+                              {food.images && food.images.length > 0 && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={
+                                    (
+                                      food.images.find(
+                                        (img) => img.isPrimary,
+                                      ) || food.images[0]
+                                    ).url
+                                  }
+                                  alt={food.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                            </div>
                             <div>
                               <div className="text-sm font-medium text-gray-900 dark:text-white">
                                 {food.name}
@@ -378,16 +403,36 @@ export default function RestaurantDashboard() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900 dark:text-white">
-                            {food.quantity}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {food.quantityUnit}
-                          </div>
+                          {activeTab === "active" && (
+                            <div className="text-sm text-gray-900 dark:text-white">
+                              {food.availableQty}{" "}
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                active
+                              </span>
+                            </div>
+                          )}
+                          {activeTab === "reserved" && food.quantity > food.availableQty && (
+                            <div className="text-sm text-yellow-600 dark:text-yellow-400">
+                              {food.quantity - food.availableQty}{" "}
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                reserved
+                              </span>
+                            </div>
+                          )}
+                          {activeTab === "expired" && (
+                            <div className="text-sm text-gray-900 dark:text-white">
+                              {food.quantity}{" "}
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                total
+                              </span>
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900 dark:text-white">
-                            {food.isDonation ? "Donation" : formatPrice(food.price)}
+                            {food.isDonation
+                              ? "Donation"
+                              : formatPrice(food.price)}
                           </div>
                           {food.originalPrice && !food.isDonation && (
                             <div className="text-xs text-gray-400 line-through">
@@ -419,7 +464,11 @@ export default function RestaurantDashboard() {
                                   : "bg-green-100 dark:bg-green-800/60 text-green-800 dark:text-green-100"
                             }`}
                           >
-                            {expired ? "Expired" : reserved ? "Reserved" : "Active"}
+                            {expired
+                              ? "Expired"
+                              : reserved
+                                ? "Reserved"
+                                : "Active"}
                           </span>
                         </td>
                         <td

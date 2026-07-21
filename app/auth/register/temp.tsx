@@ -48,9 +48,6 @@ interface CustomLocation {
   longitude: number;
 }
  
-// Mirrors the API's zod schema. Keeping this in sync with the backend
-// contract (route.ts) avoids the client accepting values the server
-// will reject.
 const PASSWORD_REGEX = {
   upper: /[A-Z]/,
   lower: /[a-z]/,
@@ -58,16 +55,8 @@ const PASSWORD_REGEX = {
   special: /[^A-Za-z0-9]/,
 };
  
-/**
- * Normalizes user-entered phone numbers (e.g. "+91 98765 43210",
- * "98765-43210") down to the bare 10-digit form the backend expects:
- * /^[6-9]\d{9}$/
- */
 function normalizePhone(raw: string): string {
   const digitsOnly = raw.replace(/\D/g, "");
-  // Strip a leading "91" country code if the user included it, but only
-  // when that leaves exactly 10 digits (avoids mangling valid 10-digit
-  // numbers that happen to start with 91-lookalike digits).
   if (digitsOnly.length === 12 && digitsOnly.startsWith("91")) {
     return digitsOnly.slice(2);
   }
@@ -94,14 +83,13 @@ interface ApiErrorResponse {
   details?: { path: (string | number)[]; message: string }[];
 }
  
-export default function RegisterPage() {
+const Register =()=> {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
  
-  // Redirect if already logged in
   useEffect(() => {
     if (session?.user) {
       router.push("/dashboard");
@@ -124,6 +112,12 @@ export default function RegisterPage() {
     latitude: null,
     longitude: null,
   });
+
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
  
   const [locationMode, setLocationMode] = useState<"none" | "current" | "map">(
     "none",
@@ -138,6 +132,18 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentStep, setCurrentStep] = useState(1);
+
+  // OTP Verification States
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [emailOtp, setEmailOtp] = useState("");
+  const [phoneOtp, setPhoneOtp] = useState("");
+  const [showEmailOtpInput, setShowEmailOtpInput] = useState(false);
+  const [showPhoneOtpInput, setShowPhoneOtpInput] = useState(false);
+  const [isSendingEmailOtp, setIsSendingEmailOtp] = useState(false);
+  const [isSendingPhoneOtp, setIsSendingPhoneOtp] = useState(false);
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
+  const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
  
   const roleOptions = [
     {
@@ -178,31 +184,36 @@ export default function RegisterPage() {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
-    // Clear field error when user types
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
- 
+
   const validateStep1 = () => {
     const newErrors: Record<string, string> = {};
-    if (formData.role === "individual" && !formData.name.trim()) {
-      newErrors.name = "Name is required";
+    if (formData.role === "individual") {
+      if (!formData.name.trim()) newErrors.name = "Name is required";
+      else if (formData.name.trim().length < 2) newErrors.name = "Name must be at least 2 characters";
     }
     if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
       newErrors.email = "Valid email is required";
+    } else if (!isEmailVerified) {
+      newErrors.email = "Please verify your email to proceed";
     }
-    if (formData.role === "restaurant" && !formData.restaurantName.trim()) {
-      newErrors.restaurantName = "Restaurant name is required";
+    if (formData.role === "restaurant") {
+      if (!formData.restaurantName.trim()) newErrors.restaurantName = "Restaurant name is required";
+      else if (formData.restaurantName.trim().length < 2) newErrors.restaurantName = "Restaurant name must be at least 2 characters";
     }
     if (formData.role === "ngo") {
       if (!formData.ngoName.trim()) newErrors.ngoName = "NGO name is required";
-      if (!formData.ngoRegistrationId.trim())
-        newErrors.ngoRegistrationId = "Registration ID is required";
+      else if (formData.ngoName.trim().length < 2) newErrors.ngoName = "NGO name must be at least 2 characters";
+      
+      if (!formData.ngoRegistrationId.trim()) newErrors.ngoRegistrationId = "Registration ID is required";
+      else if (formData.ngoRegistrationId.trim().length < 3) newErrors.ngoRegistrationId = "Registration ID must be at least 3 characters";
     }
     return newErrors;
   };
- 
+
   const validateStep2 = () => {
     const newErrors: Record<string, string> = {};
     const normalizedPhone = normalizePhone(formData.phone);
@@ -211,14 +222,78 @@ export default function RegisterPage() {
     } else if (!/^[6-9]\d{9}$/.test(normalizedPhone)) {
       newErrors.phone =
         "Enter a valid 10-digit Indian mobile number (e.g. 98765 43210)";
+    } else if (!isPhoneVerified) {
+      newErrors.phone = "Please verify your phone number to proceed";
     }
+    
     if (!formData.address.trim()) newErrors.address = "Address is required";
+    else if (formData.address.trim().length < 5) newErrors.address = "Address must be at least 5 characters";
+
     if (formData.role !== "individual") {
       const hasLocation =
         formData.latitude !== null && formData.longitude !== null;
       if (!hasLocation) newErrors.location = "Location is required";
     }
     return newErrors;
+  };
+
+  const handleSendOtp = async (type: "email" | "phone", identifier: string) => {
+    if (type === "email") setIsSendingEmailOtp(true);
+    else setIsSendingPhoneOtp(true);
+
+    try {
+      const res = await fetch("/api/auth/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier, type }),
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        toast.success(`OTP sent to your ${type}!`);
+        if (type === "email") setShowEmailOtpInput(true);
+        else setShowPhoneOtpInput(true);
+      } else {
+        toast.error(data.error || "Failed to send OTP");
+      }
+    } catch (error) {
+      toast.error("An error occurred. Please try again.");
+    } finally {
+      if (type === "email") setIsSendingEmailOtp(false);
+      else setIsSendingPhoneOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async (type: "email" | "phone", identifier: string, otp: string) => {
+    if (type === "email") setIsVerifyingEmail(true);
+    else setIsVerifyingPhone(true);
+
+    try {
+      const res = await fetch("/api/auth/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier, otp, type }),
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        toast.success(`${type === "email" ? "Email" : "Phone"} verified successfully!`);
+        if (type === "email") {
+          setIsEmailVerified(true);
+          setErrors((prev) => ({ ...prev, email: "" }));
+        } else {
+          setIsPhoneVerified(true);
+          setErrors((prev) => ({ ...prev, phone: "" }));
+        }
+      } else {
+        toast.error(data.error || "Invalid OTP");
+      }
+    } catch (error) {
+      toast.error("An error occurred. Please try again.");
+    } finally {
+      if (type === "email") setIsVerifyingEmail(false);
+      else setIsVerifyingPhone(false);
+    }
   };
  
   const validateStep3 = () => {
@@ -294,13 +369,9 @@ export default function RegisterPage() {
       const data: ApiErrorResponse & { success?: boolean } = await res.json();
  
       if (!res.ok) {
-        // Surface the server's actual reason (e.g. "User already exists")
-        // instead of assuming the request succeeded.
         const message = data?.error || "Registration failed. Please try again.";
         toast.error(message);
  
-        // Map zod validation issues back onto individual form fields
-        // where possible, so the user sees exactly what to fix.
         if (data?.details?.length) {
           const fieldErrors: Record<string, string> = {};
           for (const issue of data.details) {
@@ -327,7 +398,6 @@ export default function RegisterPage() {
     }
   };
  
-  // Geolocation handlers (same as original but using Next.js)
   const getCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setErrors((prev) => ({ ...prev, location: "Geolocation not supported" }));
@@ -418,6 +488,8 @@ export default function RegisterPage() {
   const isLocationSelected =
     formData.latitude !== null && formData.longitude !== null;
  
+  if (!mounted) return null;
+ 
   return (
     <div className="min-h-screen py-12 relative overflow-hidden">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -446,7 +518,6 @@ export default function RegisterPage() {
             </motion.p>
           </div>
  
-          {/* Role Selection Cards */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -569,21 +640,62 @@ export default function RegisterPage() {
                           placeholder="Enter NGO name"
                         />
                       )}
-                      <Input
-                        label="Email Address"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        error={errors.email}
-                        required
-                        icon={
-                          <FaEnvelope
-                            className={roleColorClass[formData.role]}
-                          />
-                        }
-                        placeholder="you@example.com"
-                      />
+                      <div className="flex flex-col gap-2">
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="flex-1">
+                            <Input
+                              label="Email Address"
+                              name="email"
+                              type="email"
+                              value={formData.email}
+                              onChange={handleChange}
+                              error={errors.email}
+                              required
+                              icon={<FaEnvelope className={roleColorClass[formData.role]} />}
+                              placeholder="you@example.com"
+                            />
+                          </div>
+                          {!isEmailVerified && (
+                            <button
+                              type="button"
+                              disabled={isSendingEmailOtp || !formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)}
+                              onClick={() => handleSendOtp("email", formData.email)}
+                              className="mb-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 cursor-pointer text-sm whitespace-nowrap"
+                            >
+                              {isSendingEmailOtp ? "Sending..." : "Send OTP"}
+                            </button>
+                          )}
+                          {isEmailVerified && (
+                            <div className="mb-1 px-4 py-2.5 text-green-500 font-medium text-sm flex items-center h-[42px]">
+                              ✓ Verified
+                            </div>
+                          )}
+                        </div>
+                        
+                        {showEmailOtpInput && !isEmailVerified && (
+                          <div className="flex items-end gap-2 mt-1">
+                            <div className="flex-1">
+                              <Input
+                                label="Enter Email OTP"
+                                name="emailOtp"
+                                type="text"
+                                value={emailOtp}
+                                onChange={(e) => setEmailOtp(e.target.value)}
+                                placeholder="123456"
+                                maxLength={6}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              disabled={isVerifyingEmail || emailOtp.length !== 6}
+                              onClick={() => handleVerifyOtp("email", formData.email, emailOtp)}
+                              className="mb-1 px-4 py-2.5 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-colors disabled:opacity-50 cursor-pointer text-sm whitespace-nowrap"
+                            >
+                              {isVerifyingEmail ? "Verifying..." : "Verify OTP"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     {formData.role === "ngo" && (
                       <Input
@@ -616,20 +728,63 @@ export default function RegisterPage() {
                       Contact & Location
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Input
-                        label="Phone Number"
-                        name="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        error={errors.phone}
-                        required
-                        icon={
-                          <FaPhone className={roleColorClass[formData.role]} />
-                        }
-                        placeholder="98765 43210"
-                        helperText="10-digit Indian mobile number"
-                      />
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1">
+                            <Input
+                              label="Phone Number"
+                              name="phone"
+                              type="tel"
+                              value={formData.phone}
+                              onChange={handleChange}
+                              error={errors.phone}
+                              required
+                              icon={<FaPhone className={roleColorClass[formData.role]} />}
+                              placeholder="98765 43210"
+                              helperText="10-digit mobile number"
+                            />
+                          </div>
+                          {!isPhoneVerified && (
+                            <button
+                              type="button"
+                              disabled={isSendingPhoneOtp || !/^[6-9]\d{9}$/.test(normalizePhone(formData.phone))}
+                              onClick={() => handleSendOtp("phone", formData.phone)}
+                              className={`mb-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 cursor-pointer text-sm whitespace-nowrap ${errors.phone ? 'mb-7' : ''}`}
+                            >
+                              {isSendingPhoneOtp ? "Sending..." : "Send OTP"}
+                            </button>
+                          )}
+                          {isPhoneVerified && (
+                            <div className={`mb-1 px-4 py-2.5 text-green-500 font-medium text-sm flex items-center h-[42px] ${errors.phone ? 'mb-7' : ''}`}>
+                              ✓ Verified
+                            </div>
+                          )}
+                        </div>
+                        
+                        {showPhoneOtpInput && !isPhoneVerified && (
+                          <div className="flex items-end gap-2 mt-1">
+                            <div className="flex-1">
+                              <Input
+                                label="Enter SMS OTP"
+                                name="phoneOtp"
+                                type="text"
+                                value={phoneOtp}
+                                onChange={(e) => setPhoneOtp(e.target.value)}
+                                placeholder="123456"
+                                maxLength={6}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              disabled={isVerifyingPhone || phoneOtp.length !== 6}
+                              onClick={() => handleVerifyOtp("phone", formData.phone, phoneOtp)}
+                              className="mb-1 px-4 py-2.5 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-colors disabled:opacity-50 cursor-pointer text-sm whitespace-nowrap"
+                            >
+                              {isVerifyingPhone ? "Verifying..." : "Verify OTP"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                       <div className="flex flex-col gap-0.5">
                         <Input
                           label="Address"
@@ -839,19 +994,21 @@ export default function RegisterPage() {
                       Security & Terms
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Input
-                        label="Password"
-                        name="password"
-                        type="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        error={errors.password}
-                        required
-                        icon={
-                          <FaLock className={roleColorClass[formData.role]} />
-                        }
-                        helperText="8+ chars, upper & lower case, a number, and a special character"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          label="Password"
+                          name="password"
+                          type="password"
+                          value={formData.password}
+                          onChange={handleChange}
+                          error={errors.password}
+                          required
+                          icon={
+                            <FaLock className={roleColorClass[formData.role]} />
+                          }
+                          helperText="8+ chars, upper & lower case, a number, and a special character"
+                        />
+                      </div>
                       <Input
                         label="Confirm Password"
                         name="confirmPassword"
@@ -1066,3 +1223,5 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+export default Register;

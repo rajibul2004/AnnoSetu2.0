@@ -16,6 +16,15 @@ export async function PUT(
   }
 
   const { id } = await params;
+  let note = null;
+  try {
+    const body = await _request.json();
+    if (body && typeof body.note === "string") {
+      note = body.note;
+    }
+  } catch (e) {
+    // Ignore JSON parse errors if body is empty
+  }
 
   // Fetch reservation + food name together to avoid an extra round-trip.
   const existing = await prisma.reservation.findUnique({
@@ -50,6 +59,7 @@ export async function PUT(
         status: "cancelled",
         cancelledAt: new Date(),
         cancellationReason: isSupplier ? "supplier_cancelled" : "user_cancelled",
+        cancellationNote: note,
       },
     }),
 

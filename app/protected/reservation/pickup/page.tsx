@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import RestaurantPickupManager from "../../../../components/reservation/RestaurantPickupManager";
+import PickupManager from "../../../../components/reservation/PickupManager";
 
-export default function ConfirmReservationPage() {
+export default function PickupScannerPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
-      <RestaurantPickupManager/>
+      <PickupManager/>
     </Suspense>
   );
 }

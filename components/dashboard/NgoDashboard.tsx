@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -38,9 +38,13 @@ function computeStats(reservations: ReservationDTO[]): NGOStats {
   const completed = reservations.filter((r) => r.status === "picked_up");
 
   const totalMeals = completed.reduce((s, r) => s + r.quantity, 0);
-  const moneySaved = completed.reduce((s, r) => {
-    const orig = r.food.originalPrice;
-    return s + (orig != null ? orig * r.quantity - r.totalPrice : r.totalPrice);
+  const totalMoneySaved = completed.reduce((sum, r) => {
+    // Fix: Money saved is the difference between original price and what was paid.
+    // If original price is not set, they didn't 'save' a trackable amount, they just spent money.
+    if (r.food?.originalPrice) {
+      return sum + Math.max(0, (r.food.originalPrice * r.quantity) - (r.totalPrice || 0));
+    }
+    return sum;
   }, 0);
 
   const thisWeekCount = reservations.filter(
@@ -50,7 +54,7 @@ function computeStats(reservations: ReservationDTO[]): NGOStats {
   return {
     totalMeals,
     thisWeekCount,
-    moneySaved,
+    moneySaved: totalMoneySaved,
     co2Reduced: +(totalMeals * 2.5).toFixed(1),
     peopleServed: totalMeals * 2,
   };
@@ -81,19 +85,9 @@ export default function NGODashboard() {
   const { reservations, isLoading } = useMyReservations();
   const { cancelReservation, isCancelling } = useCancelReservation();
 
-  const [stats, setStats] = useState<NGOStats>({
-    totalMeals: 0,
-    thisWeekCount: 0,
-    moneySaved: 0,
-    co2Reduced: 0,
-    peopleServed: 0,
-  });
+  const stats = useMemo(() => computeStats(reservations), [reservations]);
   const [showWelcome, setShowWelcome] = useState(true);
   const welcomeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (!isLoading) setStats(computeStats(reservations));
-  }, [isLoading, reservations]);
 
   useEffect(() => {
     welcomeTimerRef.current = setTimeout(() => setShowWelcome(false), 4000);
@@ -363,7 +357,7 @@ export default function NGODashboard() {
                           r.status === "confirmed") && (
                           <button
                             disabled={isCancelling}
-                            onClick={() => cancelReservation(r.id)}
+                            onClick={() => cancelReservation({ id: r.id })}
                             className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40 font-medium"
                           >
                             Cancel

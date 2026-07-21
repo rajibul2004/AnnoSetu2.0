@@ -1,41 +1,30 @@
 "use client";
+import { Suspense } from "react";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
-import LoadingSpinner from "@/components/common/LoadingSpinner";
+import { useSearchParams } from "next/navigation";
+import IndividualDashboard from "@/components/dashboard/IndividualDashboard";
+import RestaurantDashboard from "@/components/dashboard/RestaurantDashboard";
+import NgoDashboard from "@/components/dashboard/NgoDashboard";
 
-const ROLE_DASHBOARD: Record<string, string> = {
-  restaurant: "/protected/dashboard/restaurant",
-  individual: "/protected/dashboard/individual",
-  ngo: "/protected/dashboard/ngo",
-  admin: "/protected/dashboard/admin",
-};
+function DashboardContent() {
+  const searchParams = useSearchParams();
+  const role = searchParams.get("role")?.toLowerCase();
 
-/**
- * Role-aware dashboard redirect.
- *
- * Automatically sends authenticated users to their role-specific dashboard.
- * This eliminates the 404 that previously occurred when visiting /protected/dashboard
- * without a role sub-path.
- */
-export default function DashboardRedirectPage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
+  switch (role) {
+    case "restaurant":
+      return <RestaurantDashboard />;
+    case "ngo":
+      return <NgoDashboard />;
+    case "individual":
+    default:
+      return <IndividualDashboard />;
+  }
+}
 
-  useEffect(() => {
-    if (loading) return;
-    if (!user) {
-      router.replace("/auth/login");
-      return;
-    }
-    const target = ROLE_DASHBOARD[user.role] ?? "/protected/dashboard/individual";
-    router.replace(target);
-  }, [user, loading, router]);
-
+export default function DashboardPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <LoadingSpinner text="Redirecting to your dashboard..." />
-    </div>
+    <Suspense fallback={<div>Loading dashboard...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }

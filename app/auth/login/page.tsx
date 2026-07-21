@@ -20,6 +20,7 @@ import toast from "react-hot-toast";
 interface LoginFormData {
   email: string;
   password: string;
+  rememberMe: boolean;
 }
  
 interface LoginFormErrors {
@@ -31,6 +32,7 @@ const Login = () => {
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
     password: "",
+    rememberMe: false,
   });
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [loading, setLoading] = useState<boolean>(false);
@@ -59,6 +61,7 @@ const Login = () => {
       const result = await signIn("credentials", {
         email: formData.email,
         password: formData.password,
+        rememberMe: formData.rememberMe ? "true" : "false",
         redirect: false,
       });
  
@@ -78,10 +81,10 @@ const Login = () => {
   };
  
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
  
@@ -156,7 +159,13 @@ const Login = () => {
             {/* Remember Me & Forgot Password */}
             <div className="flex items-center justify-between">
               <label className="flex items-center  group cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 cursor-pointer " />
+                <input
+                  type="checkbox"
+                  name="rememberMe"
+                  checked={formData.rememberMe}
+                  onChange={handleChange}
+                  className="w-4 h-4 cursor-pointer"
+                />
                 <span className="ml-2 text-sm text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors duration-200">
                   Remember me
                 </span>

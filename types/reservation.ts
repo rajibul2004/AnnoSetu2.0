@@ -14,6 +14,7 @@ export interface ReservationFoodSummary {
   // Resolved server-side from the supplier's role-specific profile —
   // see lib/supplier.ts. Not a column on Food.
   supplierName: string;
+  images?: { id: string; url: string; isPrimary: boolean; displayOrder: number }[];
 }
  
 export interface ReservationDTO {
@@ -24,7 +25,10 @@ export interface ReservationDTO {
   pickupTime: string;
   pickupAddress: string;
   pickupCode: string | null;
+  createdAt: string;
   food: ReservationFoodSummary;
+  reserverName?: string;
+  reserverPhone?: string | null;
 }
  
 // ---------------------------------------------------------------------

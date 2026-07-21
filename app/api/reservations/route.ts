@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { resolveSupplierName, SUPPLIER_NAME_SELECT } from "@/lib/supplier";
+import { resolveSupplierName, resolveSupplierPhone, SUPPLIER_NAME_SELECT } from "@/lib/supplier";
 import { notifyReservationRequest } from "@/services/notificationService";
+import type { ReservationDTO } from "@/types/reservation";
  
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await auth();
  
   if (!session?.user) {
@@ -14,11 +15,27 @@ export async function GET() {
     );
   }
  
-  // NOTE: field is `reserverId` in this schema, not `userId`.
+  const searchParams = request.nextUrl.searchParams;
+  const type = searchParams.get("type"); // "incoming" or undefined
+  const foodId = searchParams.get("foodId"); // optional foodId to filter
+ 
+  // If "incoming", we want reservations where the current user is the supplier.
+  // Otherwise, we want reservations where the current user is the reserver.
+  const isIncoming = type === "incoming";
+ 
+  const whereClause: any = isIncoming
+    ? { supplierId: session.user.id }
+    : { reserverId: session.user.id };
+
+  if (foodId) {
+    whereClause.foodId = foodId;
+  }
+
   const reservations = await prisma.reservation.findMany({
-    where: { reserverId: session.user.id },
+    where: whereClause,
     orderBy: { createdAt: "desc" },
     include: {
+      reserver: isIncoming ? { select: SUPPLIER_NAME_SELECT } : false,
       food: {
         select: {
           id: true,
@@ -27,27 +44,32 @@ export async function GET() {
           originalPrice: true,
           supplierId: true,
           supplier: { select: SUPPLIER_NAME_SELECT },
+          images: { select: { id: true, url: true, isPrimary: true, displayOrder: true } },
         },
       },
     },
   });
  
-  const data = reservations.map((r) => ({
+  const data: ReservationDTO[] = reservations.map((r) => ({
     id: r.id,
     quantity: r.quantity,
     totalPrice: r.totalPrice,
     status: r.status,
-    pickupTime: r.pickupTime,
+    pickupTime: r.pickupTime.toISOString(),
     pickupAddress: r.pickupAddress,
     pickupCode: r.pickupCode,
+    createdAt: r.createdAt.toISOString(),
     food: {
       id: r.food.id,
       name: r.food.name,
       quantityUnit: r.food.quantityUnit,
       originalPrice: r.food.originalPrice,
       supplierId: r.food.supplierId,
-      supplierName: resolveSupplierName(r.food.supplier),
+      supplierName: resolveSupplierName(r.food.supplier as any),
+      images: (r.food as any).images,
     },
+    reserverName: isIncoming && "reserver" in r && r.reserver ? resolveSupplierName(r.reserver as any) : undefined,
+    reserverPhone: isIncoming && "reserver" in r && r.reserver ? resolveSupplierPhone(r.reserver as any) : undefined,
   }));
  
   return NextResponse.json({ success: true, data });
@@ -138,10 +160,19 @@ export async function POST(request: NextRequest) {
     }),
   ]);
  
+  // Fetch the latest reserver profile to ensure we have the most up-to-date name
+  // instead of relying on potentially stale session data.
+  const reserver = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: SUPPLIER_NAME_SELECT,
+  });
+  
+  const reserverName = reserver ? resolveSupplierName(reserver as any) : (session.user.name ?? session.user.email ?? "Someone");
+
   // Fire-and-forget notification to the supplier (non-blocking)
   void notifyReservationRequest(
     food.supplierId,
-    session.user.name ?? session.user.email ?? "Someone",
+    reserverName,
     food.name,
     reservation.id,
   );

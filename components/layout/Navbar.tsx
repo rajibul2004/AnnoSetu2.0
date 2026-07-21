@@ -26,15 +26,15 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
  
   const getDashboardLink = (): string => {
-    if (isRestaurant) return "/protected/dashboard/restaurant";
-    if (isIndividual) return "/protected/dashboard/individual";
-    if (isNGO) return "/protected/dashboard/ngo";
+    if (isRestaurant) return "/protected/dashboard?role=restaurant";
+    if (isIndividual) return "/protected/dashboard?role=individual";
+    if (isNGO) return "/protected/dashboard?role=ngo";
     return "/protected/dashboard";
   };
  
   const getAddFoodLink = (): string | null => {
-    if (isRestaurant) return "/protected/add-food/restaurant";
-    if (isIndividual) return "/protected/add-food/individual";
+    if (isRestaurant) return "/protected/add-food?role=restaurant";
+    if (isIndividual) return "/protected/add-food?role=individual";
     return null;
   };
  
@@ -59,7 +59,7 @@ export default function Navbar() {
   const addFoodLink = getAddFoodLink();
  
   return (
-    <nav className="transition-all duration-300">
+    <nav className="transition-all duration-300 relative z-[9999]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-15 md:h-20">
           {/* Logo */}

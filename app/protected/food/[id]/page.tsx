@@ -46,6 +46,7 @@ export default function FoodDetailsPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [showContactInfo, setShowContactInfo] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
  
   const { food, isLoading } = useFoodDetails(params.id);
  
@@ -67,7 +68,7 @@ export default function FoodDetailsPage() {
             This food item may have expired or been removed.
           </p>
           <Link href="/">
-            <Button className="bg-linear-to-r from-green-500 to-amber-500">Browse Other Food</Button>
+            <Button >Browse Other Food</Button>
           </Link>
         </div>
       </div>
@@ -75,7 +76,7 @@ export default function FoodDetailsPage() {
   }
  
   const expired = isFoodExpired(food);
-  const reserved = isFoodReserved(food);
+  const reserved = isFoodReserved(food.availableQty);
   const isOwner = food.supplierId === user?.id;
   const canReserve = !expired && !reserved && food.availableQty > 0 && !isOwner;
  
@@ -86,7 +87,23 @@ export default function FoodDetailsPage() {
   };
  
   const style = SUPPLIER_STYLES[food.supplierType] ?? SUPPLIER_STYLES.individual;
-  const dashboardHref = food.supplierType === "restaurant" ? "/protected/dashboard/restaurant" : "/protected/dashboard/individual";
+  const dashboardHref = food.supplierType === "restaurant" ? "/protected/dashboard?role=restaurant" : "/protected/dashboard?role=individual";
+
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this listing?")) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/food/${food.id}`, { method: "DELETE" });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message);
+      toast.success("Listing deleted successfully");
+      router.push(dashboardHref);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete listing");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
  
   return (
     <div className="min-h-screen bg-transparent py-8">
@@ -100,7 +117,6 @@ export default function FoodDetailsPage() {
         </button>
  
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card overflow-hidden">
               <div className="relative h-96 bg-linear-to-br from-green-100 dark:from-gray-600 via-amber-100 dark:via-slate-700 to-pink-100 dark:to-zinc-600">
@@ -385,11 +401,19 @@ export default function FoodDetailsPage() {
                       </div>
                     </div>
  
-                    <Link href={isAuthenticated ? `/food/${food.id}/reserve` : `/login?next=/food/${food.id}`}>
-                      <Button size="lg" fullWidth className="bg-linear-to-r from-green-500 to-amber-500">
-                        {isAuthenticated ? "Reserve Now" : "Login to Reserve"}
-                      </Button>
-                    </Link>
+                    {food.userReservationId ? (
+                      <Link href={`/protected/reservation/${food.userReservationId}`}>
+                        <Button size="lg" fullWidth className="bg-linear-to-r from-blue-500 to-indigo-500">
+                          View Your Reservation
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Link href={isAuthenticated ? `/protected/food/${food.id}/reserve` : `/auth/login?next=/protected/food/${food.id}`}>
+                        <Button size="lg" fullWidth className="bg-linear-to-r from-green-500 to-amber-500">
+                          {isAuthenticated ? "Reserve Now" : "Login to Reserve"}
+                        </Button>
+                      </Link>
+                    )}
                   </>
                 ) : (
                   <div className="text-center py-4">
@@ -454,7 +478,7 @@ export default function FoodDetailsPage() {
                   </div>
                 )}
  
-                {isAuthenticated && !isOwner && (
+                {(food.supplierPhone || food.supplierEmail) && (
                   <button
                     onClick={() => setShowContactInfo((prev) => !prev)}
                     className="w-full mt-2 text-green-600 dark:text-green-300 hover:text-green-700 dark:hover:text-green-200 font-medium text-sm"
@@ -463,29 +487,43 @@ export default function FoodDetailsPage() {
                   </button>
                 )}
  
-                {showContactInfo && isAuthenticated && !isOwner && (
+                {showContactInfo && (food.supplierPhone || food.supplierEmail) && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     className="border-t border-gray-100 dark:border-gray-700 pt-4 space-y-2"
                   >
-                    <p className="flex items-center gap-2 text-sm">
-                      <FaPhone className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                      <span>{food.supplierPhone || "Not provided"}</span>
-                    </p>
-                    <p className="flex items-center gap-2 text-sm">
-                      <FaEnvelope className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                      <span>{food.supplierEmail || "Not provided"}</span>
-                    </p>
+                    {food.supplierPhone && (
+                      <p className="flex items-center gap-2 text-sm">
+                        <FaPhone className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                        <span>{food.supplierPhone}</span>
+                      </p>
+                    )}
+                    {food.supplierEmail && (
+                      <p className="flex items-center gap-2 text-sm">
+                        <FaEnvelope className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                        <span>{food.supplierEmail}</span>
+                      </p>
+                    )}
                   </motion.div>
                 )}
  
                 {isOwner && (
-                  <Link href={dashboardHref}>
-                    <Button variant="primary" fullWidth>
-                      View All Requests
+                  <div className="flex flex-col space-y-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+                    <Link href={`/protected/food/${food.id}/requests`}>
+                      <Button variant="primary" fullWidth>
+                        View All Requests
+                      </Button>
+                    </Link>
+                    <Button 
+                      variant="danger" 
+                      fullWidth 
+                      onClick={handleDelete}
+                      loading={isDeleting}
+                    >
+                      Delete Listing
                     </Button>
-                  </Link>
+                  </div>
                 )}
               </div>
             </motion.div>

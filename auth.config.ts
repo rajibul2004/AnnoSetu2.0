@@ -7,6 +7,7 @@ import { z } from "zod"
 const loginSchema = z.object({
   email: z.string().email("Invalid email format"),
   password: z.string().min(1, "Password is required"),
+  rememberMe: z.string().optional(),
 })
 
 export const authConfig: NextAuthConfig = {
@@ -20,14 +21,14 @@ export const authConfig: NextAuthConfig = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        rememberMe: { label: "Remember Me", type: "text" },
       },
       async authorize(credentials) {
         try {
-          const { email, password } = await loginSchema.parseAsync(credentials)
+          const { email, password, rememberMe } = await loginSchema.parseAsync(credentials)
 
           const { prisma } = await import("@/lib/prisma")
 
-          // Find user without loading all profiles
           const user = await prisma.user.findUnique({
             where: { email: email.toLowerCase() },
           })
@@ -42,12 +43,10 @@ export const authConfig: NextAuthConfig = {
             return null
           }
 
-          // Check if user is active
           if (!user.isActive || user.deletedAt) {
             throw new Error("Account is deactivated")
           }
 
-          // Get display name from appropriate profile
           let displayName = user.email
 
           if (user.role === "individual") {
@@ -81,10 +80,9 @@ export const authConfig: NextAuthConfig = {
             email: user.email,
             name: displayName,
             role: user.role,
+            rememberMe: rememberMe === "true",
           }
         } catch (error) {
-          // Re-throw deactivation errors so the sign-in page can display
-          // a meaningful message instead of a generic "invalid credentials".
           if (error instanceof Error && error.message === "Account is deactivated") {
             throw error;
           }
@@ -108,7 +106,7 @@ export const authConfig: NextAuthConfig = {
           const newUser = await prisma.user.create({
             data: {
               email: user.email!,
-              emailVerifiedAt: new Date(), // Fixed: changed from emailVerified to emailVerifiedAt
+              emailVerifiedAt: new Date(),
               role: "individual",
             },
           })
@@ -137,10 +135,19 @@ export const authConfig: NextAuthConfig = {
       }
       return true
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id
         token.role = user.role
+        
+        // If it's a credentials login, `user` contains our custom rememberMe flag
+        // If it's Google login, default to rememberMe = true since they don't have a checkbox
+        const isRemembered = 'rememberMe' in user ? user.rememberMe : true;
+        token.isRemembered = isRemembered;
+        
+        // 15 days in seconds if remembered, 1 day (24 hours) if not
+        const maxAgeSeconds = isRemembered ? (15 * 24 * 60 * 60) : (24 * 60 * 60);
+        token.exp = Math.floor(Date.now() / 1000) + maxAgeSeconds;
       }
       return token
     },
@@ -153,12 +160,12 @@ export const authConfig: NextAuthConfig = {
     },
   },
   pages: {
-    signIn: "/login",
-    error: "/login",
+    signIn: "/auth/login",
+    error: "/auth/login",
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: 15 * 24 * 60 * 60, // Default 15 days, overridden dynamically in jwt callback
   },
   secret: process.env.AUTH_SECRET,
 }

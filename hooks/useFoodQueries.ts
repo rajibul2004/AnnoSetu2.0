@@ -30,6 +30,8 @@ async function addFoodRequest(payload: FormData): Promise<SharedFoodDTO> {
   return json.data;
 }
  
+const EMPTY_SHARED_FOOD: SharedFoodDTO[] = [];
+
 export function useMySharedFood() {
   const query = useQuery({
     queryKey: ["mysharedfood"],
@@ -37,7 +39,7 @@ export function useMySharedFood() {
     retry: false,
   });
  
-  return { mySharedFood: query.data ?? [], isLoading: query.isLoading };
+  return { mySharedFood: query.data ?? EMPTY_SHARED_FOOD, isLoading: query.isLoading };
 }
  
 // This mutation didn't exist at all in the original `foodService`

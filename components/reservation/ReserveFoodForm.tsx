@@ -34,7 +34,7 @@ import { isFoodExpired, isFoodReserved } from "@/types/food";
 export default function ReserveFoodForm() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
  
   const [quantity, setQuantity] = useState(1);
   const [pickupTime, setPickupTime] = useState("");
@@ -50,6 +50,16 @@ export default function ReserveFoodForm() {
     const options: { value: string; label: string }[] = [];
     const now = new Date();
     const expiry = new Date(food.expiresAt);
+    
+    // Always add an ASAP option that is 15 minutes from now
+    const asapTime = new Date(now.getTime() + 15 * 60000);
+    if (asapTime < expiry) {
+      options.push({
+        value: asapTime.toISOString(),
+        label: `ASAP (${asapTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`,
+      });
+    }
+
     for (let i = 30; i <= 120; i += 30) {
       const time = new Date(now.getTime() + i * 60000);
       if (time < expiry) {
@@ -59,15 +69,23 @@ export default function ReserveFoodForm() {
         });
       }
     }
+    
+    // Fallback if everything is past expiry but it hasn't technically expired yet
+    if (options.length === 0 && now < expiry) {
+       options.push({
+         value: now.toISOString(),
+         label: "Immediately (Expiring Soon)",
+       });
+    }
+    
     return options;
   })();
  
   useEffect(() => {
-    if (food && !pickupTime) {
-      const defaultTime = new Date(Date.now() + 30 * 60000);
-      setPickupTime(defaultTime.toISOString());
+    if (food && !pickupTime && pickupOptions.length > 0) {
+      setPickupTime(pickupOptions[0].value);
     }
-  }, [food, pickupTime]);
+  }, [food, pickupTime, pickupOptions]);
  
   const handleQuantityChange = (delta: number) => {
     if (!food) return;
@@ -80,30 +98,29 @@ export default function ReserveFoodForm() {
   const handleReserve = async () => {
     if (!isAuthenticated) {
       toast.error("Please login to reserve food");
-      router.push(`/auth/login?next=/food/${params.id}/reserve`);
+      router.push(`/auth/login?next=/protected/food/${params.id}/reserve`);
       return;
     }
     if (!acceptedTerms) {
       toast.error("Please accept the terms and conditions");
       return;
     }
+    if (!pickupTime) {
+      toast.error("Please select a pickup time");
+      return;
+    }
     if (!food) return;
+    
+    const finalQuantity = Math.min(Math.max(1, quantity), food.availableQty);
  
     try {
       const result = await createReservation({
         foodId: food.id,
-        quantity,
+        quantity: finalQuantity,
         pickupTime,
         acceptedTerms: true,
       });
       toast.success("🎉 Food reservation request created successfully!");
-      // The original redirected to `/${role === "user" ? "user" : "ngo"}/dashboard` —
-      // but roles in this schema are "individual"/"restaurant"/"ngo"/"admin",
-      // never "user", so that condition was always false and every
-      // non-ngo role (including individuals and restaurants) landed on
-      // the NGO dashboard. Sending everyone to the reservation's own
-      // status page instead sidesteps the role-routing question entirely
-      // and is more useful than a dashboard anyway.
       router.push(`/protected/reservation/${result.id}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to reserve food");
@@ -142,8 +159,10 @@ export default function ReserveFoodForm() {
   }
  
   const expired = isFoodExpired(food);
-  const reserved = isFoodReserved(food);
-  const canReserve = !expired && !reserved && food.availableQty > 0;
+  const reserved = isFoodReserved(food.availableQty);
+  const isOwnListing = user?.id === food.supplierId;
+  const hasNoPickupAddress = !food.pickupAddress;
+  const canReserve = !expired && !reserved && food.availableQty > 0 && !isOwnListing && !hasNoPickupAddress;
  
   return (
     <div className="min-h-screen bg-transparent py-8">
@@ -410,16 +429,28 @@ export default function ReserveFoodForm() {
                     <FaExclamationTriangle className="w-10 h-10 text-red-500 dark:text-red-400" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    {expired ? "Food Expired" : reserved ? "Already Reserved" : "Not Available"}
+                    {expired 
+                      ? "Food Expired" 
+                      : reserved 
+                        ? "Already Reserved" 
+                        : isOwnListing
+                          ? "Own Listing"
+                          : hasNoPickupAddress
+                            ? "Pickup Unavailable"
+                            : "Not Available"}
                   </h3>
                   <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm">
                     {expired
                       ? "This delicious meal is no longer available."
                       : reserved
                         ? "Someone else has already reserved this food."
-                        : "This food item is not available for reservation."}
+                        : isOwnListing
+                          ? "You cannot reserve a food listing that you created."
+                          : hasNoPickupAddress
+                            ? "This listing has no pickup address set. You cannot reserve it."
+                            : "This food item is not available for reservation."}
                   </p>
-                  <Button onClick={() => router.push("/food")} className="w-full bg-linear-to-r from-green-500 to-amber-500 dark:text-black">
+                  <Button onClick={() => router.push("/food")} className="w-full">
                     Browse More Food
                   </Button>
                 </motion.div>
@@ -541,7 +572,7 @@ export default function ReserveFoodForm() {
                     disabled={!acceptedTerms || isCreating}
                     size="lg"
                     fullWidth
-                    className="bg-linear-to-r from-green-500 to-amber-500 hover:from-green-600 hover:to-amber-600 text-white font-bold py-4 text-lg"
+                    className="font-bold py-4 text-lg"
                   >
                     <FaCheckCircle className="mr-2" />
                     Request Reservation

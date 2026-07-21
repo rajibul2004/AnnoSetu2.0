@@ -74,8 +74,8 @@ export default function ReservationDetailPage() {
  
   const handleCancel = async () => {
     if (!window.confirm("Are you sure you want to cancel this reservation?")) return;
-    await cancelReservation(reservation.id).catch(() => {});
-    if (reservation.isSupplierView) router.push("/protected/dashboard/restaurant");
+    await cancelReservation({ id: reservation.id }).catch(() => {});
+    router.back();
   };
  
   const handleCopyCode = () => {
@@ -115,34 +115,43 @@ export default function ReservationDetailPage() {
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`rounded-2xl p-6 ${
+              className={`rounded-2xl p-6 shadow-sm relative overflow-hidden ${
                 reservation.status === "confirmed"
-                  ? "bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-700"
+                  ? "bg-linear-to-r from-green-50 to-emerald-100 dark:from-green-900/40 dark:to-emerald-900/20 border border-green-200 dark:border-green-700/50"
                   : reservation.status === "pending"
-                    ? "bg-yellow-50 dark:bg-yellow-900/40 border border-yellow-200 dark:border-yellow-700"
-                    : "bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700"
+                    ? "bg-linear-to-r from-yellow-50 to-amber-100 dark:from-yellow-900/40 dark:to-amber-900/20 border border-yellow-200 dark:border-yellow-700/50"
+                    : "bg-linear-to-r from-gray-50 to-slate-100 dark:from-gray-900/40 dark:to-slate-900/20 border border-gray-200 dark:border-gray-700/50"
               }`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {reservation.status === "confirmed" ? (
-                    <FaCheckCircle className="w-8 h-8 text-green-600 dark:text-green-300" />
-                  ) : reservation.status === "pending" ? (
-                    <FaClock className="w-8 h-8 text-yellow-600 dark:text-yellow-300" />
-                  ) : (
-                    <FaTimesCircle className="w-8 h-8 text-gray-600 dark:text-gray-300" />
-                  )}
+              {/* Decorative background element */}
+              <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-5 bg-black dark:bg-white pointer-events-none" />
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+                <div className="flex items-start sm:items-center gap-4">
+                  <div className={`p-3 rounded-full shadow-sm ${
+                    reservation.status === "confirmed" ? "bg-white dark:bg-green-800/80" : 
+                    reservation.status === "pending" ? "bg-white dark:bg-yellow-800/80" : 
+                    "bg-white dark:bg-gray-800/80"
+                  }`}>
+                    {reservation.status === "confirmed" ? (
+                      <FaCheckCircle className="w-6 h-6 text-green-600 dark:text-green-300" />
+                    ) : reservation.status === "pending" ? (
+                      <FaClock className="w-6 h-6 text-yellow-600 dark:text-yellow-300" />
+                    ) : (
+                      <FaTimesCircle className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+                    )}
+                  </div>
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white capitalize">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white capitalize tracking-tight">
                       {reservation.status === "confirmed"
                         ? "Reservation Confirmed"
                         : reservation.status === "pending"
                           ? "Pending Confirmation"
                           : reservation.status}
                     </h2>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">
                       {reservation.status === "confirmed"
-                        ? "Pickup code generated"
+                        ? "Your pickup code is ready. Please present it to the supplier."
                         : reservation.status === "pending"
                           ? reservation.isSupplierView
                             ? "Review details and confirm or decline"
@@ -152,7 +161,7 @@ export default function ReservationDetailPage() {
                   </div>
                 </div>
                 {reservation.status === "pending" && reservation.isSupplierView && (
-                  <span className="px-3 py-1 bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-100 text-sm font-medium rounded-full animate-pulse">
+                  <span className="px-4 py-1.5 bg-white dark:bg-yellow-800 text-yellow-700 dark:text-yellow-100 text-sm font-bold rounded-full animate-pulse shadow-sm border border-yellow-200 dark:border-yellow-600">
                     Action Required
                   </span>
                 )}
@@ -196,30 +205,31 @@ export default function ReservationDetailPage() {
                   </div>
                 </div>
  
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Quantity</p>
-                    <p className="font-semibold text-gray-900 dark:text-white">
-                      {reservation.quantity} {reservation.food.quantityUnit}
+                <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-100 dark:border-gray-800/60">
+                  <div className="bg-gray-50 dark:bg-gray-800/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700/50">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium uppercase tracking-wider">Quantity</p>
+                    <p className="font-semibold text-gray-900 dark:text-white text-lg">
+                      {reservation.quantity} <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">{reservation.food.quantityUnit}</span>
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Total Price</p>
-                    <p className="font-semibold text-green-600 dark:text-green-300 flex items-center">
-                      <FaRupeeSign className="w-4 h-4" />
+                  <div className="bg-gray-50 dark:bg-gray-800/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700/50">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium uppercase tracking-wider">Total Price</p>
+                    <p className="font-semibold text-green-600 dark:text-green-400 text-lg flex items-center">
+                      <FaRupeeSign className="w-4 h-4 mr-0.5 opacity-80" />
                       {reservation.totalPrice}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Pickup Time</p>
-                    <p className="font-semibold text-gray-900 dark:text-white flex items-center">
-                      <FaClock className="w-4 h-4 mr-1 text-gray-400 dark:text-gray-500" />
+                  <div className="bg-gray-50 dark:bg-gray-800/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700/50">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium uppercase tracking-wider">Pickup Time</p>
+                    <p className="font-medium text-gray-900 dark:text-white text-sm flex items-start gap-1.5 mt-0.5">
+                      <FaClock className="w-3.5 h-3.5 mt-0.5 text-blue-500 dark:text-blue-400 shrink-0" />
                       {new Date(reservation.pickupTime).toLocaleString()}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Food Expires</p>
-                    <p className="font-semibold text-orange-600 dark:text-orange-300">
+                  <div className="bg-gray-50 dark:bg-gray-800/40 p-4 rounded-xl border border-gray-100 dark:border-gray-700/50">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium uppercase tracking-wider">Food Expires</p>
+                    <p className="font-medium text-orange-600 dark:text-orange-400 text-sm flex items-start gap-1.5 mt-0.5">
+                      <FaExclamationTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                       {new Date(reservation.food.expiresAt).toLocaleString()}
                     </p>
                   </div>
@@ -336,71 +346,81 @@ export default function ReservationDetailPage() {
                 </Button>
               </motion.div>
             )}
- 
+
             {reservation.status === "confirmed" && reservation.pickupCode && (
-              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="card p-6 sticky top-4">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <FaQrcode className="text-green-600 dark:text-green-300" />
-                  Pickup Code
-                </h3>
- 
-                <div ref={qrWrapperRef} className="flex justify-center mb-4">
-                  <div className="p-4 card">
-                    <QRCodeCanvas
-                      value={JSON.stringify({
-                        reservationId: reservation.id,
-                        pickupCode: reservation.pickupCode,
-                        foodName: reservation.food.name,
-                      })}
-                      size={180}
-                      level="H"
-                      includeMargin
-                    />
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="card sticky top-4 overflow-hidden border-0 shadow-xl dark:bg-gray-800/90 backdrop-blur-xl">
+                {/* Top colored accent line */}
+                <div className="h-2 w-full bg-linear-to-r from-green-400 via-emerald-500 to-teal-500" />
+                
+                <div className="p-6">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center justify-center gap-2">
+                    <FaQrcode className="text-green-500 dark:text-green-400" />
+                    Pickup Ticket
+                  </h3>
+  
+                  <div ref={qrWrapperRef} className="flex justify-center mb-6">
+                    <div className="p-4 bg-white rounded-2xl shadow-[0_0_15px_rgba(0,0,0,0.05)] border border-gray-100">
+                      <QRCodeCanvas
+                        value={JSON.stringify({
+                          reservationId: reservation.id,
+                          pickupCode: reservation.pickupCode,
+                          foodName: reservation.food.name,
+                        })}
+                        size={180}
+                        level="H"
+                        includeMargin
+                      />
+                    </div>
                   </div>
-                </div>
- 
-                <div className="text-center mb-4">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Pickup Code</p>
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-2xl font-mono font-bold text-green-600 dark:text-green-300 bg-green-100 dark:bg-green-900/40 px-4 py-2 rounded-lg">
-                      {reservation.pickupCode}
-                    </span>
-                    <button onClick={handleCopyCode} className="p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg transition-colors">
-                      {copied ? (
-                        <FaCheckCircle className="w-5 h-5 text-green-600 dark:text-green-300" />
-                      ) : (
-                        <FaCopy className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                      )}
+  
+                  <div className="text-center mb-6 border-y border-dashed border-gray-200 dark:border-gray-700 py-6 relative">
+                    {/* Ticket notches */}
+                    <div className="absolute -left-8 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700" />
+                    <div className="absolute -right-8 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-50 dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700" />
+                    
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-widest font-medium">Secret Code</p>
+                    <div className="flex items-center justify-center gap-3">
+                      <span className="text-3xl font-mono font-bold tracking-[0.2em] text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-6 py-2.5 rounded-xl border border-green-100 dark:border-green-800/50 shadow-inner">
+                        {reservation.pickupCode}
+                      </span>
+                      <button onClick={handleCopyCode} className="p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all hover:scale-105 active:scale-95 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 shadow-sm">
+                        {copied ? (
+                          <FaCheckCircle className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <FaCopy className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+  
+                  <div className="flex justify-center gap-3 mb-5">
+                    <button
+                      onClick={handleDownloadQR}
+                      className="flex-1 cursor-pointer flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-sm font-medium text-gray-700 dark:text-gray-200"
+                    >
+                      <FaDownload className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm">Save QR</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigator.share?.({
+                          title: "Pickup Code",
+                          text: `Pickup code: ${reservation.pickupCode}`,
+                        });
+                      }}
+                      className="flex-1 cursor-pointer flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-sm font-medium text-gray-700 dark:text-gray-200"
+                    >
+                      <FaShare className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm">Share</span>
                     </button>
                   </div>
-                </div>
- 
-                <div className="flex justify-center gap-3 mb-4">
-                  <button
-                    onClick={handleDownloadQR}
-                    className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-900 transition-colors"
-                  >
-                    <FaDownload className="w-4 h-4" />
-                    <span className="text-sm">Download QR</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      navigator.share?.({
-                        title: "Pickup Code",
-                        text: `Pickup code: ${reservation.pickupCode}`,
-                      });
-                    }}
-                    className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-900 transition-colors"
-                  >
-                    <FaShare className="w-4 h-4" />
-                    <span className="text-sm">Share</span>
-                  </button>
-                </div>
- 
-                <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-                  <p className="text-xs text-green-600 dark:text-green-300 text-center">
-                    ✓ Valid until {new Date(reservation.food.expiresAt).toLocaleString()}
-                  </p>
+  
+                  <div className="pt-2 text-center">
+                    <p className="text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 py-2 rounded-lg inline-flex items-center gap-1.5 px-4">
+                      <FaCheckCircle className="w-3.5 h-3.5" />
+                      Valid until {new Date(reservation.food.expiresAt).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
               </motion.div>
             )}

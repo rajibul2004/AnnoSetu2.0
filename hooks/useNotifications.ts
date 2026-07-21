@@ -159,6 +159,11 @@ export function useNotificationStream(enabled: boolean) {
         const notification: NotificationDTO = JSON.parse(e.data);
         // Invalidate so the bell count and list re-fetch
         queryClient.invalidateQueries({ queryKey: ["notifications"] });
+        
+        if (notification.type === "reservation_request") {
+          queryClient.invalidateQueries({ queryKey: ["incoming-reservations"] });
+        }
+
         // Show a toast for high-priority notifications
         if (notification.priority === "high" || notification.priority === "urgent") {
           toast(notification.message, {

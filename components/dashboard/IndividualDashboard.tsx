@@ -1,6 +1,7 @@
 "use client";
  
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   FaShoppingBag,
@@ -21,6 +22,8 @@ import {
   FaFire,
   FaMedal,
   FaTrophy,
+  FaStore,
+  FaRupeeSign
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
@@ -72,18 +75,25 @@ function calculateStats(
 ): DashboardStats {
   const completedReservations = reservedFoods.filter((r) => r.status === "picked_up");
   const totalMealsConsumed = completedReservations.reduce((sum, r) => sum + r.quantity, 0);
+  
+  // Fix: Money saved is the difference between original price and what was paid.
+  // If original price is not set, they didn't 'save' a trackable amount, they just spent money.
   const totalMoneySaved = completedReservations.reduce((sum, r) => {
-    if (r.food?.originalPrice && r.totalPrice) {
-      return sum + (r.food.originalPrice - r.totalPrice);
+    if (r.food?.originalPrice) {
+      return sum + Math.max(0, (r.food.originalPrice * r.quantity) - (r.totalPrice || 0));
     }
-    return sum + (r.totalPrice || 0);
+    return sum;
   }, 0);
  
-  const completedListings = sharedFoods.filter((l) => isFoodReserved(l) || isFoodExpired(l));
-  const totalMealsShared = completedListings.reduce((sum, l) => sum + l.quantity, 0);
-  const totalEarnings = sharedFoods
-    .filter((l) => !l.isDonation && isFoodReserved(l))
-    .reduce((sum, l) => sum + (l.price || 0), 0);
+  // Fix: Meals shared is the quantity that has been claimed/picked up.
+  // (quantity - availableQty) represents the meals that were actually taken.
+  const totalMealsShared = sharedFoods.reduce((sum, l) => sum + (l.quantity - l.availableQty), 0);
+  
+  // Fix: Earnings is (quantity taken) * price
+  const totalEarnings = sharedFoods.reduce((sum, l) => {
+    if (l.isDonation || !l.price) return sum;
+    return sum + ((l.quantity - l.availableQty) * l.price);
+  }, 0);
  
   // Food caches averageRating/reviewCount directly — no need to fetch a
   // nested reviews array just to check "has this been reviewed".
@@ -97,7 +107,8 @@ function calculateStats(
     mealsConsumed: totalMealsConsumed,
     moneySaved: totalMoneySaved,
     co2Reduced: totalMealsConsumed * 2.5,
-    favoriteRestaurants: new Set(reservedFoods.map((r) => r.food?.supplierId)).size,
+    // Fix: Favorite restaurants should only count completed reservations, not cancelled ones.
+    favoriteRestaurants: new Set(completedReservations.map((r) => r.food?.supplierId)).size,
     mealsShared: totalMealsShared,
     peopleFed: totalMealsShared * 2,
     earnings: totalEarnings,
@@ -119,18 +130,13 @@ export default function UserDashboard() {
   const [consumerTab, setConsumerTab] = useState<ConsumerTab>("upcoming");
   const [supplierTab, setSupplierTab] = useState<SupplierTab>("active");
   const [showWelcome, setShowWelcome] = useState(true);
-  const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
  
   const { reservations: userReservations, isLoading: isReservationsLoading } = useMyReservations();
   const { mySharedFood: userSharedFood, isLoading: isMySharedLoading } = useMySharedFood();
- 
+  
   const isLoading = isReservationsLoading || isMySharedLoading;
  
-  useEffect(() => {
-    if (!isLoading) {
-      setStats(calculateStats(userReservations, userSharedFood));
-    }
-  }, [userReservations, userSharedFood, isLoading]);
+  const stats = useMemo(() => calculateStats(userReservations, userSharedFood), [userReservations, userSharedFood]);
  
   const filteredReservations = userReservations.filter((res) => {
     const now = new Date();
@@ -156,9 +162,9 @@ export default function UserDashboard() {
   const filteredListings = userSharedFood.filter((food) => {
     switch (supplierTab) {
       case "active":
-        return food.isActive && !isFoodExpired(food) && !isFoodReserved(food);
+        return food.isActive && !isFoodExpired(food) && food.availableQty > 0;
       case "reserved":
-        return isFoodReserved(food);
+        return food.quantity > food.availableQty; // Has at least 1 reservation
       case "expired":
         return isFoodExpired(food) || !food.isActive;
       default:
@@ -171,7 +177,7 @@ export default function UserDashboard() {
   ).length;
  
   const activeListings = userSharedFood.filter(
-    (f) => f.isActive && !isFoodExpired(f) && !isFoodReserved(f),
+    (f) => f.isActive && !isFoodExpired(f) && f.availableQty > 0,
   ).length;
  
   if (isLoading) {
@@ -368,7 +374,7 @@ export default function UserDashboard() {
                     Food Sharer
                   </h3>
                 </div>
-                <Link href="/user/add-food">
+                <Link href="/protected/add-food?role=individual">
                   <Button
                     variant="outline"
                     size="sm"
@@ -598,7 +604,7 @@ export default function UserDashboard() {
                       </p>
                     </div>
                   </div>
-                  <Link href="/user/add-food">
+                  <Link href="/protected/add-food?role=individual">
                     <Button className="bg-white dark:bg-gray-900 text-purple-700 dark:text-purple-200 hover:bg-purple-50 dark:hover:bg-purple-900 shadow-lg">
                       <FaPlus className="mr-2" />
                       List New Food
@@ -637,7 +643,7 @@ export default function UserDashboard() {
                       : `You don't have any ${supplierTab} food items yet.`}
                   </p>
                   {supplierTab === "active" && (
-                    <Link href="/user/add-food">
+                    <Link href="/protected/add-food?role=individual">
                       <Button>
                         <FaPlus className="mr-2" />
                         Share Your First Meal
@@ -648,7 +654,7 @@ export default function UserDashboard() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredListings.map((food, index) => (
-                    <SupplierFoodCard key={food.id} food={food} index={index} />
+                    <SupplierFoodCard key={food.id} food={food} index={index} tab={supplierTab} />
                   ))}
                 </div>
               )}
@@ -846,13 +852,14 @@ function ConsumerReservationCard({
   reservation: ReservationDTO;
   index: number;
 }) {
+  const router = useRouter();
   const { cancelReservation, isCancelling } = useCancelReservation();
  
   const handleCancel = async () => {
     if (!window.confirm("Cancel this reservation?")) return;
     // Errors are already toasted inside useCancelReservation's onError —
     // no local try/catch needed here.
-    await cancelReservation(reservation.id).catch(() => {});
+    await cancelReservation({ id: reservation.id }).catch(() => {});
   };
  
   const isUpcoming = new Date(reservation.pickupTime) > new Date();
@@ -862,47 +869,102 @@ function ConsumerReservationCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="bg-white dark:bg-gray-800 dark:text-gray-900 rounded-xl shadow-sm hover:shadow-md transition-all p-6 border border-gray-100 dark:border-gray-800"
+      className="bg-white dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 p-0 border border-gray-100 dark:border-gray-700/50 overflow-hidden group"
     >
-      <div className="flex flex-col md:flex-row md:items-center justify-between">
-        <div className="flex items-start space-x-4 mb-4 md:mb-0">
-          <div className="w-16 h-16 bg-linear-to-br from-blue-100 dark:from-blue-900/30 to-purple-100 dark:to-purple-900/30 rounded-xl flex items-center justify-center">
-            <FaShoppingBag className="w-8 h-8 text-blue-600 dark:text-blue-300" />
-          </div>
-          <div>
-            <h4 className="font-semibold text-gray-900 dark:text-gray-50 text-lg">
-              {reservation.food?.name}
-            </h4>
-            <p className="text-gray-600 dark:text-gray-300 flex items-center gap-1">
-              {reservation.food?.supplierName}
-            </p>
-            <div className="flex items-center mt-1 text-sm">
-              <FaMapMarkerAlt className="w-3 h-3 text-gray-400 dark:text-gray-500 mr-1" />
-              <span className="text-gray-500 dark:text-gray-400 truncate max-w-xs">
-                {reservation.pickupAddress}
-              </span>
+      <div className="flex flex-col md:flex-row h-full">
+        {/* Image Section */}
+        <div className="relative w-full md:w-48 h-48 md:h-auto bg-gray-100 dark:bg-gray-700 shrink-0 overflow-hidden">
+          {reservation.food?.images && reservation.food.images.length > 0 ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={reservation.food.images[0].url}
+              alt={reservation.food?.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-gray-800">
+              <FaShoppingBag className="w-12 h-12 text-blue-200 dark:text-gray-600" />
             </div>
-          </div>
-        </div>
- 
-        <div className="flex flex-col items-end">
-          <div className="flex items-center space-x-2 mb-2">
+          )}
+          <div className="absolute top-3 left-3">
             <span
-              className={`px-3 py-1 text-xs font-medium rounded-full ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-full shadow-md backdrop-blur-md border border-white/20 uppercase tracking-wider ${
                 reservation.status === "confirmed"
-                  ? "bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100"
+                  ? "bg-green-500/90 text-white"
                   : reservation.status === "cancelled"
-                    ? "bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-100"
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                    ? "bg-red-500/90 text-white"
+                    : "bg-yellow-500/90 text-white"
               }`}
             >
               {reservation.status}
             </span>
+          </div>
+        </div>
+
+        {/* Content Section */}
+        <div className="p-5 flex-1 flex flex-col justify-between">
+          <div className="flex flex-col md:flex-row justify-between gap-4">
+            <div>
+              <h4 className="font-bold text-gray-900 dark:text-white text-xl mb-1 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                {reservation.food?.name}
+              </h4>
+              <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1.5 font-medium">
+                <FaStore className="w-3.5 h-3.5" />
+                {reservation.food?.supplierName}
+              </p>
+            </div>
+            
+            <div className="text-left md:text-right">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                {reservation.quantity} <span className="font-normal text-gray-500">{reservation.food?.quantityUnit}</span>
+              </p>
+              <p className="text-lg font-bold text-green-600 dark:text-green-400 flex items-center md:justify-end">
+                <FaRupeeSign className="w-4 h-4 opacity-80" />
+                {reservation.totalPrice}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5 pt-5 border-t border-gray-100 dark:border-gray-700/50">
+            <div className="flex items-start gap-2.5">
+              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg shrink-0">
+                <FaClock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Pickup Time</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  {formatDate(reservation.pickupTime, "PPp")}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-2.5">
+              <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg shrink-0">
+                <FaMapMarkerAlt className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Location</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
+                  {reservation.pickupAddress}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3 mt-5">
+            <Button 
+              size="sm" 
+              className="w-full bg-linear-to-r from-blue-600 to-indigo-600 text-white shadow-sm hover:shadow-md flex-1"
+              onClick={() => router.push(`/protected/reservation/${reservation.id}`)}
+            >
+              View Details
+            </Button>
+            
             {isUpcoming && reservation.status === "confirmed" && (
               <Button
                 size="sm"
                 variant="outline"
-                className="text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/30"
+                className="flex-1 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50 hover:bg-red-50 dark:hover:bg-red-900/30"
                 onClick={handleCancel}
                 loading={isCancelling}
               >
@@ -910,36 +972,8 @@ function ConsumerReservationCard({
               </Button>
             )}
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
-            <FaClock className="w-3 h-3" />
-            {formatDate(reservation.pickupTime, "PPp")}
-          </p>
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-50 mt-1">
-            {reservation.quantity} {reservation.food?.quantityUnit}
-          </p>
         </div>
       </div>
- 
-      {reservation.status === "confirmed" && isUpcoming && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center text-sm">
-              <span className="bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-lg font-mono font-bold">
-                {reservation.pickupCode}
-              </span>
-              <span className="ml-2 text-gray-500 dark:text-gray-400">Pickup code</span>
-            </div>
-            <button className="text-blue-600 dark:text-blue-300 text-sm hover:text-blue-700 dark:hover:text-blue-200 font-medium flex items-center gap-1">
-              <FaMapMarkerAlt className="w-3 h-3" />
-              Directions
-            </button>
-          </div>
-        </motion.div>
-      )}
     </motion.div>
   );
 }
@@ -948,7 +982,7 @@ function ConsumerReservationCard({
 // Supplier Food Card
 // ---------------------------------------------------------------------
  
-function SupplierFoodCard({ food, index }: { food: SharedFoodDTO; index: number }) {
+function SupplierFoodCard({ food, index, tab }: { food: SharedFoodDTO; index: number; tab: SupplierTab }) {
   const { deleteFood, isDeleting } = useDeleteFood();
  
   const handleDeactivate = async () => {
@@ -964,12 +998,18 @@ function SupplierFoodCard({ food, index }: { food: SharedFoodDTO; index: number 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="bg-white dark:bg-gray-900 rounded-xl shadow-sm hover:shadow-md transition-all overflow-hidden border border-gray-100 dark:border-gray-800"
+      className={`bg-white dark:bg-gray-900 rounded-xl shadow-sm hover:shadow-md transition-all overflow-hidden border border-gray-100 dark:border-gray-800 relative ${tab === 'expired' ? 'opacity-70 grayscale-[30%]' : ''}`}
     >
-      <div className="relative">
+      {tab === 'expired' && (
+        <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none overflow-hidden">
+          <div className="transform -rotate-45 text-5xl font-black text-gray-500/10 dark:text-gray-400/10 uppercase tracking-widest border-8 border-gray-500/10 dark:border-gray-400/10 p-6 rounded-2xl whitespace-nowrap">
+            EXPIRED
+          </div>
+        </div>
+      )}
+      <div className="relative z-10">
         <div className="h-40 w-full bg-linear-to-br from-purple-100 dark:from-purple-800 to-pink-100 dark:to-pink-800">
           {food.images && food.images.length > 0 ? (
-            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={(food.images.find((img) => img.isPrimary) ?? food.images[0]).url}
               alt={food.name}
@@ -986,12 +1026,12 @@ function SupplierFoodCard({ food, index }: { food: SharedFoodDTO; index: number 
           className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded-full ${
             isFoodExpired(food)
               ? "bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-100"
-              : isFoodReserved(food)
+              : food.quantity > food.availableQty
                 ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-100"
                 : "bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-100"
           }`}
         >
-          {isFoodExpired(food) ? "Expired" : isFoodReserved(food) ? "Reserved" : "Active"}
+          {isFoodExpired(food) ? "Expired" : food.quantity > food.availableQty ? "Reserved" : "Active"}
         </span>
  
         {food.isHomeCooked && (
@@ -1021,11 +1061,31 @@ function SupplierFoodCard({ food, index }: { food: SharedFoodDTO; index: number 
         </div>
  
         <div className="space-y-2 mt-3">
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-gray-500 dark:text-gray-400">Quantity:</span>
-            <span className="font-medium text-gray-900 dark:text-gray-50">
-              {food.quantity} {food.quantityUnit}
-            </span>
+          <div className="flex flex-col gap-1 mt-3 text-xs">
+            {tab === "active" && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500 dark:text-gray-400">Active Quantity:</span>
+                <span className="font-medium text-purple-600 dark:text-purple-300">
+                  {food.availableQty} {food.quantityUnit}
+                </span>
+              </div>
+            )}
+            {tab === "reserved" && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500 dark:text-gray-400">Reserved Quantity:</span>
+                <span className="font-medium text-yellow-600 dark:text-yellow-400">
+                  {food.quantity - food.availableQty} {food.quantityUnit}
+                </span>
+              </div>
+            )}
+            {tab === "expired" && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500 dark:text-gray-400">Total Quantity:</span>
+                <span className="font-medium text-gray-900 dark:text-gray-50">
+                  {food.quantity} {food.quantityUnit}
+                </span>
+              </div>
+            )}
           </div>
  
           <div className="flex justify-between items-center text-xs">
@@ -1054,24 +1114,40 @@ function SupplierFoodCard({ food, index }: { food: SharedFoodDTO; index: number 
           )}
         </div>
  
-        <div className="flex gap-2 mt-4">
-          {food.isActive && !isFoodExpired(food) && !isFoodReserved(food) && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1 text-red-600 dark:text-red-300 border-red-200 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs"
-              onClick={handleDeactivate}
-              loading={isDeleting}
-            >
-              <FaTimesCircle className="mr-1" />
-              Remove
-            </Button>
+        <div className="flex gap-2 mt-4 relative z-10">
+          {tab === "active" && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 text-red-600 dark:text-red-300 border-red-200 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs"
+                onClick={handleDeactivate}
+                loading={isDeleting}
+              >
+                <FaTimesCircle className="mr-1" />
+                Remove
+              </Button>
+              <Link href={`/protected/food/${food.id}`} className="flex-1">
+                <Button size="sm" className="w-full bg-linear-to-r from-purple-600 to-pink-600 text-xs">
+                  View Details
+                </Button>
+              </Link>
+            </>
           )}
-          <Link href={`/protected/food/${food.id}`} className="flex-1">
-            <Button size="sm" className="w-full bg-linear-to-r from-purple-600 to-pink-600 text-xs">
-              View Details
-            </Button>
-          </Link>
+          {tab === "reserved" && (
+            <Link href={`/protected/food/${food.id}/requests`} className="flex-1">
+              <Button size="sm" className="w-full bg-linear-to-r from-yellow-500 to-orange-500 text-xs">
+                View Reservations
+              </Button>
+            </Link>
+          )}
+          {tab === "expired" && (
+            <Link href={`/protected/food/${food.id}`} className="flex-1">
+              <Button size="sm" variant="outline" className="w-full text-xs bg-white/50 dark:bg-gray-800/50">
+                View Details
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     </motion.div>

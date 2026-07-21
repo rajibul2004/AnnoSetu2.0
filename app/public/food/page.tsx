@@ -461,7 +461,7 @@ export default function AllFoodPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
-                    <FoodCard food={food} onReserve={handleReserve} isAuthenticated={isAuthenticated} />
+                    <FoodCard food={food} onReserve={handleReserve} isAuthenticated={isAuthenticated} userRole={user?.role} />
                   </motion.div>
                 ))}
               </div>

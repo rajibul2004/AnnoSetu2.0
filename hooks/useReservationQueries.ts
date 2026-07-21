@@ -19,8 +19,12 @@ async function fetchMyReservations(): Promise<ReservationDTO[]> {
   return json.data;
 }
  
-async function cancelReservationRequest(id: string): Promise<ReservationDTO> {
-  const res = await fetch(`/api/reservations/${id}/cancel`, { method: "PUT" });
+async function cancelReservationRequest({ id, note }: { id: string; note?: string }): Promise<ReservationDTO> {
+  const res = await fetch(`/api/reservations/${id}/cancel`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(note ? { note } : {}),
+  });
   const json = await res.json();
   if (!res.ok || !json.success) {
     throw new Error(json.message || "Failed to cancel reservation");
@@ -28,6 +32,8 @@ async function cancelReservationRequest(id: string): Promise<ReservationDTO> {
   return json.data;
 }
  
+const EMPTY_RESERVATIONS: ReservationDTO[] = [];
+
 export function useMyReservations() {
   const query = useQuery({
     queryKey: ["myreservations"],
@@ -35,7 +41,29 @@ export function useMyReservations() {
     retry: false,
   });
  
-  return { reservations: query.data ?? [], isLoading: query.isLoading };
+  return { reservations: query.data ?? EMPTY_RESERVATIONS, isLoading: query.isLoading };
+}
+ 
+async function fetchIncomingRequests(foodId?: string): Promise<ReservationDTO[]> {
+  const url = foodId 
+    ? `/api/reservations?type=incoming&foodId=${foodId}` 
+    : "/api/reservations?type=incoming";
+  const res = await fetch(url);
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.message || "Failed to load incoming requests");
+  }
+  return json.data;
+}
+ 
+export function useIncomingRequests(foodId?: string) {
+  const query = useQuery({
+    queryKey: ["incoming-reservations", foodId],
+    queryFn: () => fetchIncomingRequests(foodId),
+    retry: false,
+  });
+ 
+  return { requests: query.data ?? EMPTY_RESERVATIONS, isLoading: query.isLoading };
 }
  
 export function useCancelReservation() {
@@ -43,13 +71,14 @@ export function useCancelReservation() {
  
   const mutation = useMutation({
     mutationFn: cancelReservationRequest,
-    onSuccess: (_data, id) => {
+    onSuccess: (_data, { id }) => {
       toast.success("Reservation cancelled successfully");
       // This replaces the missing `fetchAllData`/`onRefresh` from the
       // original component — invalidating the query re-fetches it
       // automatically, no manual refresh callback needed.
       queryClient.invalidateQueries({ queryKey: ["myreservations"] });
       queryClient.invalidateQueries({ queryKey: ["reservation", id] });
+      queryClient.invalidateQueries({ queryKey: ["incoming-reservations"] });
     },
     onError: (error: Error) =>
       toast.error(error.message || "Failed to cancel reservation"),

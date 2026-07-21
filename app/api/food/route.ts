@@ -241,13 +241,20 @@ export async function POST(request: NextRequest) {
       errors.description = "Description must be 500 characters or fewer";
     }
     if (!quantity || quantity <= 0) errors.quantity = "Valid quantity is required";
-    if (!isDonation && (isNaN(price) || price < 0)) errors.price = "Valid price is required";
+    if (!isDonation && (isNaN(price) || price <= 0)) errors.price = "Valid price is required";
     if (isRaw) errors.isRaw = "Only cooked, ready-to-eat food can be listed";
     if (!expiresAtRaw) {
       errors.expiresAt = "Expiry time is required";
-    } else if (new Date(expiresAtRaw).getTime() <= Date.now()) {
-      errors.expiresAt = "Expiry time must be in the future";
+    } else if (new Date(expiresAtRaw).getTime() <= Date.now() + 15 * 60 * 1000) {
+      errors.expiresAt = "Expiry time must be at least 15 minutes in the future";
     }
+    const validUnits = ["servings", "plates", "kg", "units", "packets"];
+    if (!validUnits.includes(quantityUnit)) errors.quantityUnit = "Invalid quantity unit";
+    const validAllergens = ["nuts", "dairy", "gluten", "seafood", "eggs", "soy", "sesame", "shellfish", "mustard", "sulphites", "other"];
+    if (allergens.some((a) => !validAllergens.includes(a))) {
+      errors.allergens = "Invalid allergens provided";
+    }
+    if (discountPct < 0 || discountPct > 100) errors.discountPct = "Discount must be between 0 and 100";
 
     if (Object.keys(errors).length > 0) {
       return NextResponse.json({ success: false, message: "Validation failed", errors }, { status: 400 });
@@ -297,6 +304,12 @@ export async function POST(request: NextRequest) {
     }
     
     for (const file of imageFiles) {
+      if (!file.type.startsWith("image/")) {
+        return NextResponse.json(
+          { success: false, message: "Uploaded files must be valid images" },
+          { status: 400 },
+        );
+      }
       if (file.size > MAX_IMAGE_BYTES) {
         return NextResponse.json(
           { success: false, message: "Each image must be 5MB or smaller" },

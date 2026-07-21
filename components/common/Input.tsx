@@ -100,6 +100,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             `}
             placeholder={placeholder}
             required={required}
+            suppressHydrationWarning
             {...props}
           />
 

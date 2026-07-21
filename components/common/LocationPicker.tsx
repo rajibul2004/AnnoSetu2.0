@@ -94,7 +94,7 @@ function buildCSS(t: typeof THEMES.light) {
   .lp-root { font-family: inherit; display: flex; flex-direction: column; gap: 0; }
 
   /* Search */
-  .lp-search-wrap { position: relative; z-index: 10000; }
+  .lp-search-wrap { position: relative; z-index: 40; }
   .lp-search-icon {
     position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
     color: ${t.textMuted}; pointer-events: none; font-size: 14px; line-height: 1;
@@ -131,7 +131,7 @@ function buildCSS(t: typeof THEMES.light) {
     position: absolute; top: calc(100% + 5px); left: 0; right: 0;
     background: ${t.surface}; border: 1px solid ${t.border};
     border-radius: 12px; overflow: hidden;
-    box-shadow: ${t.shadowMd}; z-index: 10001;
+    box-shadow: ${t.shadowMd}; z-index: 41;
     animation: lpFadeDown 0.13s ease;
   }
   @keyframes lpFadeDown {
@@ -156,7 +156,7 @@ function buildCSS(t: typeof THEMES.light) {
 
   /* Map */
   .lp-map-shell {
-    position: relative; border-radius: 12px; overflow: hidden;
+    position: relative; z-index: 0; border-radius: 12px; overflow: hidden;
     border: 1.5px solid ${t.border}; margin-top: 10px; box-shadow: ${t.shadowSm};
   }
   .leaflet-container { height: 300px; width: 100%; cursor: crosshair !important; }
