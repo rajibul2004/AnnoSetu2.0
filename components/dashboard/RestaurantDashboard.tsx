@@ -12,10 +12,11 @@ import {
   FaHeart,
   FaStar,
   FaTrophy,
-  FaHome,
-  FaExchangeAlt,
+  FaStore,
+  FaUtensils,
+  FaShieldAlt,
 } from "react-icons/fa";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { formatDate, formatTimeRemaining, formatPrice } from "@/lib/formatters";
 import { useAuth } from "@/hooks/useAuth";
@@ -50,14 +51,11 @@ interface DashboardStats {
 // ---------------------------------------------------------------------------
 
 function calculateStats(sharedFoods: SharedFoodDTO[]): DashboardStats {
-  // Fix: Meals shared is the quantity that has been claimed/picked up.
-  // (quantity - availableQty) represents the meals that were actually taken.
   const totalMealsShared = sharedFoods.reduce(
     (sum, l) => sum + (l.quantity - l.availableQty),
     0,
   );
 
-  // Fix: Earnings is (quantity taken) * price
   const totalEarnings = sharedFoods.reduce((sum, l) => {
     if (l.isDonation || !l.price) return sum;
     return sum + (l.quantity - l.availableQty) * l.price;
@@ -90,7 +88,7 @@ function calculateStats(sharedFoods: SharedFoodDTO[]): DashboardStats {
 }
 
 // ---------------------------------------------------------------------------
-// Page
+// Page Component
 // ---------------------------------------------------------------------------
 
 export default function RestaurantDashboard() {
@@ -122,149 +120,145 @@ export default function RestaurantDashboard() {
   });
 
   const displayName =
-    user?.name?.split(" ")[0] ?? user?.email?.split("@")[0] ?? "there";
+    user?.name?.split(" ")[0] ?? user?.email?.split("@")[0] ?? "Partner";
 
   return (
-    <div className="min-h-screen bg-transparent">
+    <div className="min-h-screen bg-transparent pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero Banner */}
+        {/* Hero Welcome Banner */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-linear-to-r from-pink-600 via-purple-600 to-blue-600 rounded-3xl shadow-2xl p-8 mb-8 text-white relative overflow-hidden"
+          className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 rounded-3xl shadow-2xl p-8 mb-8 text-white relative overflow-hidden"
         >
-          <div className="absolute inset-0 opacity-10 pointer-events-none">
-            <div className="absolute -top-20 -right-20 w-64 h-64 bg-white rounded-full" />
-            <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-white rounded-full" />
+          <div className="absolute inset-0 opacity-15 pointer-events-none">
+            <div className="absolute -top-24 -right-24 w-80 h-80 bg-white rounded-full blur-2xl" />
+            <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-emerald-400 rounded-full blur-2xl" />
           </div>
 
-          <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center">
-            <div className="flex items-center space-x-4 mb-4 md:mb-0">
-              <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+          <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/25 shadow-lg">
                 {stats.avgRating >= 4.5 ? (
-                  <FaTrophy className="w-10 h-10 text-yellow-300" />
+                  <FaTrophy className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-300 drop-shadow-md" />
                 ) : (
-                  <FaHome className="w-10 h-10" />
+                  <FaStore className="w-8 h-8 sm:w-10 sm:h-10 text-white drop-shadow-md" />
                 )}
               </div>
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold mb-2">
-                  Hey {displayName}! 👋
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-bold uppercase tracking-wider backdrop-blur-xs border border-white/20">
+                    Restaurant Partner
+                  </span>
+                </div>
+                <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
+                  Welcome back, {displayName}! 👨‍🍳
                 </h1>
-                <p className="text-white/90 flex items-center gap-2">
-                  <FaExchangeAlt className="w-4 h-4" />
-                  You&apos;re making a difference as both a saver &amp; sharer
+                <p className="text-sm text-blue-100 mt-1">
+                  Managing your surplus listings, reducing waste, and feeding the community.
                 </p>
               </div>
             </div>
 
-            {/* Badges */}
-            <div className="flex flex-wrap gap-2">
-              {stats.impactBadges.includes("food-sharer") && (
-                <div className="bg-purple-500/20 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2 border border-white/30">
-                  <FaHeart className="w-4 h-4" />
-                  <span className="text-sm">Food Sharer</span>
-                </div>
-              )}
-              {stats.avgRating > 4.5 && (
-                <div className="bg-yellow-500/20 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2 border border-white/30">
-                  <FaStar className="w-4 h-4" />
-                  <span className="text-sm">Top Rated</span>
-                </div>
-              )}
-            </div>
+            {/* Quick Action Button */}
+            <button
+              onClick={() => router.push("/protected/add-food?role=restaurant")}
+              className="flex items-center gap-2.5 px-6 py-3.5 bg-white hover:bg-white/90 text-blue-700 font-extrabold text-sm rounded-2xl shadow-xl hover:shadow-2xl hover:scale-103 transition-all cursor-pointer shrink-0"
+            >
+              <FaPlus className="text-blue-600" />
+              <span>List New Surplus Food</span>
+            </button>
           </div>
 
-          {/* Quick Stats Row */}
-          <div className="grid grid-cols-3 gap-4 mt-8">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-              <div className="text-2xl font-bold">{stats.totalImpact}</div>
-              <div className="text-xs text-white/80">Total Impact</div>
+          {/* Quick Stat Pill Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8 pt-6 border-t border-white/20">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15">
+              <div className="text-2xl font-black">{stats.mealsShared}</div>
+              <div className="text-xs text-blue-100 font-medium">Total Listings Created</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-              <div className="text-2xl font-bold">#{stats.communityRank}</div>
-              <div className="text-xs text-white/80">Community Rank</div>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15">
+              <div className="text-2xl font-black">{stats.peopleFed}</div>
+              <div className="text-xs text-blue-100 font-medium">Est. People Fed</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-              <div className="text-2xl font-bold">
-                {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "New"}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15">
+              <div className="text-2xl font-black">₹{stats.earnings}</div>
+              <div className="text-xs text-blue-100 font-medium">Total Value Generated</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15">
+              <div className="text-2xl font-black">
+                {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "New"} ⭐
               </div>
-              <div className="text-xs text-white/80">Avg Rating</div>
+              <div className="text-xs text-blue-100 font-medium">Quality Rating</div>
             </div>
           </div>
         </motion.div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+        {/* 4 Status Metric Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
           {[
             {
-              label: "Total Listings",
+              label: "All Listings",
               value: stats.mealsShared,
               icon: FaChartBar,
-              colors:
-                "from-green-50 dark:from-green-950 to-green-100 dark:to-green-900 border-green-200 dark:border-green-700",
-              iconBg: "bg-green-500 dark:bg-green-400",
-              textColor: "text-green-800 dark:text-green-100",
-              valueColor: "text-green-900 dark:text-green-50",
+              bg: "from-blue-500/10 to-indigo-500/10 border-blue-200 dark:border-blue-800/60",
+              iconBg: "bg-blue-500 text-white",
+              valColor: "text-blue-600 dark:text-blue-400",
             },
             {
-              label: "Active",
+              label: "Active & Available",
               value: stats.active,
               icon: FaCheckCircle,
-              colors:
-                "from-blue-50 dark:from-blue-950 to-blue-100 dark:to-blue-900 border-blue-200 dark:border-blue-700",
-              iconBg: "bg-blue-500 dark:bg-blue-400",
-              textColor: "text-blue-800 dark:text-blue-100",
-              valueColor: "text-blue-900 dark:text-blue-50",
+              bg: "from-emerald-500/10 to-green-500/10 border-emerald-200 dark:border-emerald-800/60",
+              iconBg: "bg-emerald-500 text-white",
+              valColor: "text-emerald-600 dark:text-emerald-400",
             },
             {
-              label: "Reserved",
+              label: "Currently Reserved",
               value: stats.reserved,
               icon: FaClock,
-              colors:
-                "from-purple-50 dark:from-purple-950 to-purple-100 dark:to-purple-900 border-purple-200 dark:border-purple-700",
-              iconBg: "bg-purple-500 dark:bg-purple-400",
-              textColor: "text-purple-800 dark:text-purple-100",
-              valueColor: "text-purple-900 dark:text-purple-50",
+              bg: "from-amber-500/10 to-orange-500/10 border-amber-200 dark:border-amber-800/60",
+              iconBg: "bg-amber-500 text-white",
+              valColor: "text-amber-600 dark:text-amber-400",
             },
             {
-              label: "Expired",
+              label: "Expired / Inactive",
               value: stats.expired,
               icon: FaTimesCircle,
-              colors:
-                "from-orange-50 dark:from-orange-950 to-red-100 dark:to-orange-900 border-orange-200 dark:border-orange-700",
-              iconBg: "bg-red-500 dark:bg-red-400",
-              textColor: "text-orange-800 dark:text-orange-100",
-              valueColor: "text-orange-900 dark:text-orange-50",
+              bg: "from-rose-500/10 to-pink-500/10 border-rose-200 dark:border-rose-800/60",
+              iconBg: "bg-rose-500 text-white",
+              valColor: "text-rose-600 dark:text-rose-400",
             },
-          ].map((card) => (
-            <div
+          ].map((card, idx) => (
+            <motion.div
               key={card.label}
-              className={`bg-linear-to-br ${card.colors} border rounded-xl p-6`}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05 }}
+              className={`bg-gradient-to-br ${card.bg} bg-white dark:bg-slate-900 border rounded-3xl p-5 sm:p-6 shadow-md hover:shadow-lg transition-all`}
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className={`text-sm font-medium ${card.textColor}`}>
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     {card.label}
                   </p>
-                  <p className={`text-3xl font-bold mt-2 ${card.valueColor}`}>
+                  <p className={`text-3xl font-black mt-1 ${card.valColor}`}>
                     {card.value}
                   </p>
                 </div>
                 <div
-                  className={`w-12 h-12 ${card.iconBg} rounded-lg flex items-center justify-center`}
+                  className={`w-12 h-12 ${card.iconBg} rounded-2xl flex items-center justify-center shadow-md`}
                 >
-                  <card.icon className="w-6 h-6 text-white" />
+                  <card.icon className="w-5 h-5" />
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
 
-        {/* Tab bar + Add Food */}
-        <div className="card mb-6">
-          <div className="flex flex-wrap justify-center md:justify-between items-center gap-4">
-            <div className="flex space-x-2">
+        {/* Tab Navigation Pill Bar */}
+        <div className="bg-white dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl p-2 border border-gray-200/80 dark:border-slate-800 shadow-md mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
               {(["active", "reserved", "expired"] as FoodTab[]).map((tab) => {
                 const count =
                   tab === "active"
@@ -272,89 +266,102 @@ export default function RestaurantDashboard() {
                     : tab === "reserved"
                       ? stats.reserved
                       : stats.expired;
+                const isActive = activeTab === tab;
                 return (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`py-3 px-3 font-medium text-sm md:text-base border-b-2 transition-colors ${
-                      activeTab === tab
-                        ? "border-blue-600 text-blue-600 dark:text-blue-400"
-                        : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                    className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
+                      isActive
+                        ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800"
                     }`}
                   >
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)} ({count})
+                    <span>
+                      {tab === "active"
+                        ? "Active Listings"
+                        : tab === "reserved"
+                          ? "Reserved Orders"
+                          : "Expired"}
+                    </span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${
+                        isActive
+                          ? "bg-white/20 text-white"
+                          : "bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300"
+                      }`}
+                    >
+                      {count}
+                    </span>
                   </button>
                 );
               })}
             </div>
-            <div className="hidden md:flex">
-              <button
-                onClick={() =>
-                  router.push("/protected/add-food?role=restaurant")
-                }
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors"
-              >
-                <FaPlus />
-                Add New Food
-              </button>
-            </div>
+
+            <button
+              onClick={() => router.push("/protected/add-food?role=restaurant")}
+              className="hidden sm:flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition-colors"
+            >
+              <FaPlus />
+              <span>Add Food Item</span>
+            </button>
           </div>
         </div>
 
-        {/* Food Listings */}
+        {/* Food Listings Content */}
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <LoadingSpinner text="Loading your food listings..." />
+          <div className="flex justify-center py-20">
+            <LoadingSpinner text="Loading restaurant food listings..." />
           </div>
         ) : filteredFoods.length === 0 ? (
-          <div className="card p-8 text-center">
-            <div className="w-24 h-24 mx-auto bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-              <FaPlus className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl p-12 text-center shadow-lg">
+            <div className="w-20 h-20 mx-auto bg-blue-50 dark:bg-blue-950/60 rounded-3xl flex items-center justify-center mb-4 text-blue-600 text-2xl">
+              <FaUtensils />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
               No {activeTab} food listings
             </h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
+            <p className="text-gray-500 dark:text-gray-400 mb-6 text-sm max-w-md mx-auto">
               {activeTab === "active"
-                ? "Start by adding your surplus food items."
-                : `You don't have any ${activeTab} food items.`}
+                ? "You have no active food items currently available for pickup. Add surplus inventory to prevent food waste."
+                : `You do not have any ${activeTab} food items currently.`}
             </p>
             {activeTab === "active" && (
               <button
                 onClick={() =>
                   router.push("/protected/add-food?role=restaurant")
                 }
-                className="flex items-center gap-2 mx-auto px-5 py-2.5 border-2 border-green-600 text-green-600 dark:text-green-300 dark:border-green-300 font-semibold rounded-xl hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-lg cursor-pointer transition-all hover:scale-103"
               >
                 <FaPlus />
-                Add Your First Food Item
+                <span>Add Your First Surplus Listing</span>
               </button>
             )}
           </div>
         ) : (
-          <div className="card overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-xl overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-800">
+                <thead className="bg-gray-50/80 dark:bg-slate-800/80 backdrop-blur-xs">
                   <tr>
                     {[
                       "Food Item",
-                      "Quantity",
-                      "Price",
-                      "Expires",
+                      "Available Qty",
+                      "Price / Type",
+                      "Expiry Countdown",
                       "Status",
-                      "Actions",
+                      "Action",
                     ].map((h) => (
                       <th
                         key={h}
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                        className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                       >
                         {h}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60 bg-transparent">
                   {filteredFoods.map((food, index) => {
                     const expired =
                       new Date(food.expiresAt) <= new Date() || !food.isActive;
@@ -364,8 +371,8 @@ export default function RestaurantDashboard() {
                         key={food.id}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        transition={{ delay: index * 0.04 }}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                        transition={{ delay: index * 0.03 }}
+                        className="hover:bg-blue-50/40 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
                         onClick={() => {
                           if (activeTab === "reserved") {
                             router.push(`/protected/food/${food.id}/requests`);
@@ -375,9 +382,9 @@ export default function RestaurantDashboard() {
                         }}
                       >
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="shrink-0 h-10 w-10 bg-linear-to-r from-green-100 dark:from-green-800 to-amber-100 dark:to-amber-800 rounded-lg overflow-hidden">
-                              {food.images && food.images.length > 0 && (
+                          <div className="flex items-center gap-3.5">
+                            <div className="shrink-0 h-12 w-12 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-slate-800 dark:to-slate-700 rounded-xl overflow-hidden shadow-xs">
+                              {food.images && food.images.length > 0 ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
                                   src={
@@ -390,48 +397,54 @@ export default function RestaurantDashboard() {
                                   alt={food.name}
                                   className="w-full h-full object-cover"
                                 />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                  <FaUtensils />
+                                </div>
                               )}
                             </div>
                             <div>
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              <div className="text-sm font-bold text-gray-900 dark:text-white">
                                 {food.name}
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
-                                {food.description?.substring(0, 50)}
+                              <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 max-w-[200px]">
+                                {food.description || "Fresh surplus meal"}
                               </div>
                             </div>
                           </div>
                         </td>
+
                         <td className="px-6 py-4 whitespace-nowrap">
                           {activeTab === "active" && (
-                            <div className="text-sm text-gray-900 dark:text-white">
+                            <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
                               {food.availableQty}{" "}
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                active
+                              <span className="text-xs font-normal text-gray-500">
+                                portions
                               </span>
                             </div>
                           )}
-                          {activeTab === "reserved" && food.quantity > food.availableQty && (
-                            <div className="text-sm text-yellow-600 dark:text-yellow-400">
+                          {activeTab === "reserved" && (
+                            <div className="text-sm font-extrabold text-amber-600 dark:text-amber-400">
                               {food.quantity - food.availableQty}{" "}
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                              <span className="text-xs font-normal text-gray-500">
                                 reserved
                               </span>
                             </div>
                           )}
                           {activeTab === "expired" && (
-                            <div className="text-sm text-gray-900 dark:text-white">
+                            <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
                               {food.quantity}{" "}
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                              <span className="text-xs font-normal text-gray-500">
                                 total
                               </span>
                             </div>
                           )}
                         </td>
+
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900 dark:text-white">
+                          <div className="text-sm font-black text-gray-900 dark:text-white">
                             {food.isDonation
-                              ? "Donation"
+                              ? "Free Donation"
                               : formatPrice(food.price)}
                           </div>
                           {food.originalPrice && !food.isDonation && (
@@ -440,28 +453,30 @@ export default function RestaurantDashboard() {
                             </div>
                           )}
                         </td>
+
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900 dark:text-white">
+                          <div className="text-xs font-bold text-gray-700 dark:text-gray-300">
                             {formatDate(food.expiresAt, "PPp")}
                           </div>
                           <div
-                            className={`text-xs ${
+                            className={`text-xs font-medium ${
                               expired
-                                ? "text-red-500 dark:text-red-300"
-                                : "text-yellow-600 dark:text-yellow-300"
+                                ? "text-rose-500"
+                                : "text-amber-600 dark:text-amber-400"
                             }`}
                           >
                             {formatTimeRemaining(food.expiresAt)}
                           </div>
                         </td>
+
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
-                            className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${
                               expired
-                                ? "bg-red-100 dark:bg-red-800/60 text-red-800 dark:text-red-100"
+                                ? "bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200"
                                 : reserved
-                                  ? "bg-yellow-100 dark:bg-yellow-800/60 text-yellow-800 dark:text-yellow-100"
-                                  : "bg-green-100 dark:bg-green-800/60 text-green-800 dark:text-green-100"
+                                  ? "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200"
+                                  : "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200"
                             }`}
                           >
                             {expired
@@ -471,6 +486,7 @@ export default function RestaurantDashboard() {
                                 : "Active"}
                           </span>
                         </td>
+
                         <td
                           className="px-6 py-4 whitespace-nowrap"
                           onClick={(e) => e.stopPropagation()}
@@ -478,7 +494,7 @@ export default function RestaurantDashboard() {
                           <button
                             onClick={() => deleteFood(food.id)}
                             disabled={isDeleting}
-                            className="text-red-500 dark:text-red-400 hover:text-red-700 disabled:opacity-40 transition-colors"
+                            className="p-2 rounded-xl text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/50 cursor-pointer disabled:opacity-40 transition-colors"
                             title="Delete listing"
                           >
                             <FaTrash />
@@ -493,16 +509,15 @@ export default function RestaurantDashboard() {
           </div>
         )}
 
-        {/* Safety Reminder */}
-        <div className="mt-8 bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 dark:border-yellow-500 p-4 rounded-r-xl">
-          <div className="flex gap-3">
-            <FaClock className="h-5 w-5 text-yellow-500 dark:text-yellow-400 shrink-0 mt-0.5" />
-            <p className="text-sm text-yellow-700 dark:text-yellow-200">
-              <strong>Food Safety Reminder:</strong> All food listings
-              automatically expire at the specified time. Please ensure cooked
-              food is properly stored and labelled with preparation time.
-            </p>
-          </div>
+        {/* Safety Note Card */}
+        <div className="mt-8 bg-blue-50 dark:bg-slate-900 border border-blue-200 dark:border-blue-900/60 p-5 rounded-2xl shadow-sm flex items-start gap-4">
+          <FaShieldAlt className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+          <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            <strong className="font-bold text-gray-900 dark:text-white">
+              Food Quality & Hygiene Standard:
+            </strong>{" "}
+            All surplus food must adhere to local health standards. Items expiring will automatically be delisted when the countdown completes.
+          </p>
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 // app/page.tsx
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   FaFilter,
   FaHeart,
@@ -13,7 +13,7 @@ import {
   FaLeaf,
 } from "react-icons/fa";
 import { useTheme } from "next-themes";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Select from "@/components/common/Select";
 import Button from "@/components/common/Button";
@@ -86,8 +86,8 @@ export default function HomePage() {
     e.preventDefault();
     router.push(
       search.trim()
-        ? `/food?search=${encodeURIComponent(search.trim())}`
-        : "/food",
+        ? `/public/food?search=${encodeURIComponent(search.trim())}`
+        : "/public/food",
     );
   };
 
@@ -96,7 +96,7 @@ export default function HomePage() {
     appliedFilters,
     "",
     1,
-    3,
+    6,
   );
 
   useEffect(() => {
@@ -113,8 +113,8 @@ export default function HomePage() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen w-full bg-transparent">
-      {/* ================= HERO WITH FULL BACKGROUND VIDEO ================= */}
+    <div className="min-h-screen w-full bg-transparent overflow-x-hidden">
+      {/* ================= 1. HERO WITH FULL BACKGROUND VIDEO ================= */}
       <div className="w-full relative overflow-hidden min-h-[90vh] md:min-h-[85vh] flex flex-col justify-between text-gray-900 dark:text-white transition-colors duration-500">
         {/* Full-Cover Background Video & Ambient Adaptive Gradient Overlays */}
         <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
@@ -130,8 +130,8 @@ export default function HomePage() {
             Your browser does not support the video tag.
           </video>
           {/* Multi-layered adaptive gradient overlays for crisp contrast without washing out the video */}
-          <div className="absolute inset-0 bg-gradient-to-b from-white/35 via-white/10 to-white/60 dark:from-black/90 dark:via-black/75 dark:to-zinc-950/95 transition-colors duration-500" />
-          <div className="absolute inset-0 bg-radial from-transparent via-transparent to-white/30 dark:via-black/20 dark:to-black/70 pointer-events-none transition-colors duration-500" />
+          <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/15 to-white/65 dark:from-black/90 dark:via-black/75 dark:to-zinc-950/95 transition-colors duration-500" />
+          <div className="absolute inset-0 bg-radial from-transparent via-transparent to-white/35 dark:via-black/20 dark:to-black/70 pointer-events-none transition-colors duration-500" />
         </div>
 
         {/* Ambient Glowing Blobs in Background */}
@@ -153,7 +153,7 @@ export default function HomePage() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring" }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-white/15 backdrop-blur-md rounded-full mb-8 border border-emerald-500/30 dark:border-white/25 shadow-md dark:shadow-lg"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white/40 dark:bg-white/15 backdrop-blur-md rounded-full mb-8 border border-emerald-500/30 dark:border-white/25 shadow-md dark:shadow-lg"
             >
               <FaLeaf className="w-4 h-4 text-emerald-600 dark:text-emerald-400 animate-bounce" />
               <span className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
@@ -169,7 +169,7 @@ export default function HomePage() {
               className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-6 leading-tight drop-shadow-xs dark:drop-shadow-md"
             >
               Save Food! <br />
-              <span className="logotext">
+              <span className="bg-gradient-to-r from-emerald-600 via-green-600 to-amber-600 dark:from-emerald-400 dark:via-green-300 dark:to-amber-300 bg-clip-text text-transparent">
                 Serve Community!
               </span>
             </motion.h1>
@@ -198,7 +198,7 @@ export default function HomePage() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full px-6 py-3.5 pl-14 pr-28 rounded-2xl border-2 border-gray-300/80 dark:border-white/30 bg-white/90 dark:bg-black/40 backdrop-blur-xl placeholder-gray-500 dark:placeholder-gray-300 text-gray-900 dark:text-white focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 dark:focus:ring-emerald-500/30 transition-all duration-300 text-base sm:text-lg shadow-xl dark:shadow-2xl"
+                  className="w-full px-6 py-3.5 pl-14 pr-28 rounded-2xl border-2 border-gray-300/60 dark:border-white/30 bg-white/40 dark:bg-black/40 backdrop-blur-xl placeholder-gray-500 dark:placeholder-gray-300 text-gray-900 dark:text-white focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 dark:focus:ring-emerald-500/30 transition-all duration-300 text-base sm:text-lg shadow-xl dark:shadow-2xl"
                 />
                 <FaSearch className="absolute left-5 top-1/2 transform -translate-y-1/2 text-emerald-600 dark:text-emerald-400 text-xl pointer-events-none" />
                 {!search && (
@@ -244,22 +244,11 @@ export default function HomePage() {
               </Link>
               <Link
                 href="/protected/add-food"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-gray-300/80 dark:border-white/30 bg-white/85 dark:bg-white/15 hover:bg-white dark:hover:bg-white/25 text-gray-900 dark:text-white backdrop-blur-md shadow-lg hover:scale-105 transition-all duration-200"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-gray-300/60 dark:border-white/30 bg-white/40 dark:bg-white/15 hover:bg-white/50 dark:hover:bg-white/25 text-gray-900 dark:text-white backdrop-blur-md shadow-lg hover:scale-105 transition-all duration-200"
               >
                 <FaHeart className="w-4 h-4 text-rose-500 dark:text-rose-400" />
                 Donate / Share Food
               </Link>
-            </motion.div>
-
-            {/* Floating Live Badge */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.7 }}
-              className="mt-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/75 dark:bg-black/40 backdrop-blur-md border border-emerald-200 dark:border-white/20 text-xs font-medium text-emerald-900 dark:text-gray-200 shadow-sm"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-ping" />
-              <span>Direct Hand-to-Hand Surplus Rescue Movement</span>
             </motion.div>
 
             {/* Stats Cards */}
@@ -269,7 +258,7 @@ export default function HomePage() {
               transition={{ delay: 0.75 }}
               className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-6 mt-12 sm:mt-16 max-w-4xl mx-auto"
             >
-              <div className="backdrop-blur-xl bg-white/80 dark:bg-black/35 border border-gray-200 dark:border-white/20 rounded-2xl p-5 text-center shadow-lg dark:shadow-2xl hover:border-emerald-500/50 dark:hover:border-emerald-400/50 transition-all">
+              <div className="backdrop-blur-xl bg-white/40 dark:bg-black/35 border border-gray-200/60 dark:border-white/20 rounded-2xl p-5 text-center shadow-lg dark:shadow-2xl hover:border-emerald-500/50 dark:hover:border-emerald-400/50 transition-all">
                 <AnimatedNumber
                   value={12.5}
                   decimals={1}
@@ -279,7 +268,7 @@ export default function HomePage() {
                 />
                 <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Meals Saved</div>
               </div>
-              <div className="backdrop-blur-xl bg-white/80 dark:bg-black/35 border border-gray-200 dark:border-white/20 rounded-2xl p-5 text-center shadow-lg dark:shadow-2xl hover:border-amber-500/50 dark:hover:border-amber-400/50 transition-all">
+              <div className="backdrop-blur-xl bg-white/40 dark:bg-black/35 border border-gray-200/60 dark:border-white/20 rounded-2xl p-5 text-center shadow-lg dark:shadow-2xl hover:border-amber-500/50 dark:hover:border-amber-400/50 transition-all">
                 <AnimatedNumber
                   value={150}
                   duration={2}
@@ -287,7 +276,7 @@ export default function HomePage() {
                 />
                 <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Partner Donors</div>
               </div>
-              <div className="backdrop-blur-xl bg-white/80 dark:bg-black/35 border border-gray-200 dark:border-white/20 rounded-2xl p-5 text-center shadow-lg dark:shadow-2xl hover:border-teal-500/50 dark:hover:border-teal-400/50 transition-all">
+              <div className="backdrop-blur-xl bg-white/40 dark:bg-black/35 border border-gray-200/60 dark:border-white/20 rounded-2xl p-5 text-center shadow-lg dark:shadow-2xl hover:border-teal-500/50 dark:hover:border-teal-400/50 transition-all">
                 <AnimatedNumber
                   value={8.2}
                   decimals={1}
@@ -319,23 +308,25 @@ export default function HomePage() {
 
       {/* ================= FILTERS + LISTINGS ================= */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Filter Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="card rounded-2xl shadow-xl p-6 mb-8"
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="card rounded-2xl shadow-xl p-6 mb-8 border border-gray-200/80 dark:border-slate-800 backdrop-blur-md"
         >
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-900 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-950 transition-colors duration-200 lg:hidden"
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-900 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-950 transition-colors duration-200 lg:hidden cursor-pointer"
               >
                 <FaFilter className="text-gray-600 dark:text-gray-300" />
                 <span className="font-medium">Filters</span>
               </button>
               <div className="hidden lg:flex items-center gap-2">
-                <FaFilter className="text-green-500" />
-                <span className="font-medium text-gray-700 dark:text-gray-200">
+                <FaFilter className="text-emerald-500" />
+                <span className="font-semibold text-gray-700 dark:text-gray-200">
                   Filter by:
                 </span>
               </div>
@@ -388,7 +379,7 @@ export default function HomePage() {
                   />
                   <button
                     onClick={handleApplyFilters}
-                    className="w-full lg:w-auto px-6 py-3 cursor-pointer bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all duration-300"
+                    className="w-full lg:w-auto px-6 py-3 cursor-pointer bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-300"
                   >
                     Apply Filters
                   </button>
@@ -398,71 +389,87 @@ export default function HomePage() {
           </div>
         </motion.div>
 
+        {/* Real-time 3 Stats Cards */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
           className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
         >
-          <div className="card rounded-2xl p-6 border border-blue-200">
+          <motion.div
+            whileHover={{ y: -4 }}
+            className="card rounded-2xl p-6 border border-blue-200/80 dark:border-blue-500/20 shadow-md hover:shadow-xl transition-all duration-300"
+          >
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-linear-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                <FaMapMarkedAlt className="w-6 h-6 text-white" />
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg text-white">
+                <FaMapMarkedAlt className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-sm text-blue-600 dark:text-blue-300 font-medium">
                   Active Listings
                 </p>
-                <p className="text-3xl font-bold text-blue-900 dark:text-blue-600">
+                <p className="text-3xl font-bold text-blue-900 dark:text-blue-400">
                   {statsLoading ? "…" : stats.activeListings}
                 </p>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="card rounded-2xl p-6 border border-green-200">
+          <motion.div
+            whileHover={{ y: -4 }}
+            className="card rounded-2xl p-6 border border-emerald-200/80 dark:border-emerald-500/20 shadow-md hover:shadow-xl transition-all duration-300"
+          >
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-linear-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
-                <FaHeart className="w-6 h-6 text-white" />
+              <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg text-white">
+                <FaHeart className="w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <p className="text-sm text-green-600 dark:text-green-300 font-medium">
+                <p className="text-sm text-emerald-600 dark:text-emerald-300 font-medium">
                   Donations
                 </p>
-                <p className="text-3xl font-bold text-green-900 dark:text-green-600">
+                <p className="text-3xl font-bold text-emerald-900 dark:text-emerald-400">
                   {statsLoading ? "…" : stats.donations}
                 </p>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="card rounded-2xl p-6 border border-pink-200">
+          <motion.div
+            whileHover={{ y: -4 }}
+            className="card rounded-2xl p-6 border border-pink-200/80 dark:border-pink-500/20 shadow-md hover:shadow-xl transition-all duration-300"
+          >
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-linear-to-br from-pink-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
-                <FaStore className="w-6 h-6 text-white" />
+              <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg text-white">
+                <FaStore className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-sm text-pink-600 dark:text-pink-300 font-medium">
                   Restaurants
                 </p>
-                <p className="text-3xl font-bold text-pink-900 dark:text-pink-600">
+                <p className="text-3xl font-bold text-pink-900 dark:text-pink-400">
                   {statsLoading ? "…" : stats.uniqueRestaurants}
                 </p>
               </div>
             </div>
-          </div>
+          </motion.div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        {/* Food Listings Section */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+        >
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-50">
               Available Food{" "}
-              <span className="text-green-600">
+              <span className="text-emerald-600 dark:text-emerald-400">
                 ({statsLoading ? "…" : stats.activeListings})
               </span>
             </h2>
             <Link
               href="/public/food"
-              className="text-green-600 hover:text-green-700 font-medium flex items-center gap-2 group"
+              className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-semibold flex items-center gap-2 group transition-colors"
             >
               View All
               <FaArrowRight className="group-hover:translate-x-1 transition-transform duration-200" />
@@ -474,12 +481,16 @@ export default function HomePage() {
               <LoadingSpinner text="Loading available food..." />
             </div>
           ) : previewFoods.length === 0 ? (
-            <div className="card rounded-2xl p-12 text-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="card rounded-2xl p-12 text-center border border-gray-200 dark:border-slate-800"
+            >
               <FaUtensils className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
               <p className="text-gray-500 dark:text-gray-400">
                 No food matches your filters right now — check back soon!
               </p>
-            </div>
+            </motion.div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {previewFoods.map((food, index) => (
@@ -489,6 +500,7 @@ export default function HomePage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.05 }}
+                  whileHover={{ y: -4 }}
                 >
                   <FoodCard
                     food={food}
@@ -496,7 +508,9 @@ export default function HomePage() {
                     userRole={user?.role}
                     onReserve={(f) =>
                       router.push(
-                        isAuthenticated ? `/protected/food/${f.id}/reserve` : "/auth/login",
+                        isAuthenticated
+                          ? `/protected/food/${f.id}/reserve`
+                          : "/auth/login",
                       )
                     }
                   />
@@ -508,7 +522,7 @@ export default function HomePage() {
       </div>
 
       {/* ================= COMMUNITY (photography) ================= */}
-      <div className="bg-linear-to-b from-transparent dark:from-gray-600 via-green-50 dark:via-slate-900 to-white dark:to-zinc-950 py-16 md:py-24">
+      <div className="bg-gradient-to-b from-transparent dark:from-gray-900/50 via-green-50/50 dark:via-slate-900/80 to-white dark:to-zinc-950 py-16 md:py-24">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -516,7 +530,7 @@ export default function HomePage() {
             viewport={{ once: true }}
             className="text-center max-w-2xl mx-auto mb-12"
           >
-            <FaLeaf className="w-6 h-6 text-green-600 dark:text-green-300 mx-auto mb-4" />
+            <FaLeaf className="w-6 h-6 text-emerald-600 dark:text-emerald-400 mx-auto mb-4" />
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
               Behind every listing, a hand that cooked
             </h2>
@@ -532,16 +546,17 @@ export default function HomePage() {
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="relative rounded-3xl overflow-hidden h-72 md:h-96 shadow-xl"
+              whileHover={{ scale: 1.02 }}
+              className="relative rounded-3xl overflow-hidden h-72 md:h-96 shadow-xl group border border-white/20"
             >
               <Image
                 src="https://images.unsplash.com/photo-1593113598332-cd288d649433?w=900"
                 alt="Volunteers serving a shared community meal"
                 fill
-                className="object-cover"
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
-              <p className="absolute bottom-4 left-4 right-4 text-white text-sm">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <p className="absolute bottom-4 left-4 right-4 text-white text-sm font-medium">
                 Community meal-sharing in action
               </p>
             </motion.div>
@@ -549,16 +564,17 @@ export default function HomePage() {
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="relative rounded-3xl overflow-hidden h-72 md:h-96 shadow-xl"
+              whileHover={{ scale: 1.02 }}
+              className="relative rounded-3xl overflow-hidden h-72 md:h-96 shadow-xl group border border-white/20"
             >
               <Image
                 src="https://images.unsplash.com/photo-1593113646773-028c64a8f1b8?w=900"
                 alt="Volunteers preparing food to share with the community"
                 fill
-                className="object-cover"
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
-              <p className="absolute bottom-4 left-4 right-4 text-white text-sm">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <p className="absolute bottom-4 left-4 right-4 text-white text-sm font-medium">
                 Every portion has someone&apos;s name on it, eventually
               </p>
             </motion.div>
@@ -566,58 +582,78 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ================= CTA ================= */}
+      {/* ================= CTA (EXACT PREVIOUS CONTENT WITH SMOOTH ANIMATIONS) ================= */}
       {!isAuthenticated && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="card rounded-3xl p-8 md:p-12 text-center relative overflow-hidden"
+            className="card rounded-3xl p-8 md:p-12 text-center relative overflow-hidden shadow-2xl border border-gray-200/80 dark:border-slate-800"
           >
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute -top-20 -right-20 w-64 h-64 bg-white dark:bg-gray-900/40 rounded-full filter blur-3xl"></div>
-              <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-white dark:bg-gray-900/40 rounded-full filter blur-3xl"></div>
+            {/* Ambient Background Glowing Blobs */}
+            <div className="absolute inset-0 opacity-15 pointer-events-none">
+              <div className="absolute -top-20 -right-20 w-72 h-72 bg-emerald-400 dark:bg-emerald-500 rounded-full filter blur-3xl animate-pulse"></div>
+              <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-amber-400 dark:bg-amber-500 rounded-full filter blur-3xl animate-pulse delay-1000"></div>
             </div>
 
-            <div className="relative">
-              <h3 className="text-3xl md:text-4xl font-bold mb-4">
+            <div className="relative z-10">
+              <motion.h3
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 dark:text-white"
+              >
                 Join AnnoSetu Today!
-              </h3>
-              <p className="text-xl mb-8 max-w-2xl mx-auto">
+              </motion.h3>
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.1 }}
+                className="text-xl mb-8 max-w-2xl mx-auto text-gray-600 dark:text-gray-300"
+              >
                 Whether you&apos;re a restaurant with surplus food or someone
                 looking to save food and money, AnnoSetu helps you make a
                 difference.
-              </p>
+              </motion.p>
 
-              <div className="flex flex-col md:flex-row flex-wrap justify-center gap-4 w-[80%] mx-auto">
-                <Link href="/auth/register?role=individual" className="flex-1">
-                  <Button
-                    type="button"
-                    className={`flex w-full group items-center gap-2 bg-linear-to-r ${roleGradientMap.individual} hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200`}
-                  >
-                    👤 Register as Individual
-                    <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </Link>
-                <Link href="/auth/register?role=restaurant" className="flex-1">
-                  <Button
-                    type="button"
-                    className={`flex w-full group items-center gap-2 bg-linear-to-r ${roleGradientMap.restaurant} hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200`}
-                  >
-                    🏪 Register as Restaurant
-                    <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </Link>
-                <Link href="/auth/register?role=ngo" className="flex-1">
-                  <Button
-                    type="button"
-                    className={`flex w-full group items-center gap-2 bg-linear-to-r ${roleGradientMap.ngo} hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200`}
-                  >
-                    🏥 Register as NGO
-                    <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </Link>
+              <div className="flex flex-col md:flex-row flex-wrap justify-center gap-4 w-full sm:w-[85%] md:w-[80%] mx-auto">
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }} className="flex-1">
+                  <Link href="/auth/register?role=individual" className="block w-full">
+                    <Button
+                      type="button"
+                      className={`flex w-full group items-center justify-center gap-2 bg-gradient-to-r ${roleGradientMap.individual} hover:shadow-xl transition-all duration-200 py-3.5`}
+                    >
+                      👤 Register as Individual
+                      <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </Link>
+                </motion.div>
+
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }} className="flex-1">
+                  <Link href="/auth/register?role=restaurant" className="block w-full">
+                    <Button
+                      type="button"
+                      className={`flex w-full group items-center justify-center gap-2 bg-gradient-to-r ${roleGradientMap.restaurant} hover:shadow-xl transition-all duration-200 py-3.5`}
+                    >
+                      🏪 Register as Restaurant
+                      <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </Link>
+                </motion.div>
+
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }} className="flex-1">
+                  <Link href="/auth/register?role=ngo" className="block w-full">
+                    <Button
+                      type="button"
+                      className={`flex w-full group items-center justify-center gap-2 bg-gradient-to-r ${roleGradientMap.ngo} hover:shadow-xl transition-all duration-200 py-3.5`}
+                    >
+                      🏥 Register as NGO
+                      <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </Link>
+                </motion.div>
               </div>
 
               <p className="mt-6 text-sm dark:text-white/80 text-gray-900/80">

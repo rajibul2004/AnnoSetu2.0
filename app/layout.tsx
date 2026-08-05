@@ -5,7 +5,7 @@ import QueryProvider from "@/components/provider/query-provider";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { Toaster } from "react-hot-toast";
+import ModernToaster from "@/components/common/ModernToaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,33 +38,7 @@ export default function RootLayout({
             <Navbar />
             {children}
             <Footer />
-            <Toaster
-              position="top-right"
-              reverseOrder={false}
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: "#333",
-                  color: "#fff",
-                  borderRadius: "10px",
-                  padding: "12px 16px",
-                },
-                success: {
-                  duration: 3000,
-                  iconTheme: {
-                    primary: "#22c55e",
-                    secondary: "#fff",
-                  },
-                },
-                error: {
-                  duration: 5000,
-                  iconTheme: {
-                    primary: "#ef4444",
-                    secondary: "#fff",
-                  },
-                },
-              }}
-            />
+            <ModernToaster />
           </ThemeProvider>
         </QueryProvider>
       </body>

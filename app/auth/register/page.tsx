@@ -23,6 +23,7 @@ import {
 import Input from "@/components/common/Input";
 import Button from "@/components/common/Button";
 import LocationPicker from "@/components/common/LocationPicker";
+import OtpVerificationModal from "@/components/auth/OtpVerificationModal";
 import { useTheme } from "next-themes";
 
 interface FormData {
@@ -132,6 +133,17 @@ const RegisterContent = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentStep, setCurrentStep] = useState(1);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [otpModal, setOtpModal] = useState<{
+    isOpen: boolean;
+    type: "email" | "phone";
+    identifier: string;
+  }>({
+    isOpen: false,
+    type: "email",
+    identifier: "",
+  });
 
   const roleOptions = [
     {
@@ -172,6 +184,12 @@ const RegisterContent = () => {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
+    if (name === "email") {
+      setIsEmailVerified(false);
+    }
+    if (name === "phone") {
+      setIsPhoneVerified(false);
+    }
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -574,21 +592,29 @@ const RegisterContent = () => {
                           placeholder="Enter NGO name"
                         />
                       )}
-                      <Input
-                        label="Email Address"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        error={errors.email}
-                        required
-                        icon={
-                          <FaEnvelope
-                            className={roleColorClass[formData.role]}
-                          />
-                        }
-                        placeholder="you@example.com"
-                      />
+                      <div className="relative">
+                        <Input
+                          label="Email Address"
+                          name="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={handleChange}
+                          error={errors.email}
+                          required
+                          icon={
+                            <FaEnvelope
+                              className={roleColorClass[formData.role]}
+                            />
+                          }
+                          placeholder="you@example.com"
+                        />
+                        {isEmailVerified && (
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                            <FaCheckCircle className="text-emerald-500" />
+                            <span>Email Verified</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div>
                       {/* <Button
@@ -632,20 +658,28 @@ const RegisterContent = () => {
                       Contact & Location
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Input
-                        label="Phone Number"
-                        name="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        error={errors.phone}
-                        required
-                        icon={
-                          <FaPhone className={roleColorClass[formData.role]} />
-                        }
-                        placeholder="98765 43210"
-                        helperText="10-digit Indian mobile number"
-                      />
+                      <div>
+                        <Input
+                          label="Phone Number"
+                          name="phone"
+                          type="tel"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          error={errors.phone}
+                          required
+                          icon={
+                            <FaPhone className={roleColorClass[formData.role]} />
+                          }
+                          placeholder="98765 43210"
+                          helperText="10-digit Indian mobile number"
+                        />
+                        {isPhoneVerified && (
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                            <FaCheckCircle className="text-emerald-500" />
+                            <span>Phone Verified</span>
+                          </div>
+                        )}
+                      </div>
                       <div className="flex flex-col gap-0.5">
                         <Input
                           label="Address"
@@ -973,23 +1007,50 @@ const RegisterContent = () => {
                 {currentStep < 3 ? (
                   <Button
                     onClick={() => {
-                      const newErrors =
-                        currentStep === 1
-                          ? validateStep1()
-                          : currentStep === 2
-                            ? validateStep2()
-                            : {};
-                      if (Object.keys(newErrors).length > 0) {
-                        setErrors(newErrors);
-                        toast.error("Please fix the errors before proceeding!");
-                        return;
+                      if (currentStep === 1) {
+                        const newErrors = validateStep1();
+                        if (Object.keys(newErrors).length > 0) {
+                          setErrors(newErrors);
+                          toast.error("Please fix the errors before proceeding!");
+                          return;
+                        }
+                        setErrors({});
+                        if (!isEmailVerified) {
+                          setOtpModal({
+                            isOpen: true,
+                            type: "email",
+                            identifier: formData.email.trim().toLowerCase(),
+                          });
+                          return;
+                        }
+                        setCurrentStep(2);
+                      } else if (currentStep === 2) {
+                        const newErrors = validateStep2();
+                        if (Object.keys(newErrors).length > 0) {
+                          setErrors(newErrors);
+                          toast.error("Please fix the errors before proceeding!");
+                          return;
+                        }
+                        setErrors({});
+                        if (!isPhoneVerified) {
+                          setOtpModal({
+                            isOpen: true,
+                            type: "phone",
+                            identifier: normalizePhone(formData.phone),
+                          });
+                          return;
+                        }
+                        setCurrentStep(3);
                       }
-                      setErrors({});
-                      setCurrentStep(currentStep + 1);
                     }}
                     className={`flex-1 bg-gradient-to-r ${roleGradientMap[formData.role]} hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 text-white`}
                   >
-                    Next Step <FaArrowRight className="ml-2" />
+                    {currentStep === 1 && !isEmailVerified
+                      ? "Verify Email & Next"
+                      : currentStep === 2 && !isPhoneVerified
+                        ? "Verify Phone & Next"
+                        : "Next Step"}{" "}
+                    <FaArrowRight className="ml-2" />
                   </Button>
                 ) : (
                   <Button
@@ -1079,6 +1140,23 @@ const RegisterContent = () => {
               <FaCheckCircle className="text-green-600" />
             </div>
           </motion.div>
+          {/* OTP Modal */}
+          <OtpVerificationModal
+            isOpen={otpModal.isOpen}
+            type={otpModal.type}
+            identifier={otpModal.identifier}
+            role={formData.role}
+            onClose={() => setOtpModal((prev) => ({ ...prev, isOpen: false }))}
+            onVerified={() => {
+              if (otpModal.type === "email") {
+                setIsEmailVerified(true);
+                setCurrentStep(2);
+              } else if (otpModal.type === "phone") {
+                setIsPhoneVerified(true);
+                setCurrentStep(3);
+              }
+            }}
+          />
         </motion.div>
       </div>
     </div>

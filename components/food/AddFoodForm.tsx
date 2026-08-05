@@ -21,6 +21,11 @@ import {
   FaCheckCircle,
   FaArrowLeft,
   FaArrowRight,
+  FaMapMarkerAlt,
+  FaTag,
+  FaHandHoldingHeart,
+  FaCheck,
+  FaMagic,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import Input from "@/components/common/Input";
@@ -64,25 +69,25 @@ interface PickedLocation {
 }
 
 const QUANTITY_UNIT_OPTIONS: { value: QuantityUnit; label: string }[] = [
-  { value: "servings", label: "Servings" },
-  { value: "plates", label: "Plates" },
+  { value: "servings", label: "Servings (standard portion)" },
+  { value: "plates", label: "Plates / Meal Boxes" },
   { value: "kg", label: "Kilograms (kg)" },
-  { value: "units", label: "Units" },
-  { value: "packets", label: "Packets" },
+  { value: "units", label: "Individual Units / Pieces" },
+  { value: "packets", label: "Packets / Containers" },
 ];
 
-const ALLERGEN_OPTIONS: { value: Allergen; label: string }[] = [
-  { value: "nuts", label: "Nuts" },
-  { value: "dairy", label: "Dairy" },
-  { value: "gluten", label: "Gluten" },
-  { value: "seafood", label: "Seafood" },
-  { value: "eggs", label: "Eggs" },
-  { value: "soy", label: "Soy" },
-  { value: "sesame", label: "Sesame" },
-  { value: "shellfish", label: "Shellfish" },
-  { value: "mustard", label: "Mustard" },
-  { value: "sulphites", label: "Sulphites" },
-  { value: "other", label: "Other" },
+const ALLERGEN_OPTIONS: { value: Allergen; label: string; icon: string }[] = [
+  { value: "nuts", label: "Tree Nuts / Peanuts", icon: "🥜" },
+  { value: "dairy", label: "Dairy / Milk / Cheese", icon: "🥛" },
+  { value: "gluten", label: "Gluten / Wheat", icon: "🌾" },
+  { value: "seafood", label: "Fish / Seafood", icon: "🐟" },
+  { value: "eggs", label: "Eggs", icon: "🥚" },
+  { value: "soy", label: "Soy / Tofu", icon: "🌱" },
+  { value: "sesame", label: "Sesame", icon: "🌰" },
+  { value: "shellfish", label: "Crustaceans / Shellfish", icon: "🦐" },
+  { value: "mustard", label: "Mustard", icon: "🌭" },
+  { value: "sulphites", label: "Sulphites", icon: "🍷" },
+  { value: "other", label: "Other Allergens", icon: "➕" },
 ];
 
 const NAME_MAX_LENGTH = 100;
@@ -101,9 +106,7 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
 
   const [locationMode, setLocationMode] = useState<LocationMode>("none");
   const [locationLoading, setLocationLoading] = useState(false);
-  const [pickedLocation, setPickedLocation] = useState<PickedLocation | null>(
-    null,
-  );
+  const [pickedLocation, setPickedLocation] = useState<PickedLocation | null>(null);
 
   const [formData, setFormData] = useState<AddFoodFormData>({
     name: "",
@@ -120,35 +123,36 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
       "Consume within 2 hours of pickup. Store in refrigerator if not consuming immediately.",
   });
 
-  const roleColor = userType === "restaurant" ? "blue" : "pink";
-  const accentGradient =
-    userType === "restaurant"
-      ? "from-blue-500 to-green-500"
-      : "from-pink-500 to-amber-500";
+  const isRestaurant = userType === "restaurant";
+
+  const accentGradient = isRestaurant
+    ? "from-blue-600 via-indigo-600 to-cyan-500"
+    : "from-rose-500 via-pink-600 to-amber-500";
+
+  const glowShadow = isRestaurant
+    ? "shadow-blue-500/20"
+    : "shadow-pink-500/20";
 
   const expiryOptions = useMemo(() => {
     const now = new Date();
-    const options: { value: string; label: string }[] = [];
-    const maxHours = userType === "restaurant" ? 24 : 6;
+    const options: { value: string; label: string; quick?: boolean }[] = [];
+    const maxHours = isRestaurant ? 24 : 6;
 
     for (let i = 1; i <= maxHours; i++) {
       const time = new Date(now.getTime() + i * 60 * 60 * 1000);
       options.push({
         value: time.toISOString(),
-        label: `${i} hour${i > 1 ? "s" : ""} from now (${time.toLocaleTimeString(
-          [],
-          {
-            hour: "2-digit",
-            minute: "2-digit",
-          },
-        )})`,
+        label: `${i} hour${i > 1 ? "s" : ""} from now (${time.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })})`,
+        quick: i === 2 || i === 4 || i === 6,
       });
     }
 
-    const todayTimes =
-      userType === "restaurant"
-        ? ["18:00", "19:00", "20:00", "21:00", "22:00", "23:00"]
-        : ["18:00", "19:00", "20:00", "21:00"];
+    const todayTimes = isRestaurant
+      ? ["18:00", "19:00", "20:00", "21:00", "22:00", "23:00"]
+      : ["18:00", "19:00", "20:00", "21:00"];
 
     todayTimes.forEach((timeStr) => {
       const [hours, minutes] = timeStr.split(":");
@@ -157,13 +161,13 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
       if (time > now) {
         options.push({
           value: time.toISOString(),
-          label: `Today at ${timeStr}`,
+          label: `Tonight at ${timeStr}`,
         });
       }
     });
 
     return options;
-  }, [userType]);
+  }, [isRestaurant]);
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -176,17 +180,20 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
       return;
     }
 
-    if (name === "allergens" && target instanceof HTMLSelectElement) {
-      const selected = Array.from(
-        target.selectedOptions,
-        (o) => o.value as Allergen,
-      );
-      setFormData((prev) => ({ ...prev, allergens: selected }));
-      return;
-    }
-
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+  };
+
+  const toggleAllergen = (allergen: Allergen) => {
+    setFormData((prev) => {
+      const exists = prev.allergens.includes(allergen);
+      return {
+        ...prev,
+        allergens: exists
+          ? prev.allergens.filter((a) => a !== allergen)
+          : [...prev.allergens, allergen],
+      };
+    });
   };
 
   const handleSelectChange =
@@ -208,7 +215,6 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
         toast.error(`"${file.name}" is not a valid image file`);
         return false;
       }
-      // 5MB limit
       if (file.size > 5 * 1024 * 1024) {
         toast.error(`"${file.name}" exceeds the 5MB size limit`);
         return false;
@@ -246,7 +252,7 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
 
   const validateStep1 = (): Record<string, string> => {
     const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = "Food name is required";
+    if (!formData.name.trim()) newErrors.name = "Food item name is required";
     if (formData.name.length > NAME_MAX_LENGTH) {
       newErrors.name = `Name must be ${NAME_MAX_LENGTH} characters or fewer`;
     }
@@ -254,19 +260,18 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
       newErrors.description = `Description must be ${DESCRIPTION_MAX_LENGTH} characters or fewer`;
     }
     if (!formData.quantity || parseInt(formData.quantity, 10) <= 0) {
-      newErrors.quantity = "Valid quantity is required";
+      newErrors.quantity = "Please enter a valid quantity greater than 0";
     }
     if (!formData.isDonation) {
       if (!formData.price || parseFloat(formData.price) <= 0) {
-        newErrors.price = "Valid price is required";
+        newErrors.price = "Price is required for non-donation listings";
       }
     }
     return newErrors;
   };
 
   const validateStep2 = (): Record<string, string> => {
-    const newErrors: Record<string, string> = {};
-    return newErrors;
+    return {};
   };
 
   const validateStep3 = (): Record<string, string> => {
@@ -305,13 +310,13 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
             latitude,
             longitude,
           });
-          toast.error("Address lookup failed, but coordinates were captured");
+          toast.error("Address lookup failed, but GPS coordinates were saved");
         } finally {
           setLocationLoading(false);
         }
       },
       () => {
-        toast.error("Please allow location access to continue");
+        toast.error("Please allow location permissions to auto-detect address");
         setLocationLoading(false);
       },
       { timeout: 10000, maximumAge: 60000 },
@@ -333,7 +338,7 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
     };
     if (Object.keys(combinedErrors).length > 0) {
       setErrors(combinedErrors);
-      toast.error("Please fix the errors before submitting");
+      toast.error("Please fill in all required fields before listing");
       return;
     }
 
@@ -364,15 +369,15 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
 
     try {
       await addFood(payload);
-      toast.success("Food listed successfully! 🎉");
+      toast.success("Food listed successfully! Community notified 🎉");
       router.push(
-        userType === "individual"
-          ? "/protected/dashboard?role=individual"
-          : "/protected/dashboard?role=restaurant",
+        isRestaurant
+          ? "/protected/dashboard?role=restaurant"
+          : "/protected/dashboard?role=individual",
       );
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to add food item",
+        error instanceof Error ? error.message : "Failed to list food item",
       );
     }
   };
@@ -381,7 +386,7 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
     const stepErrors = currentStep === 1 ? validateStep1() : validateStep2();
     if (Object.keys(stepErrors).length > 0) {
       setErrors(stepErrors);
-      toast.error("Please fix the errors before proceeding!");
+      toast.error("Please complete the required details");
       return;
     }
     setErrors({});
@@ -390,668 +395,658 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
     const target = e.target as HTMLElement;
-
-    // Ignore textareas and buttons
-    if (target.tagName === "TEXTAREA" || target.tagName === "BUTTON") {
-      return;
-    }
-
-    // Also ignore inputs inside the location picker so users can search places
-    if (target.closest(".lp-root")) {
-      return;
-    }
+    if (target.tagName === "TEXTAREA" || target.tagName === "BUTTON") return;
+    if (target.closest(".lp-root")) return;
 
     if (e.key === "Enter") {
       if (currentStep < 3) {
         e.preventDefault();
         goNext();
       }
-      // If currentStep === 3, we allow the native form submission to occur
     }
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-800 rounded-lg shadow-md shadow-gray-200 dark:shadow-gray-700 py-8">
-      <div className="max-w-6xl mx-auto px-1 sm:px-2 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative"
-        >
-          {/* Header */}
-          <div
-            className={`bg-linear-to-r ${accentGradient} rounded-3xl p-8 mb-8 text-white shadow-2xl`}
-          >
-            <div className="flex flex-col lg:flex-row gap-4 md:gap-0 items-center justify-between">
-              <div className="flex items-start md:items-center gap-4">
-                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                  <FaUtensils className="w-8 h-8" />
-                </div>
-                <div>
-                  <h1 className="lg:text-3xl text-xl font-bold mb-2">
-                    {userType === "restaurant"
-                      ? "Add Surplus Food"
-                      : "Share Home-Cooked Food"}
-                  </h1>
-                  <p className="text-white/80 hidden lg:flex">
-                    {userType === "restaurant"
-                      ? "Turn your surplus into community support"
-                      : "Share your love for cooking with others"}
-                  </p>
-                </div>
-              </div>
-              <Link
-                href={
-                  userType === "individual"
-                    ? "/protected/dashboard?role=individual"
-                    : "/protected/dashboard?role=restaurant"
-                }
-              >
-                <Button
-                  variant="outline"
-                  className="border-white hover:bg-white/20 w-full lg:w-auto"
-                >
-                  Back to Dashboard
-                </Button>
-              </Link>
-            </div>
-          </div>
+    <div className="w-full">
+      <div className="relative bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl border border-gray-200/80 dark:border-gray-800/80 rounded-3xl shadow-2xl p-6 sm:p-10 transition-all duration-300">
+        {/* Glow backdrop behind card */}
+        <div
+          className={`absolute -top-20 -right-20 w-80 h-80 bg-linear-to-br ${accentGradient} opacity-10 blur-3xl pointer-events-none rounded-full`}
+        />
+        <div
+          className={`absolute -bottom-20 -left-20 w-80 h-80 bg-linear-to-tr ${accentGradient} opacity-10 blur-3xl pointer-events-none rounded-full`}
+        />
 
-          {/* Progress Steps */}
-          <div className="mb-8 w-full">
-            <div className="grid grid-cols-3 justify-items-center mb-4">
-              {[1, 2, 3].map((step) => (
-                <div key={step} className="flex items-center flex-1">
+        {/* Top Header Card */}
+        <div
+          className={`relative overflow-hidden bg-linear-to-r ${accentGradient} rounded-2xl p-6 sm:p-8 mb-8 text-white shadow-xl ${glowShadow}`}
+        >
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4 text-center md:text-left">
+              <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-inner shrink-0">
+                <FaUtensils className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold uppercase tracking-wider mb-1">
+                  <FaMagic className="w-3 h-3 text-amber-300" />
+                  {isRestaurant ? "Restaurant Surplus Feed" : "Home Cook Sharing"}
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                  {isRestaurant ? "List Fresh Surplus Food" : "Share Homemade Delights"}
+                </h2>
+                <p className="text-white/85 text-sm mt-0.5">
+                  {isRestaurant
+                    ? "Connect extra kitchen prep with hungry patrons & eliminate waste."
+                    : "Spread warmth and home cooking joy with your community."}
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href={
+                isRestaurant
+                  ? "/protected/dashboard?role=restaurant"
+                  : "/protected/dashboard?role=individual"
+              }
+            >
+              <Button
+                variant="outline"
+                className="bg-white/10 hover:bg-white/20 border-white/40 text-white font-medium backdrop-blur-sm transition-all"
+              >
+                Dashboard
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Step Progress Tracker */}
+        <div className="mb-10">
+          <div className="flex items-center justify-between relative max-w-2xl mx-auto px-4">
+            {/* Background Line */}
+            <div className="absolute top-1/2 left-8 right-8 -translate-y-1/2 h-1 bg-gray-200 dark:bg-gray-800 rounded-full z-0" />
+            
+            {/* Active Progress Fill */}
+            <div
+              className={`absolute top-1/2 left-8 -translate-y-1/2 h-1 bg-linear-to-r ${accentGradient} rounded-full transition-all duration-500 z-0`}
+              style={{
+                width:
+                  currentStep === 1
+                    ? "0%"
+                    : currentStep === 2
+                    ? "50%"
+                    : "calc(100% - 4rem)",
+              }}
+            />
+
+            {[
+              { num: 1, label: "Food Details", icon: FaUtensils },
+              { num: 2, label: isRestaurant ? "Safety & Diet" : "Location & Safety", icon: isRestaurant ? FaShieldAlt : FaMapMarkerAlt },
+              { num: 3, label: "Expiry & Photos", icon: FaClock },
+            ].map((step) => {
+              const isCompleted = currentStep > step.num;
+              const isCurrent = currentStep === step.num;
+              const Icon = step.icon;
+
+              return (
+                <div
+                  key={step.num}
+                  className="relative z-10 flex flex-col items-center cursor-pointer group"
+                  onClick={() => {
+                    if (step.num < currentStep) setCurrentStep(step.num);
+                  }}
+                >
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                      currentStep >= step
-                        ? `bg-linear-to-r ${accentGradient} text-white`
-                        : "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold transition-all duration-300 shadow-md ${
+                      isCompleted
+                        ? `bg-linear-to-br ${accentGradient} text-white ring-4 ring-green-400/20`
+                        : isCurrent
+                        ? `bg-linear-to-br ${accentGradient} text-white ring-4 ring-indigo-500/30 scale-110 shadow-lg`
+                        : "bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-700"
                     }`}
                   >
-                    {currentStep > step ? <FaCheckCircle /> : step}
+                    {isCompleted ? (
+                      <FaCheck className="w-5 h-5 text-white" />
+                    ) : (
+                      <Icon className="w-5 h-5" />
+                    )}
+                  </div>
+                  <span
+                    className={`text-xs font-semibold mt-2 transition-colors ${
+                      isCurrent
+                        ? "text-gray-900 dark:text-white"
+                        : isCompleted
+                        ? "text-gray-700 dark:text-gray-300"
+                        : "text-gray-400 dark:text-gray-500"
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Multi-Step Form */}
+        <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-8">
+          <AnimatePresence mode="wait">
+            {/* STEP 1: Basic Food Details */}
+            {currentStep === 1 && (
+              <motion.div
+                key="step1"
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 16 }}
+                transition={{ duration: 0.25 }}
+                className="space-y-6"
+              >
+                <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <span className={`px-2.5 py-0.5 rounded-lg bg-linear-to-r ${accentGradient} text-white text-xs font-bold`}>
+                        Step 1
+                      </span>
+                      Food Overview & Pricing
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Tell the community what meal you are preparing or listing.
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-3 text-center text-sm text-gray-600 dark:text-gray-300">
-              <span>Basic Details</span>
-              <span>
-                {userType === "individual"
-                  ? "Location & Safety"
-                  : "Safety Guidelines"}
-              </span>
-              <span>Images & Submit</span>
-            </div>
-          </div>
 
-          <form
-            onSubmit={handleSubmit}
-            onKeyDown={handleKeyDown}
-            className="space-y-6"
-          >
-            <AnimatePresence mode="wait">
-              {currentStep === 1 && (
-                <motion.div
-                  key="step1"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl p-4 border border-gray-100 dark:border-gray-700"
-                >
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-50 mb-6 flex items-center gap-2">
-                    <span
-                      className={`w-8 h-8 rounded-full bg-${roleColor}-100 text-${roleColor}-600 flex items-center justify-center`}
-                    >
-                      1
-                    </span>
-                    Basic Food Details
-                  </h2>
+                <div className="grid grid-cols-1 gap-6">
+                  {/* Food Name */}
+                  <Input
+                    label="Meal / Dish Name"
+                    name="name"
+                    value={formData.name}
+                    error={errors.name}
+                    onChange={handleChange}
+                    maxLength={NAME_MAX_LENGTH}
+                    placeholder={
+                      isRestaurant
+                        ? "e.g., Paneer Butter Masala Combo, Woodfired Pizza"
+                        : "e.g., Homemade Rajma Chawal, Fresh Blueberry Muffins"
+                    }
+                    required
+                    icon={<FaUtensils className="text-gray-400" />}
+                  />
 
-                  <div className="space-y-6">
-                    <Input
-                      label="Food Name"
-                      name="name"
-                      value={formData.name}
-                      error={errors.name}
+                  {/* Description */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        Description & Ingredients
+                      </label>
+                      <span className="text-xs text-gray-400">
+                        {formData.description.length}/{DESCRIPTION_MAX_LENGTH}
+                      </span>
+                    </div>
+                    <textarea
+                      name="description"
+                      value={formData.description}
                       onChange={handleChange}
-                      maxLength={NAME_MAX_LENGTH}
-                      placeholder={
-                        userType === "restaurant"
-                          ? "e.g., Margherita Pizza, Chicken Biryani"
-                          : "e.g., Homemade Lasagna, Chicken Curry"
-                      }
-                      required
-                      icon={<FaUtensils className={`text-${roleColor}-400`} />}
+                      rows={3}
+                      maxLength={DESCRIPTION_MAX_LENGTH}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-all resize-none shadow-sm"
+                      placeholder="Highlight key ingredients, taste notes, portion sizes, or special cooking love..."
                     />
+                    {errors.description && (
+                      <p className="text-xs text-rose-500 mt-1 font-medium">{errors.description}</p>
+                    )}
+                  </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Description
-                      </label>
-                      <textarea
-                        name="description"
-                        value={formData.description}
-                        onChange={handleChange}
-                        rows={4}
-                        maxLength={DESCRIPTION_MAX_LENGTH}
-                        className="dark:text-gray-100 text-gray-800 placeholder:text-gray-400 dark:placeholder:text-gray-500 w-full px-4 py-3 border-2 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus-within:border-green-500 rounded-xl focus:outline-none shadow-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 resize-none"
-                        placeholder="Describe your food - ingredients, serving size, special notes..."
-                      />
-                      {errors.description && (
-                        <p className="text-sm text-red-600 mt-1">
-                          {errors.description}
-                        </p>
-                      )}
-                    </div>
+                  {/* Quantity & Unit */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input
+                      label="Available Quantity"
+                      name="quantity"
+                      type="number"
+                      error={errors.quantity}
+                      min={1}
+                      value={formData.quantity}
+                      onChange={handleChange}
+                      placeholder="e.g., 5"
+                      required
+                    />
+                    <Select
+                      label="Portion / Packaging Unit"
+                      name="quantityUnit"
+                      value={formData.quantityUnit}
+                      onChange={handleSelectChange("quantityUnit")}
+                      options={QUANTITY_UNIT_OPTIONS}
+                      required
+                    />
+                  </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Input
-                        label="Quantity"
-                        name="quantity"
-                        type="number"
-                        error={errors.quantity}
-                        min={1}
-                        value={formData.quantity}
-                        onChange={handleChange}
-                        placeholder="e.g., 10"
-                        required
-                      />
-                      <Select
-                        label="Unit"
-                        name="quantityUnit"
-                        value={formData.quantityUnit}
-                        onChange={handleSelectChange("quantityUnit")}
-                        options={QUANTITY_UNIT_OPTIONS}
-                        required
-                      />
-                    </div>
-
-                    <div
-                      className={`p-2 md:p-6 rounded-xl ${
-                        userType === "individual"
-                          ? "bg-linear-to-br from-purple-50 dark:from-purple-900 to-pink-50 dark:to-pink-900 border border-purple-200 dark:border-purple-700"
-                          : "bg-linear-to-br from-blue-50 dark:from-blue-900 to-green-50 dark:to-green-900 border border-blue-200 dark:border-blue-700"
-                      }`}
-                    >
-                      <label className="flex items-start gap-4 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          name="isDonation"
-                          checked={formData.isDonation}
-                          onChange={handleChange}
-                          className="mt-1 w-5 h-5 rounded-md border-2 border-gray-300 dark:border-gray-600 text-green-600 dark:text-green-500 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200 cursor-pointer hover:border-green-500 dark:hover:border-green-500"
-                        />
-                        <div className="flex-1">
-                          <div className="font-semibold text-gray-900 dark:text-gray-50">
-                            {userType === "individual"
-                              ? "Share as Donation"
-                              : "List as Donation"}
-                          </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-300 mt-1 hidden md:flex">
-                            {userType === "individual"
-                              ? "Share your food for free and help those in need"
-                              : "Build community relationships by offering food for free"}
-                          </div>
+                  {/* Listing Type: Donation vs Surplus Discount */}
+                  <div className="p-5 rounded-2xl bg-gray-50/80 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-700/80">
+                    <label className="text-sm font-bold text-gray-900 dark:text-white block mb-3">
+                      Listing Purpose & Price Model
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Free Donation Option */}
+                      <div
+                        onClick={() =>
+                          setFormData((prev) => ({ ...prev, isDonation: true, price: "", originalPrice: "" }))
+                        }
+                        className={`cursor-pointer p-4 rounded-xl border-2 transition-all flex items-start gap-3 ${
+                          formData.isDonation
+                            ? "bg-purple-50/80 dark:bg-purple-950/30 border-purple-500 shadow-md ring-2 ring-purple-500/20"
+                            : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                        }`}
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/60 text-purple-600 dark:text-purple-300 flex items-center justify-center shrink-0">
+                          <FaHandHoldingHeart className="w-5 h-5" />
                         </div>
-                        {formData.isDonation && (
-                          <span className="px-4 py-2 bg-purple-500 text-white rounded-full text-sm font-medium">
-                            🆓 Free
-                          </span>
-                        )}
-                      </label>
+                        <div>
+                          <div className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1.5">
+                            Free Community Donation
+                            {formData.isDonation && <FaCheck className="text-purple-600 dark:text-purple-400 w-3.5 h-3.5" />}
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Share 100% free with neighbors, students, or NGOs in need.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Surplus Sale Option */}
+                      <div
+                        onClick={() =>
+                          setFormData((prev) => ({ ...prev, isDonation: false }))
+                        }
+                        className={`cursor-pointer p-4 rounded-xl border-2 transition-all flex items-start gap-3 ${
+                          !formData.isDonation
+                            ? "bg-blue-50/80 dark:bg-blue-950/30 border-blue-500 shadow-md ring-2 ring-blue-500/20"
+                            : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                        }`}
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-300 flex items-center justify-center shrink-0">
+                          <FaTag className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1.5">
+                            Discounted Surplus Sale
+                            {!formData.isDonation && <FaCheck className="text-blue-600 dark:text-blue-400 w-3.5 h-3.5" />}
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Recover costs at a steep discount while preventing food waste.
+                          </p>
+                        </div>
+                      </div>
                     </div>
 
+                    {/* Price Inputs if Not Donation */}
                     {!formData.isDonation && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        className="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700 grid grid-cols-1 sm:grid-cols-2 gap-4"
+                      >
                         <Input
-                          label="Price (₹)"
+                          label="Discounted Listing Price (₹)"
                           name="price"
                           type="number"
                           min={0}
                           error={errors.price}
-                          step="0.01"
+                          step="1"
                           value={formData.price}
                           onChange={handleChange}
-                          placeholder={
-                            userType === "restaurant"
-                              ? "e.g., 299"
-                              : "e.g., 199"
-                          }
+                          placeholder={isRestaurant ? "e.g., 99" : "e.g., 60"}
                           required
                         />
                         <Input
-                          label="Original Price (₹)"
+                          label="Original Menu Price (₹) (Optional)"
                           name="originalPrice"
                           type="number"
                           min={0}
-                          step="0.01"
+                          step="1"
                           value={formData.originalPrice}
                           onChange={handleChange}
-                          placeholder="e.g., 499"
-                          helperText="Show customers their savings"
+                          placeholder={isRestaurant ? "e.g., 250" : "e.g., 120"}
+                          helperText="Shown to users to highlight their food savings"
                         />
-                      </div>
-                    )}
 
-                    {!formData.isDonation && discount > 0 && (
-                      <div className="p-4 bg-linear-to-r from-green-50 dark:from-green-900 to-emerald-50 dark:to-emerald-900 border border-green-200 dark:border-green-700 rounded-xl">
-                        <div className="flex flex-col md:flex-row items-center justify-between">
-                          <div>
-                            <div className="font-medium text-green-900 dark:text-green-50">
-                              Discount Applied
-                            </div>
-                            <div className="text-sm text-green-700 dark:text-green-200 hidden md:flex">
-                              Customers save {discount}%
-                            </div>
+                        {discount > 0 && (
+                          <div className="sm:col-span-2 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center justify-between">
+                            <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                              🎉 Great deal! Customers will save:
+                            </span>
+                            <span className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
+                              {discount}% OFF Menu Price
+                            </span>
                           </div>
-                          <div className="text-3xl font-bold text-green-600 dark:text-green-300">
-                            {discount}% OFF
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-
-              {currentStep === 2 && (
-                <motion.div
-                  key="step2"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl p-4 border border-gray-100 dark:border-gray-700"
-                >
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-50 mb-6 flex items-center gap-2">
-                    <span
-                      className={`w-8 h-8 rounded-full bg-${roleColor}-100 text-${roleColor}-600 flex items-center justify-center`}
-                    >
-                      2
-                    </span>
-                    {userType === "individual" ? "Location & Safety" : "Safety"}
-                  </h2>
-
-                  <div className="space-y-6">
-                    {userType === "individual" && (
-                      <div className="space-y-4">
-                        <div
-                          className={`p-6 rounded-xl bg-linear-to-br from-${roleColor}-50 dark:from-gray-800 to-${roleColor}-100 dark:to-${roleColor}-900 border border-${roleColor}-200 dark:border-${roleColor}-700 flex flex-col gap-4`}
-                        >
-                          <div className="flex flex-col gap-4">
-                            <div className="flex w-full space-x-4">
-                              <input
-                                type="checkbox"
-                                checked={locationMode === "current"}
-                                onChange={() =>
-                                  setLocationMode((prev) =>
-                                    prev === "current" ? "none" : "current",
-                                  )
-                                }
-                                className="mt-1 w-5 h-5 rounded-md border-2 border-gray-300 dark:border-gray-600 text-green-600 dark:text-green-500 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200 cursor-pointer hover:border-green-500 dark:hover:border-green-500"
-                              />
-                              <div>
-                                <div className="font-semibold text-gray-900 dark:text-gray-50">
-                                  Use My Current Location
-                                </div>
-                                <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                                  We&apos;ll use your device&apos;s GPS to set
-                                  the pickup location
-                                </div>
-                              </div>
-                            </div>
-
-                            {locationMode === "current" && (
-                              <div className="w-full pl-8">
-                                {locationLoading ? (
-                                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                                    <svg
-                                      className="animate-spin w-4 h-4"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                    >
-                                      <circle
-                                        className="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                      />
-                                      <path
-                                        className="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8v8z"
-                                      />
-                                    </svg>
-                                    Detecting your location…
-                                  </div>
-                                ) : pickedLocation ? (
-                                  <div className="p-4 bg-white dark:bg-gray-900 rounded-xl">
-                                    <p className="font-medium text-gray-900 dark:text-gray-50">
-                                      {pickedLocation.address}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      Lat: {pickedLocation.latitude.toFixed(4)},
-                                      Lng: {pickedLocation.longitude.toFixed(4)}
-                                    </p>
-                                    <button
-                                      type="button"
-                                      onClick={getCurrentLocation}
-                                      className="mt-2 text-xs text-indigo-500 hover:underline"
-                                    >
-                                      Retry detection
-                                    </button>
-                                  </div>
-                                ) : null}
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex flex-col gap-4">
-                            <div className="flex w-full space-x-4">
-                              <input
-                                type="checkbox"
-                                checked={locationMode === "map"}
-                                onChange={() =>
-                                  setLocationMode((prev) =>
-                                    prev === "map" ? "none" : "map",
-                                  )
-                                }
-                                className="mt-1 w-5 h-5 rounded-md border-2 border-gray-300 dark:border-gray-600 text-green-600 dark:text-green-500 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-200 cursor-pointer hover:border-green-500 dark:hover:border-green-500"
-                              />
-                              <div>
-                                <div className="font-semibold text-gray-900 dark:text-gray-50">
-                                  Get Location from Map
-                                </div>
-                                <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                                  Click the map or drag the pin to pick your
-                                  exact location
-                                </div>
-                              </div>
-                            </div>
-
-                            {locationMode === "map" && (
-                              <LocationPicker
-                                isDark={isDark}
-                                onLocationSelect={(
-                                  lat: number,
-                                  lng: number,
-                                  address: string,
-                                ) =>
-                                  setPickedLocation({
-                                    address,
-                                    latitude: lat,
-                                    longitude: lng,
-                                  })
-                                }
-                              />
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="p-4 bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-xl">
-                          <div className="flex gap-3">
-                            <FaExclamationTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                            <div>
-                              <p className="font-medium text-yellow-900 dark:text-yellow-100">
-                                Safety First
-                              </p>
-                              <p className="text-sm text-yellow-700 dark:text-yellow-200 mt-1">
-                                Choose a public meeting spot for pickup. Your
-                                exact address is only shared after reservation.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        {!pickedLocation && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            No location picked — your profile&apos;s saved
-                            address will be used as the pickup location instead.
-                          </p>
                         )}
-                      </div>
+                      </motion.div>
                     )}
-
-                    <div className="space-y-4">
-                      <div className="p-4 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-xl">
-                        <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
-                          <span className="font-bold">Note:</span> For safety reasons, only cooked, ready-to-eat food can be listed on Annosetu. Raw ingredients are not permitted.
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                          Allergens (select multiple)
-                        </label>
-                        <select
-                          name="allergens"
-                          value={formData.allergens}
-                          onChange={handleChange}
-                          multiple
-                          className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 h-32 dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                        >
-                          {ALLERGEN_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                          Safety Guidelines
-                        </label>
-                        <textarea
-                          name="safetyGuidelines"
-                          value={formData.safetyGuidelines}
-                          onChange={handleChange}
-                          rows={3}
-                          className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-800 dark:text-white"
-                        />
-                      </div>
-                    </div>
                   </div>
-                </motion.div>
-              )}
+                </div>
+              </motion.div>
+            )}
 
-              {currentStep === 3 && (
-                <motion.div
-                  key="step3"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl p-4 border border-gray-100 dark:border-gray-700"
-                >
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-50 mb-6 flex items-center gap-2">
-                    <span
-                      className={`w-8 h-8 rounded-full bg-${roleColor}-100 text-${roleColor}-600 flex items-center justify-center`}
-                    >
-                      3
-                    </span>
-                    Expiry & Images
-                  </h2>
+            {/* STEP 2: Safety, Allergens & Location */}
+            {currentStep === 2 && (
+              <motion.div
+                key="step2"
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 16 }}
+                transition={{ duration: 0.25 }}
+                className="space-y-6"
+              >
+                <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <span className={`px-2.5 py-0.5 rounded-lg bg-linear-to-r ${accentGradient} text-white text-xs font-bold`}>
+                        Step 2
+                      </span>
+                      {isRestaurant ? "Allergens & Kitchen Standards" : "Pickup Location & Allergens"}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Help consumers dine safely with precise dietary & pickup guidance.
+                    </p>
+                  </div>
+                </div>
 
-                  <div className="space-y-6">
-                    <div className="p-6 rounded-xl bg-linear-to-br from-orange-50 dark:from-orange-900/20 to-amber-50 dark:to-amber-900/20 border border-orange-200 dark:border-orange-700">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-50 mb-4 flex items-center gap-2">
-                        <FaClock className="text-orange-600 dark:text-orange-300" />
-                        Expiry Time
-                      </h3>
+                {/* Individual Location Picker Section */}
+                {!isRestaurant && (
+                  <div className="p-5 rounded-2xl bg-gray-50/80 dark:bg-gray-800/40 border border-gray-200/80 dark:border-gray-700/80 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 font-bold text-gray-900 dark:text-white text-sm">
+                        <FaMapMarkerAlt className="text-rose-500" />
+                        Pickup Location Settings
+                      </div>
+                      <span className="text-xs text-gray-400">Optional Custom Spot</span>
+                    </div>
 
-                      <Select
-                        label="Food will expire at"
-                        name="expiresAt"
-                        value={formData.expiresAt}
-                        onChange={handleSelectChange("expiresAt")}
-                        options={expiryOptions}
-                        required
-                      />
-                      {errors.expiresAt && (
-                        <p className="text-sm text-red-600 mt-2">
-                          {errors.expiresAt}
-                        </p>
-                      )}
-
-                      {formData.expiresAt && (
-                        <div className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-xl">
-                          <div className="text-center">
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              Available for
-                            </p>
-                            <p className="text-2xl font-bold text-orange-600 dark:text-orange-300">
-                              {(() => {
-                                const diffMs =
-                                  new Date(formData.expiresAt).getTime() -
-                                  Date.now();
-                                const diffHours = Math.floor(
-                                  diffMs / (1000 * 60 * 60),
-                                );
-                                const diffMinutes = Math.floor(
-                                  (diffMs % (1000 * 60 * 60)) / (1000 * 60),
-                                );
-                                return diffHours > 0
-                                  ? `${diffHours}h ${diffMinutes}m`
-                                  : `${diffMinutes} minutes`;
-                              })()}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                              Auto-removes at{" "}
-                              {new Date(
-                                formData.expiresAt,
-                              ).toLocaleTimeString()}
-                            </p>
-                          </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* GPS Detection Button */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setLocationMode((prev) => (prev === "current" ? "none" : "current"))
+                        }
+                        className={`p-3.5 rounded-xl border text-left transition-all flex items-center gap-3 ${
+                          locationMode === "current"
+                            ? "bg-rose-50 dark:bg-rose-950/40 border-rose-500 text-rose-700 dark:text-rose-300 font-semibold"
+                            : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/60 flex items-center justify-center shrink-0">
+                          <FaMapMarkerAlt className="text-rose-600 dark:text-rose-400 w-4 h-4" />
                         </div>
-                      )}
+                        <div className="text-xs">
+                          <div className="font-bold">Use Current GPS</div>
+                          <div className="text-[11px] text-gray-500 dark:text-gray-400">Auto-detect device coordinates</div>
+                        </div>
+                      </button>
+
+                      {/* Map Picker Button */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setLocationMode((prev) => (prev === "map" ? "none" : "map"))
+                        }
+                        className={`p-3.5 rounded-xl border text-left transition-all flex items-center gap-3 ${
+                          locationMode === "map"
+                            ? "bg-indigo-50 dark:bg-indigo-950/40 border-indigo-500 text-indigo-700 dark:text-indigo-300 font-semibold"
+                            : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 flex items-center justify-center shrink-0">
+                          <FaMapMarkerAlt className="text-indigo-600 dark:text-indigo-400 w-4 h-4" />
+                        </div>
+                        <div className="text-xs">
+                          <div className="font-bold">Pick on Interactive Map</div>
+                          <div className="text-[11px] text-gray-500 dark:text-gray-400">Choose custom meeting point</div>
+                        </div>
+                      </button>
                     </div>
 
-                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-primary-400 transition-colors">
-                      <FaUpload className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                      <label className="cursor-pointer">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={handleImageUpload}
-                          className="hidden"
-                        />
-                        <span
-                          className={`inline-block px-6 py-3 bg-gradient-to-r ${accentGradient} text-white dark:text-gray-900 rounded-xl font-medium hover:shadow-lg transition-all duration-300`}
-                        >
-                          Choose Images
-                        </span>
-                      </label>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
-                        Upload up to {MAX_IMAGES} images • Max 5MB each • PNG,
-                        JPG, GIF
-                      </p>
-                    </div>
-
-                    {images.length > 0 && (
-                      <div className="grid grid-cols-3 gap-4">
-                        {images.map((image) => (
-                          <div key={image.id} className="relative group">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={image.preview}
-                              alt="Preview"
-                              className="w-full h-32 object-cover rounded-xl"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeImage(image.id)}
-                              className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-sm"
-                            >
-                              <FaTrash size={12} />
-                            </button>
+                    {/* GPS Detection status */}
+                    {locationMode === "current" && (
+                      <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-xs">
+                        {locationLoading ? (
+                          <div className="flex items-center gap-2 text-gray-500">
+                            <span className="w-3.5 h-3.5 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />
+                            Detecting exact GPS address...
                           </div>
-                        ))}
+                        ) : pickedLocation ? (
+                          <div>
+                            <span className="font-semibold text-gray-900 dark:text-white">Detected: </span>
+                            <span className="text-gray-600 dark:text-gray-300">{pickedLocation.address}</span>
+                          </div>
+                        ) : null}
                       </div>
                     )}
+
+                    {/* Interactive Map Picker */}
+                    {locationMode === "map" && (
+                      <div className="mt-2 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                        <LocationPicker
+                          isDark={isDark}
+                          onLocationSelect={(lat, lng, address) =>
+                            setPickedLocation({ address, latitude: lat, longitude: lng })
+                          }
+                        />
+                      </div>
+                    )}
+
+                    {!pickedLocation && locationMode === "none" && (
+                      <p className="text-xs text-gray-400 italic">
+                        ℹ️ Default: Your registered home/account address will be shared securely after reservation.
+                      </p>
+                    )}
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                )}
 
-            <div className="flex justify-between gap-4">
-              {currentStep > 1 && currentStep < 3 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setCurrentStep((s) => s - 1)}
-                  className="flex-1"
-                >
-                  <FaArrowLeft className="mr-2" />
-                  Previous
-                </Button>
-              )}
-              {currentStep === 3 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setCurrentStep((s) => s - 1)}
-                  className="flex-1"
-                >
-                  <FaArrowLeft className="mr-2" />
-                </Button>
-              )}
+                {/* Allergen Tag Selector */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                    Contains Allergens (Tap all that apply)
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {ALLERGEN_OPTIONS.map((item) => {
+                      const isSelected = formData.allergens.includes(item.value);
+                      return (
+                        <button
+                          key={item.value}
+                          type="button"
+                          onClick={() => toggleAllergen(item.value)}
+                          className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-medium transition-all text-left ${
+                            isSelected
+                              ? "bg-amber-500/15 border-amber-500 text-amber-900 dark:text-amber-200 font-bold shadow-xs ring-1 ring-amber-500"
+                              : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300"
+                          }`}
+                        >
+                          <span className="text-base">{item.icon}</span>
+                          <span className="truncate flex-1">{item.label}</span>
+                          {isSelected && <FaCheck className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-              {currentStep < 3 ? (
-                <Button
-                  key="next-button"
-                  type="button"
-                  variant="secondary"
-                  onClick={goNext}
-                  className={`flex-1 bg-linear-to-r ${accentGradient}`}
-                >
-                  Next
-                  <FaArrowRight className="ml-2" />
-                </Button>
-              ) : (
-                <Button
-                  key="submit-button"
-                  type="submit"
-                  fullWidth
-                  variant="secondary"
-                  loading={isAdding}
-                  className={`bg-linear-to-r ${accentGradient} hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200`}
-                >
-                  {userType === "restaurant"
-                    ? "List This Food"
-                    : "Share This Food"}
-                </Button>
-              )}
-            </div>
-          </form>
+                {/* Storage & Safety Guidelines */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-1.5">
+                    Consumption & Reheating Advice
+                  </label>
+                  <textarea
+                    name="safetyGuidelines"
+                    value={formData.safetyGuidelines}
+                    onChange={handleChange}
+                    rows={2}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none shadow-sm"
+                    placeholder="e.g., Best consumed within 2 hours. Keep chilled if consuming later."
+                  />
+                </div>
+              </motion.div>
+            )}
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="mt-8 bg-linear-to-r from-red-50 dark:from-red-900/20 to-orange-50 dark:to-orange-900/20 border border-red-200 dark:border-red-700 rounded-2xl p-4"
-          >
-            <div className="flex gap-4">
-              <FaShieldAlt className="w-8 h-8 text-red-500 dark:text-red-400 flex-shrink-0" />
-              <div>
-                <h3 className="font-semibold text-red-900 dark:text-red-50 mb-2">
-                  Food Safety First
-                </h3>
-                <ul className="space-y-2 text-sm text-red-700 dark:text-red-200">
-                  <li>✓ Only cooked, ready-to-eat food allowed</li>
-                  <li>✓ Maintain proper storage temperature</li>
-                  <li>✓ Accurate expiry time is mandatory</li>
-                  <li>✓ Use clean packaging for pickup</li>
-                </ul>
-                <p className="text-xs text-red-600 dark:text-red-300 mt-3">
-                  Violation of safety guidelines may result in account
-                  suspension
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
+            {/* STEP 3: Expiry & Images */}
+            {currentStep === 3 && (
+              <motion.div
+                key="step3"
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 16 }}
+                transition={{ duration: 0.25 }}
+                className="space-y-6"
+              >
+                <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <span className={`px-2.5 py-0.5 rounded-lg bg-linear-to-r ${accentGradient} text-white text-xs font-bold`}>
+                        Step 3
+                      </span>
+                      Expiry Window & Delicious Photos
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Set a strict pickup cutoff and upload tempting photos.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Expiry Selection Card */}
+                <div className="p-5 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/60 space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-bold text-amber-900 dark:text-amber-200">
+                    <FaClock className="text-amber-600 dark:text-amber-400" />
+                    Pickup Expiry Deadline (Food Safety Gate)
+                  </div>
+
+                  <Select
+                    label="Listing Valid Until"
+                    name="expiresAt"
+                    value={formData.expiresAt}
+                    onChange={handleSelectChange("expiresAt")}
+                    options={expiryOptions}
+                    required
+                  />
+                  {errors.expiresAt && (
+                    <p className="text-xs text-rose-500 font-semibold">{errors.expiresAt}</p>
+                  )}
+
+                  {formData.expiresAt && (
+                    <div className="p-4 bg-white/80 dark:bg-gray-800/80 rounded-xl border border-amber-200 dark:border-amber-700/50 flex items-center justify-between">
+                      <div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Available For:</span>
+                        <div className="text-lg font-black text-amber-600 dark:text-amber-400">
+                          {(() => {
+                            const diffMs = new Date(formData.expiresAt).getTime() - Date.now();
+                            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                            const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                            return diffHours > 0 ? `${diffHours}h ${diffMinutes}m remaining` : `${diffMinutes}m remaining`;
+                          })()}
+                        </div>
+                      </div>
+                      <span className="text-xs font-semibold px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 rounded-full">
+                        Auto-Unlists After Time
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Image Upload Area */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                    Photos of the Food (Max {MAX_IMAGES})
+                  </label>
+                  
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-2xl p-6 sm:p-8 text-center transition-all bg-gray-50/40 dark:bg-gray-800/20">
+                    <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-3">
+                      <FaUpload className="w-5 h-5" />
+                    </div>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">
+                      Drag and drop your photos here, or browse
+                    </p>
+                    <p className="text-xs text-gray-400 mb-4">
+                      Supports JPG, PNG, WebP up to 5MB each. Clear photos get reserved 3x faster!
+                    </p>
+
+                    <label className="inline-block cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                      <span className={`px-5 py-2.5 rounded-xl bg-linear-to-r ${accentGradient} text-white text-xs font-bold shadow-md hover:shadow-lg transition-all`}>
+                        Select Photos
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Thumbnail Previews */}
+                  {images.length > 0 && (
+                    <div className="grid grid-cols-3 gap-3 mt-4">
+                      {images.map((image, idx) => (
+                        <div key={image.id} className="relative group rounded-xl overflow-hidden shadow-sm aspect-4/3">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={image.preview}
+                            alt="Food preview"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 backdrop-blur-xs text-white text-[10px] font-bold rounded-md">
+                            {idx === 0 ? "Cover Photo" : `Photo ${idx + 1}`}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeImage(image.id)}
+                            className="absolute top-2 right-2 p-1.5 bg-rose-600 text-white rounded-lg opacity-90 hover:opacity-100 transition-opacity shadow-md"
+                          >
+                            <FaTrash className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Form Action Controls */}
+          <div className="pt-6 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-4">
+            {currentStep > 1 ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCurrentStep((s) => s - 1)}
+                className="px-6 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200"
+              >
+                <FaArrowLeft className="mr-2 w-3.5 h-3.5" />
+                Previous
+              </Button>
+            ) : (
+              <div />
+            )}
+
+            {currentStep < 3 ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={goNext}
+                className={`px-8 bg-linear-to-r ${accentGradient} text-white font-bold shadow-lg hover:shadow-xl transition-all`}
+              >
+                Continue
+                <FaArrowRight className="ml-2 w-3.5 h-3.5" />
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                variant="secondary"
+                loading={isAdding}
+                className={`px-10 py-3 bg-linear-to-r ${accentGradient} text-white font-extrabold shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all`}
+              >
+                {isRestaurant ? "🚀 Publish Surplus Listing" : "💝 Share Food Now"}
+              </Button>
+            )}
+          </div>
+        </form>
       </div>
     </div>
   );

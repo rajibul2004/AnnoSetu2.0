@@ -201,8 +201,8 @@ export default function NotificationsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-transparent pb-16">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-transparent pb-16 pt-24 sm:pt-28">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -16 }}

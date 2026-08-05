@@ -1,6 +1,6 @@
 "use client";
- 
-import { useEffect, useState, useMemo } from "react";
+
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -23,7 +23,9 @@ import {
   FaMedal,
   FaTrophy,
   FaStore,
-  FaRupeeSign
+  FaRupeeSign,
+  FaArrowRight,
+  FaShieldAlt,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
@@ -33,11 +35,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMyReservations, useCancelReservation } from "@/hooks/useReservationQueries";
 import { useMySharedFood, useDeleteFood } from "@/hooks/useFoodQueries";
 import type { ReservationDTO } from "@/types/reservation";
-import { isFoodExpired, isFoodReserved, type SharedFoodDTO } from "@/types/food";
- 
+import { isFoodExpired, type SharedFoodDTO } from "@/types/food";
+
 type ConsumerTab = "upcoming" | "past" | "cancelled";
 type SupplierTab = "active" | "reserved" | "expired";
- 
+
 interface DashboardStats {
   mealsConsumed: number;
   moneySaved: number;
@@ -51,64 +53,45 @@ interface DashboardStats {
   communityRank: number;
   impactBadges: string[];
 }
- 
-const EMPTY_STATS: DashboardStats = {
-  mealsConsumed: 0,
-  moneySaved: 0,
-  co2Reduced: 0,
-  favoriteRestaurants: 0,
-  mealsShared: 0,
-  peopleFed: 0,
-  earnings: 0,
-  avgRating: 0,
-  totalImpact: 0,
-  // Not backed by any real ranking system yet — the original hardcoded
-  // this to 42 too. Kept as a placeholder rather than inventing a
-  // leaderboard query; flag if you want this wired up for real.
-  communityRank: 42,
-  impactBadges: ["newcomer"],
-};
- 
+
 function calculateStats(
   reservedFoods: ReservationDTO[],
   sharedFoods: SharedFoodDTO[],
 ): DashboardStats {
   const completedReservations = reservedFoods.filter((r) => r.status === "picked_up");
   const totalMealsConsumed = completedReservations.reduce((sum, r) => sum + r.quantity, 0);
-  
-  // Fix: Money saved is the difference between original price and what was paid.
-  // If original price is not set, they didn't 'save' a trackable amount, they just spent money.
+
   const totalMoneySaved = completedReservations.reduce((sum, r) => {
     if (r.food?.originalPrice) {
-      return sum + Math.max(0, (r.food.originalPrice * r.quantity) - (r.totalPrice || 0));
+      return sum + Math.max(0, r.food.originalPrice * r.quantity - (r.totalPrice || 0));
     }
     return sum;
   }, 0);
- 
-  // Fix: Meals shared is the quantity that has been claimed/picked up.
-  // (quantity - availableQty) represents the meals that were actually taken.
-  const totalMealsShared = sharedFoods.reduce((sum, l) => sum + (l.quantity - l.availableQty), 0);
-  
-  // Fix: Earnings is (quantity taken) * price
+
+  const totalMealsShared = sharedFoods.reduce(
+    (sum, l) => sum + (l.quantity - l.availableQty),
+    0,
+  );
+
   const totalEarnings = sharedFoods.reduce((sum, l) => {
     if (l.isDonation || !l.price) return sum;
-    return sum + ((l.quantity - l.availableQty) * l.price);
+    return sum + (l.quantity - l.availableQty) * l.price;
   }, 0);
- 
-  // Food caches averageRating/reviewCount directly — no need to fetch a
-  // nested reviews array just to check "has this been reviewed".
+
   const ratedListings = sharedFoods.filter((l) => l.reviewCount > 0);
   const avgRating =
     ratedListings.length > 0
-      ? ratedListings.reduce((sum, l) => sum + (l.averageRating || 0), 0) / ratedListings.length
+      ? ratedListings.reduce((sum, l) => sum + (l.averageRating || 0), 0) /
+        ratedListings.length
       : 0;
- 
+
   return {
     mealsConsumed: totalMealsConsumed,
     moneySaved: totalMoneySaved,
     co2Reduced: totalMealsConsumed * 2.5,
-    // Fix: Favorite restaurants should only count completed reservations, not cancelled ones.
-    favoriteRestaurants: new Set(completedReservations.map((r) => r.food?.supplierId)).size,
+    favoriteRestaurants: new Set(
+      completedReservations.map((r) => r.food?.supplierId),
+    ).size,
     mealsShared: totalMealsShared,
     peopleFed: totalMealsShared * 2,
     earnings: totalEarnings,
@@ -123,29 +106,31 @@ function calculateStats(
     ].filter((v): v is string => Boolean(v)),
   };
 }
- 
+
 export default function UserDashboard() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"consumer" | "supplier">("consumer");
   const [consumerTab, setConsumerTab] = useState<ConsumerTab>("upcoming");
   const [supplierTab, setSupplierTab] = useState<SupplierTab>("active");
-  const [showWelcome, setShowWelcome] = useState(true);
- 
-  const { reservations: userReservations, isLoading: isReservationsLoading } = useMyReservations();
-  const { mySharedFood: userSharedFood, isLoading: isMySharedLoading } = useMySharedFood();
-  
+
+  const { reservations: userReservations, isLoading: isReservationsLoading } =
+    useMyReservations();
+  const { mySharedFood: userSharedFood, isLoading: isMySharedLoading } =
+    useMySharedFood();
+
   const isLoading = isReservationsLoading || isMySharedLoading;
- 
-  const stats = useMemo(() => calculateStats(userReservations, userSharedFood), [userReservations, userSharedFood]);
- 
+
+  const stats = useMemo(
+    () => calculateStats(userReservations, userSharedFood),
+    [userReservations, userSharedFood],
+  );
+
   const filteredReservations = userReservations.filter((res) => {
     const now = new Date();
     const pickupTime = new Date(res.pickupTime);
- 
+
     switch (consumerTab) {
       case "upcoming":
-        // Include both pending AND confirmed reservations in the upcoming tab
-        // so users can see reservations awaiting supplier confirmation too.
         return (
           (res.status === "confirmed" || res.status === "pending") &&
           pickupTime > now
@@ -158,28 +143,30 @@ export default function UserDashboard() {
         return true;
     }
   });
- 
+
   const filteredListings = userSharedFood.filter((food) => {
     switch (supplierTab) {
       case "active":
         return food.isActive && !isFoodExpired(food) && food.availableQty > 0;
       case "reserved":
-        return food.quantity > food.availableQty; // Has at least 1 reservation
+        return food.quantity > food.availableQty;
       case "expired":
         return isFoodExpired(food) || !food.isActive;
       default:
         return true;
     }
   });
- 
+
   const upcomingPickups = userReservations.filter(
-    (r) => r.status === "confirmed" && new Date(r.pickupTime) > new Date(),
+    (r) =>
+      (r.status === "confirmed" || r.status === "pending") &&
+      new Date(r.pickupTime) > new Date(),
   ).length;
- 
+
   const activeListings = userSharedFood.filter(
     (f) => f.isActive && !isFoodExpired(f) && f.availableQty > 0,
   ).length;
- 
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center">
@@ -187,354 +174,330 @@ export default function UserDashboard() {
       </div>
     );
   }
- 
-  const firstName = user?.name?.split(" ")[0] ?? "there";
- 
+
+  const firstName = user?.name?.split(" ")[0] ?? "Friend";
+
   return (
-    <div className="min-h-screen bg-transparent pb-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Toast */}
-        <AnimatePresence>
-          {showWelcome && (
-            <motion.div
-              initial={{ opacity: 0, y: -50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -50 }}
-              className="fixed top-20 right-4 z-40 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-4 border-l-4 border-pink-500 max-w-sm"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-linear-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center">
-                  <FaHeart className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-gray-50">
-                    Welcome back, {firstName}! 🎉
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    You have {upcomingPickups} upcoming pickups
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
- 
-        {/* Header with Dual Role Welcome */}
+    <div className="min-h-screen bg-transparent pb-16 pt-24 sm:pt-28">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Hero Banner */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-linear-to-r from-pink-600 via-purple-600 to-blue-600 rounded-3xl shadow-2xl p-8 mb-8 mt-20 text-white relative overflow-hidden"
+          className="relative rounded-3xl p-6 sm:p-10 mb-8 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-700 text-white shadow-2xl overflow-hidden border border-white/10"
         >
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute -top-20 -right-20 w-64 h-64 bg-white rounded-full"></div>
-            <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-gray-600 rounded-full"></div>
-          </div>
- 
-          <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center">
-            <div className="flex items-center space-x-4 mb-4 md:mb-0">
-              <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+          {/* Subtle Ambient Light Gradients */}
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 bg-pink-400/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-80 h-80 bg-blue-400/20 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div className="flex items-center gap-5">
+              <div className="w-18 h-18 sm:w-20 sm:h-20 bg-white/15 backdrop-blur-md rounded-2xl p-1 border border-white/20 flex items-center justify-center text-3xl shadow-inner">
                 {stats.avgRating >= 4.5 ? (
-                  <FaTrophy className="w-10 h-10 text-yellow-300" />
+                  <FaTrophy className="text-yellow-300 w-10 h-10" />
                 ) : (
-                  <FaHome className="w-10 h-10" />
+                  <FaHeart className="text-pink-200 w-10 h-10" />
                 )}
               </div>
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold mb-2">Hey {firstName}! 👋</h1>
-                <p className="text-white/90 flex items-center gap-2">
-                  <FaExchangeAlt className="w-4 h-4" />
-                  You&apos;re making a difference as both a saver &amp; sharer
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider mb-2 border border-white/20">
+                  <FaShieldAlt className="text-emerald-300" />
+                  <span>Individual Partner • Saver &amp; Sharer</span>
+                </div>
+                <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+                  Welcome back, {firstName}! ✨
+                </h1>
+                <p className="text-pink-100/90 text-sm sm:text-base mt-1 flex items-center gap-2 font-medium">
+                  <FaExchangeAlt className="opacity-80" />
+                  Making a greener difference in your local community
                 </p>
               </div>
             </div>
- 
-            <div className="flex flex-wrap gap-2">
-              {stats.impactBadges.includes("food-saver") && (
-                <div className="bg-green-500/20 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2 border border-white/30">
-                  <FaLeaf className="w-4 h-4" />
-                  <span className="text-sm">Food Saver</span>
-                </div>
-              )}
-              {stats.impactBadges.includes("food-sharer") && (
-                <div className="bg-purple-500/20 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2 border border-white/30">
-                  <FaHeart className="w-4 h-4" />
-                  <span className="text-sm">Food Sharer</span>
-                </div>
-              )}
-              {stats.avgRating > 4.5 && (
-                <div className="bg-yellow-500/20 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2 border border-white/30">
-                  <FaStar className="w-4 h-4" />
-                  <span className="text-sm">Top Rated</span>
-                </div>
-              )}
-            </div>
-          </div>
- 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-              <div className="text-2xl font-bold">{stats.totalImpact}</div>
-              <div className="text-xs text-white/80">Total Impact</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-              <div className="text-2xl font-bold">{stats.co2Reduced}kg</div>
-              <div className="text-xs text-white/80">CO₂ Saved</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-              <div className="text-2xl font-bold">#{stats.communityRank}</div>
-              <div className="text-xs text-white/80">Community Rank</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-              <div className="text-2xl font-bold">
-                {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "New"}
-              </div>
-              <div className="text-xs text-white/80">Avg Rating</div>
-            </div>
-          </div>
-        </motion.div>
- 
-        {/* Role Stats Overview */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Consumer Stats Card */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-linear-to-br from-blue-50 dark:from-blue-950 to-blue-100 dark:to-blue-900 border-2 border-blue-200 dark:border-blue-700 rounded-2xl p-6 relative overflow-hidden group hover:shadow-xl transition-all"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-200 dark:bg-blue-700 rounded-full -mr-16 -mt-16 opacity-50 group-hover:scale-150 transition-transform"></div>
- 
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-linear-to-br from-blue-500 dark:from-blue-400 to-blue-600 dark:to-blue-300 rounded-xl flex items-center justify-center mr-3 shadow-lg">
-                    <FaShoppingBag className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    Food Saver
-                  </h3>
-                </div>
-                <Link href="/">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-200 hover:bg-blue-100 dark:hover:bg-blue-900"
-                  >
-                    Browse Food
-                  </Button>
-                </Link>
-              </div>
- 
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div className="text-center p-3 bg-white/60 dark:bg-gray-900/60 rounded-xl">
-                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {stats.mealsConsumed}
-                  </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">Meals Saved</div>
-                </div>
-                <div className="text-center p-3 bg-white/60 dark:bg-gray-900/60 rounded-xl">
-                  <div className="text-xl font-bold text-green-600">
-                    ₹{stats.moneySaved.toFixed(2)}
-                  </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">Money Saved</div>
-                </div>
-                <div className="text-center p-3 bg-white/60 dark:bg-gray-900/60 rounded-xl">
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-300">
-                    {stats.co2Reduced}kg
-                  </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-300">CO₂ Reduced</div>
-                </div>
-              </div>
- 
-              <div className="flex justify-between items-center text-sm bg-white/60 dark:bg-gray-900/60 p-3 rounded-xl">
-                <span className="text-gray-600 dark:text-gray-300 flex items-center gap-1">
-                  <FaClock className="text-blue-500 dark:text-blue-300" />
-                  Upcoming pickups:
-                </span>
-                <span className="font-bold text-blue-600 dark:text-blue-300 text-lg">
-                  {upcomingPickups}
-                </span>
-              </div>
-            </div>
-          </motion.div>
- 
-          {/* Supplier Stats Card */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-linear-to-br from-purple-50 dark:from-purple-950 to-pink-100 dark:to-pink-900 border-2 border-purple-200 dark:border-purple-700 rounded-2xl p-6 relative overflow-hidden group hover:shadow-xl transition-all"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-200 dark:bg-purple-700 rounded-full -mr-16 -mt-16 opacity-50 group-hover:scale-150 transition-transform"></div>
- 
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-linear-to-br from-purple-500 dark:from-purple-400 to-pink-600 dark:to-pink-300 rounded-xl flex items-center justify-center mr-3 shadow-lg">
-                    <FaUtensils className="w-6 h-6 text-white dark:text-gray-900" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    Food Sharer
-                  </h3>
-                </div>
-                <Link href="/protected/add-food?role=individual">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-200 hover:bg-purple-100 dark:hover:bg-purple-900"
-                  >
-                    <FaPlus className="mr-1" /> Share Food
-                  </Button>
-                </Link>
-              </div>
- 
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div className="text-center p-3 bg-white/60 dark:bg-gray-900/60 rounded-xl">
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {stats.mealsShared}
-                  </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-300">Meals Shared</div>
-                </div>
-                <div className="text-center p-3 bg-white/60 dark:bg-gray-900/60 rounded-xl">
-                  <div className="text-2xl font-bold text-yellow-600">{stats.peopleFed}</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-300">People Fed</div>
-                </div>
-                <div className="text-center p-3 bg-white/60 dark:bg-gray-900/60 rounded-xl">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-300">
-                    {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "New"}
-                  </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-300 flex items-center justify-center">
-                    <FaStar className="text-yellow-500 dark:text-yellow-400 mr-1" /> Rating
-                  </div>
-                </div>
-              </div>
- 
-              <div className="flex justify-between items-center text-sm bg-white/60 dark:bg-gray-900/60 p-3 rounded-xl">
-                <span className="text-gray-600 dark:text-gray-300 flex items-center gap-1">
-                  <FaFire className="text-orange-500 dark:text-orange-400" />
-                  Active listings:
-                </span>
-                <span className="font-bold text-purple-600 dark:text-purple-300 text-lg">
-                  {activeListings}
-                </span>
-              </div>
-            </div>
-          </motion.div>
-        </div>
- 
-        <div className="mb-8">
-          <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl shadow-lg p-2 flex">
-            <button
-              onClick={() => setActiveTab("consumer")}
-              className={`flex-1 flex items-center justify-center px-4 py-3 rounded-xl font-medium transition-all ${
-                activeTab === "consumer"
-                  ? "bg-gradient-to-r from-blue-500 dark:from-blue-400 to-blue-600 dark:to-blue-300 text-white dark:text-gray-900 shadow-md"
-                  : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
-              }`}
-            >
-              <FaShoppingBag className="mr-2" />
-              <span>Food Saver</span>
-              {stats.mealsConsumed > 0 && (
-                <span className="ml-2 bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-100 text-xs px-2 py-1 rounded-full">
-                  {stats.mealsConsumed}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab("supplier")}
-              className={`flex-1 flex items-center justify-center px-4 py-3 rounded-xl font-medium transition-all ${
-                activeTab === "supplier"
-                  ? "bg-gradient-to-r from-purple-500 dark:from-purple-400 to-pink-600 dark:to-pink-300 text-white dark:text-gray-900 shadow-md"
-                  : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
-              }`}
-            >
-              <FaUtensils className="mr-2" />
-              <span>Food Sharer</span>
-              {stats.mealsShared > 0 && (
-                <span className="ml-2 bg-purple-200 dark:bg-purple-700 text-purple-800 dark:text-purple-100 text-xs px-2 py-1 rounded-full">
-                  {stats.mealsShared}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
- 
-        {/* Impact Banner */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-green-500 dark:from-green-400 to-emerald-600 dark:to-emerald-300 rounded-2xl p-8 mb-8 text-white dark:text-gray-900 relative overflow-hidden"
-        >
-          <div className="relative flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center mb-4 md:mb-0">
-              <div className="w-16 h-16 bg-white/20 dark:bg-gray-900/20 backdrop-blur-sm rounded-xl flex items-center justify-center mr-4">
-                <FaLeaf className="w-8 h-8" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold">Amazing Impact!</h3>
-                <p className="text-green-100 dark:text-green-800 mt-1">
-                  You&apos;ve helped save{" "}
-                  <span className="font-bold text-2xl">{stats.totalImpact}</span> meals from
-                  going to waste
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-6">
-              <div className="text-center">
-                <div className="text-4xl font-bold">#{stats.communityRank}</div>
-                <div className="text-xs text-green-100 dark:text-green-800">Community Rank</div>
-              </div>
-              <div className="h-12 w-px bg-white/30 dark:bg-gray-900/30"></div>
-              <Link href="/impact">
-                <Button
-                  variant="outline"
-                  className="border-white dark:border-gray-900 text-white dark:text-gray-900 hover:bg-white/20 hover:bg-gray-900/20"
-                >
-                  View Full Impact
+
+            {/* Badges & Actions */}
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href="/public/food">
+                <Button className="bg-white text-gray-900 hover:bg-white/90 font-bold shadow-lg text-sm rounded-xl py-2.5">
+                  <FaShoppingBag className="mr-2 text-pink-600" />
+                  Save Food
+                </Button>
+              </Link>
+              <Link href="/protected/add-food?role=individual">
+                <Button className="bg-white/20 hover:bg-white/30 text-white font-bold backdrop-blur-md border border-white/30 shadow-lg text-sm rounded-xl py-2.5">
+                  <FaPlus className="mr-2 text-yellow-300" />
+                  Share Meals
                 </Button>
               </Link>
             </div>
           </div>
+
+          {/* Quick Metrics Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-8 pt-6 border-t border-white/15 relative z-10">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 hover:bg-white/15 transition-all">
+              <span className="text-xs text-pink-100/80 font-medium">Total Impact</span>
+              <div className="text-2xl sm:text-3xl font-extrabold mt-0.5">
+                {stats.totalImpact} <span className="text-sm font-normal">Meals</span>
+              </div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 hover:bg-white/15 transition-all">
+              <span className="text-xs text-pink-100/80 font-medium">CO₂ Footprint Saved</span>
+              <div className="text-2xl sm:text-3xl font-extrabold mt-0.5 text-emerald-300">
+                {stats.co2Reduced} <span className="text-sm font-normal">kg</span>
+              </div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 hover:bg-white/15 transition-all">
+              <span className="text-xs text-pink-100/80 font-medium">Community Rank</span>
+              <div className="text-2xl sm:text-3xl font-extrabold mt-0.5 text-yellow-300">
+                #{stats.communityRank}
+              </div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 hover:bg-white/15 transition-all">
+              <span className="text-xs text-pink-100/80 font-medium">Cook Rating</span>
+              <div className="text-2xl sm:text-3xl font-extrabold mt-0.5 flex items-center gap-1.5">
+                {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "New"}
+                <FaStar className="text-yellow-300 text-base" />
+              </div>
+            </div>
+          </div>
         </motion.div>
- 
+
+        {/* Role Overview Dual Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Consumer (Food Saver) Card */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800/80 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all duration-300"
+          >
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center text-xl shadow-sm border border-blue-100 dark:border-blue-900/40">
+                  <FaShoppingBag />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    Food Saver Profile
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                    Rescuing quality food &amp; saving money
+                  </p>
+                </div>
+              </div>
+              <Link href="/public/food">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-xl"
+                >
+                  Browse Food <FaArrowRight className="ml-1 text-xs" />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="p-3.5 bg-gray-50 dark:bg-slate-800/50 rounded-2xl text-center border border-gray-100 dark:border-slate-700/50">
+                <div className="text-2xl font-black text-gray-900 dark:text-white">
+                  {stats.mealsConsumed}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium">
+                  Meals Saved
+                </div>
+              </div>
+              <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl text-center border border-emerald-100 dark:border-emerald-900/40">
+                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                  ₹{stats.moneySaved.toFixed(0)}
+                </div>
+                <div className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5 font-medium">
+                  Money Saved
+                </div>
+              </div>
+              <div className="p-3.5 bg-indigo-50 dark:bg-indigo-950/30 rounded-2xl text-center border border-indigo-100 dark:border-indigo-900/40">
+                <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
+                  {stats.co2Reduced}kg
+                </div>
+                <div className="text-xs text-indigo-700 dark:text-indigo-300 mt-0.5 font-medium">
+                  CO₂ Cut
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between px-4 py-3 bg-blue-50/60 dark:bg-blue-950/30 rounded-2xl border border-blue-100 dark:border-blue-900/30 text-sm">
+              <span className="text-blue-900 dark:text-blue-200 font-semibold flex items-center gap-2">
+                <FaClock className="text-blue-500" /> Upcoming Pickups
+              </span>
+              <span className="font-extrabold text-blue-600 dark:text-blue-400 text-base">
+                {upcomingPickups}
+              </span>
+            </div>
+          </motion.div>
+
+          {/* Supplier (Home Cook) Card */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800/80 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all duration-300"
+          >
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center text-xl shadow-sm border border-purple-100 dark:border-purple-900/40">
+                  <FaUtensils />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    Home Cook &amp; Sharer
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                    Sharing extra meals with neighbors
+                  </p>
+                </div>
+              </div>
+              <Link href="/protected/add-food?role=individual">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-purple-200 dark:border-purple-800 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/50 rounded-xl"
+                >
+                  <FaPlus className="mr-1 text-xs" /> Share Food
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="p-3.5 bg-gray-50 dark:bg-slate-800/50 rounded-2xl text-center border border-gray-100 dark:border-slate-700/50">
+                <div className="text-2xl font-black text-gray-900 dark:text-white">
+                  {stats.mealsShared}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium">
+                  Meals Shared
+                </div>
+              </div>
+              <div className="p-3.5 bg-pink-50 dark:bg-pink-950/30 rounded-2xl text-center border border-pink-100 dark:border-pink-900/40">
+                <div className="text-2xl font-black text-pink-600 dark:text-pink-400">
+                  {stats.peopleFed}
+                </div>
+                <div className="text-xs text-pink-700 dark:text-pink-300 mt-0.5 font-medium">
+                  People Fed
+                </div>
+              </div>
+              <div className="p-3.5 bg-yellow-50 dark:bg-yellow-950/30 rounded-2xl text-center border border-yellow-100 dark:border-yellow-900/40">
+                <div className="text-2xl font-black text-yellow-600 dark:text-yellow-400 flex items-center justify-center gap-1">
+                  {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "5.0"}
+                  <FaStar className="text-xs" />
+                </div>
+                <div className="text-xs text-yellow-700 dark:text-yellow-300 mt-0.5 font-medium">
+                  Rating
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between px-4 py-3 bg-purple-50/60 dark:bg-purple-950/30 rounded-2xl border border-purple-100 dark:border-purple-900/30 text-sm">
+              <span className="text-purple-900 dark:text-purple-200 font-semibold flex items-center gap-2">
+                <FaFire className="text-purple-500" /> Active Food Listings
+              </span>
+              <span className="font-extrabold text-purple-600 dark:text-purple-400 text-base">
+                {activeListings}
+              </span>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Interactive Mode Switcher Tabs */}
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800/80 rounded-2xl p-1.5 flex mb-8 shadow-sm">
+          <button
+            onClick={() => setActiveTab("consumer")}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer ${
+              activeTab === "consumer"
+                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
+                : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            }`}
+          >
+            <FaShoppingBag />
+            <span>My Food Reservations (Saver Mode)</span>
+            {userReservations.length > 0 && (
+              <span
+                className={`ml-1.5 px-2 py-0.5 text-xs rounded-full ${
+                  activeTab === "consumer"
+                    ? "bg-white/20 text-white"
+                    : "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300"
+                }`}
+              >
+                {userReservations.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab("supplier")}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer ${
+              activeTab === "supplier"
+                ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md"
+                : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            }`}
+          >
+            <FaUtensils />
+            <span>My Shared Foods (Sharer Mode)</span>
+            {userSharedFood.length > 0 && (
+              <span
+                className={`ml-1.5 px-2 py-0.5 text-xs rounded-full ${
+                  activeTab === "supplier"
+                    ? "bg-white/20 text-white"
+                    : "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300"
+                }`}
+              >
+                {userSharedFood.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Tab Content Section */}
         <AnimatePresence mode="wait">
           {activeTab === "consumer" && (
             <motion.div
-              key="consumer"
-              initial={{ opacity: 0, y: 20 }}
+              key="consumer-view"
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              exit={{ opacity: 0, y: -15 }}
               className="space-y-6"
             >
-              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-1 flex flex-wrap">
+              {/* Subtabs for Consumer */}
+              <div className="flex items-center gap-2 bg-gray-100/80 dark:bg-slate-800/80 p-1.5 rounded-2xl w-fit">
                 {(["upcoming", "past", "cancelled"] as ConsumerTab[]).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setConsumerTab(tab)}
-                    className={`flex-1 px-4 py-2 rounded-lg font-medium text-sm capitalize transition-all ${
+                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold capitalize transition-all cursor-pointer ${
                       consumerTab === tab
-                        ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200"
-                        : "text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300 cursor-pointer"
+                        ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                     }`}
                   >
                     {tab} {tab === "upcoming" && `(${upcomingPickups})`}
                   </button>
                 ))}
               </div>
- 
+
+              {/* Reservations List */}
               {filteredReservations.length === 0 ? (
-                <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-12 text-center">
-                  <div className="w-24 h-24 mx-auto bg-linear-to-br from-blue-100 dark:from-blue-900 to-purple-100 dark:to-purple-900 rounded-full flex items-center justify-center mb-4">
-                    <FaShoppingBag className="w-12 h-12 text-blue-600 dark:text-blue-300" />
+                <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800/80 rounded-3xl p-12 text-center shadow-sm">
+                  <div className="w-20 h-20 mx-auto bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-3xl flex items-center justify-center mb-4 text-3xl">
+                    <FaShoppingBag />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-50 mb-2">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                     No {consumerTab} reservations
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-md mx-auto">
+                  <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto text-sm mb-6">
                     {consumerTab === "upcoming"
-                      ? "Ready to save some food? Check out what's available near you!"
-                      : "Your reservation history will appear here once you start saving food."}
+                      ? "Ready to save delicious food near you and reduce food waste?"
+                      : "Your completed pickups and order history will appear right here."}
                   </p>
                   {consumerTab === "upcoming" && (
-                    <Link href="/">
-                      <Button>Browse Available Food</Button>
+                    <Link href="/public/food">
+                      <Button 
+                      variant="secondary"
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg">
+                        Browse Food Marketplace
+                      </Button>
                     </Link>
                   )}
                 </div>
@@ -549,104 +512,106 @@ export default function UserDashboard() {
                   ))}
                 </div>
               )}
- 
-              <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-6">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-50 mb-4 flex items-center gap-2">
-                  <FaChartLine className="text-blue-600 dark:text-blue-300" />
-                  Your Food Saving Insights
+
+              {/* Insights Panel */}
+              <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800/80 rounded-3xl p-6 shadow-sm">
+                <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <FaChartLine className="text-blue-600 dark:text-blue-400" />
+                  <span>Your Food Saver Insights</span>
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-4 bg-green-50 dark:bg-green-900/30 rounded-xl">
-                    <div className="text-2xl font-bold text-green-600 dark:text-green-300 mb-1">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-100 dark:border-slate-700/50">
+                    <div className="text-2xl font-extrabold text-blue-600 dark:text-blue-400">
                       {stats.favoriteRestaurants}
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Suppliers Visited
                     </div>
                   </div>
-                  <div className="p-4 bg-purple-50 dark:bg-purple-900/30 rounded-xl">
-                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-300 mb-1">
+                  <div className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-100 dark:border-slate-700/50">
+                    <div className="text-2xl font-extrabold text-purple-600 dark:text-purple-400">
                       {userReservations.length}
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Total Orders</div>
-                  </div>
-                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900/30 rounded-xl">
-                    <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-300 mb-1">
-                      ₹{(stats.moneySaved / (stats.mealsConsumed || 1)).toFixed(2)}
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Total Reservations
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">
-                      Avg Savings/Meal
+                  </div>
+                  <div className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-100 dark:border-slate-700/50">
+                    <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                      ₹{(stats.moneySaved / (stats.mealsConsumed || 1)).toFixed(0)}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Avg Savings per Meal
                     </div>
                   </div>
                 </div>
               </div>
             </motion.div>
           )}
- 
+
           {activeTab === "supplier" && (
             <motion.div
-              key="supplier"
-              initial={{ opacity: 0, y: 20 }}
+              key="supplier-view"
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              exit={{ opacity: 0, y: -15 }}
               className="space-y-6"
             >
-              <div className="bg-linear-to-r from-purple-600 dark:from-purple-300 via-pink-600 dark:via-pink-300 to-orange-600 dark:to-orange-100 rounded-2xl p-6 text-white dark:text-gray-900 relative overflow-hidden">
-                <div className="relative flex flex-col md:flex-row justify-between items-center">
-                  <div className="flex items-center mb-4 md:mb-0">
-                    <div className="w-16 h-16 bg-white/20 dark:bg-gray-900/20 backdrop-blur-sm rounded-xl flex items-center justify-center mr-4">
-                      <FaGift className="w-8 h-8" />
-                    </div>
-                    <div>
-                      <h3 className="text-2xl font-bold">Share Your Home-Cooked Love! 🍳</h3>
-                      <p className="text-pink-100 dark:text-pink-800 ">
-                        Got extra food? Turn it into smiles for others!
-                      </p>
-                    </div>
+              {/* Sharer Header CTA */}
+              <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-2xl">
+                    <FaGift />
                   </div>
-                  <Link href="/protected/add-food?role=individual">
-                    <Button className="bg-white dark:bg-gray-900 text-purple-700 dark:text-purple-200 hover:bg-purple-50 dark:hover:bg-purple-900 shadow-lg">
-                      <FaPlus className="mr-2" />
-                      List New Food
-                    </Button>
-                  </Link>
+                  <div>
+                    <h3 className="text-xl font-bold">Share Your Home Cooking! 🍳</h3>
+                    <p className="text-pink-100 text-sm mt-0.5">
+                      Got extra wholesome food? Turn it into smiles for your neighbors.
+                    </p>
+                  </div>
                 </div>
+                <Link href="/protected/add-food?role=individual">
+                  <Button className="bg-white text-purple-700 hover:bg-white/90 font-bold shadow-md rounded-xl text-sm py-2.5">
+                    <FaPlus className="mr-2" /> List Food
+                  </Button>
+                </Link>
               </div>
- 
-              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-1 flex flex-wrap">
+
+              {/* Subtabs for Supplier */}
+              <div className="flex items-center gap-2 bg-gray-100/80 dark:bg-slate-800/80 p-1.5 rounded-2xl w-fit">
                 {(["active", "reserved", "expired"] as SupplierTab[]).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setSupplierTab(tab)}
-                    className={`flex-1 px-4 py-2 rounded-lg font-medium text-sm capitalize transition-all ${
+                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold capitalize transition-all cursor-pointer ${
                       supplierTab === tab
-                        ? "bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-200"
-                        : "text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300 cursor-pointer"
+                        ? "bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-sm"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                     }`}
                   >
                     {tab} {tab === "active" && `(${activeListings})`}
                   </button>
                 ))}
               </div>
- 
+
+              {/* Supplier Listings Grid */}
               {filteredListings.length === 0 ? (
-                <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-12 text-center">
-                  <div className="w-24 h-24 mx-auto bg-linear-to-br from-purple-100 dark:from-purple-900/30 to-pink-100 dark:to-pink-900/30 rounded-full flex items-center justify-center mb-4">
-                    <FaUtensils className="w-12 h-12 text-purple-600 dark:text-purple-300" />
+                <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800/80 rounded-3xl p-12 text-center shadow-sm">
+                  <div className="w-20 h-20 mx-auto bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 rounded-3xl flex items-center justify-center mb-4 text-3xl">
+                    <FaUtensils />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-50 mb-2">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                     No {supplierTab} food listings
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-md mx-auto">
+                  <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto text-sm mb-6">
                     {supplierTab === "active"
-                      ? "Ready to share your cooking? List your first homemade meal!"
-                      : `You don't have any ${supplierTab} food items yet.`}
+                      ? "Ready to share your cooking? List your first home-cooked meal with just a few clicks!"
+                      : `You do not have any ${supplierTab} listings right now.`}
                   </p>
                   {supplierTab === "active" && (
                     <Link href="/protected/add-food?role=individual">
-                      <Button>
-                        <FaPlus className="mr-2" />
-                        Share Your First Meal
+                      <Button className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-xl shadow-lg">
+                        <FaPlus className="mr-2" /> Share Your First Meal
                       </Button>
                     </Link>
                   )}
@@ -654,197 +619,53 @@ export default function UserDashboard() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredListings.map((food, index) => (
-                    <SupplierFoodCard key={food.id} food={food} index={index} tab={supplierTab} />
+                    <SupplierFoodCard
+                      key={food.id}
+                      food={food}
+                      index={index}
+                      tab={supplierTab}
+                    />
                   ))}
                 </div>
               )}
- 
-              <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-50 flex items-center gap-2">
-                    <FaChartLine className="text-purple-600 dark:text-purple-300" />
-                    Your Home Cook Performance
-                  </h3>
-                </div>
- 
-                {/*
-                  NOTE: response rate / on-time-pickup / repeat-buyers below
-                  were static mock percentages in the original component
-                  (98%, 95%, 72%) with no backing query — kept as-is for
-                  visual parity rather than inventing an analytics endpoint
-                  that doesn't exist yet.
-                */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        Response Rate
-                      </span>
-                      <span className="font-semibold text-gray-900 dark:text-gray-50">98%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: "98%" }}
-                        className="bg-green-500 dark:bg-green-400 h-2 rounded-full"
-                      />
-                    </div>
+
+              {/* Performance Section */}
+              <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800/80 rounded-3xl p-6 shadow-sm">
+                <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <FaChartLine className="text-purple-600 dark:text-purple-400" />
+                  <span>Home Cook Reputation &amp; Badges</span>
+                </h3>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="px-4 py-2.5 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 rounded-2xl text-xs font-bold flex items-center gap-2 border border-purple-100 dark:border-purple-900/40">
+                    <FaMedal />
+                    <span>Verified Home Cook</span>
                   </div>
- 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        On-time Pickup
-                      </span>
-                      <span className="font-semibold text-gray-900 dark:text-gray-50">95%</span>
+                  {stats.mealsShared > 5 && (
+                    <div className="px-4 py-2.5 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 rounded-2xl text-xs font-bold flex items-center gap-2 border border-blue-100 dark:border-blue-900/40">
+                      <FaAward />
+                      <span>Pro Sharer</span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: "95%" }}
-                        className="bg-blue-500 dark:bg-blue-400 h-2 rounded-full"
-                      />
+                  )}
+                  {stats.avgRating > 4.5 && (
+                    <div className="px-4 py-2.5 bg-yellow-50 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-300 rounded-2xl text-xs font-bold flex items-center gap-2 border border-yellow-100 dark:border-yellow-900/40">
+                      <FaStar />
+                      <span>Top Rated (4.5+ ★)</span>
                     </div>
-                  </div>
- 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        Food Quality
-                      </span>
-                      <span className="font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-1">
-                        {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "4.8"}
-                        <FaStar className="text-yellow-500 w-3 h-3" />
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: "96%" }}
-                        className="bg-yellow-500 dark:bg-yellow-400 h-2 rounded-full"
-                      />
-                    </div>
-                  </div>
- 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-300">
-                        Repeat Buyers
-                      </span>
-                      <span className="font-semibold text-gray-900 dark:text-gray-50">72%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: "72%" }}
-                        className="bg-purple-500 dark:bg-purple-400 h-2 rounded-full"
-                      />
-                    </div>
-                  </div>
-                </div>
- 
-                <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Your Achievements:
-                    </span>
-                    <div className="flex gap-2">
-                      {stats.mealsShared > 0 && (
-                        <div className="px-3 py-1 bg-purple-100 dark:bg-purple-800 text-purple-700 dark:text-purple-200 rounded-full text-xs flex items-center gap-1">
-                          <FaMedal className="w-3 h-3" />
-                          First Share
-                        </div>
-                      )}
-                      {stats.mealsShared > 5 && (
-                        <div className="px-3 py-1 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 rounded-full text-xs flex items-center gap-1">
-                          <FaAward className="w-3 h-3" />
-                          Pro Sharer
-                        </div>
-                      )}
-                      {stats.avgRating > 4.5 && (
-                        <div className="px-3 py-1 bg-yellow-100 dark:bg-yellow-800 text-yellow-700 dark:text-yellow-200 rounded-full text-xs flex items-center gap-1">
-                          <FaStar className="w-3 h-3" />
-                          Top Rated
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
- 
-        {/*
-          NOTE: "Community Activity" below was a hardcoded array of three
-          fake events in the original — not wired to any feed/API. Kept
-          for visual parity; flag if you want this backed by a real
-          activity-feed query.
-        */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mt-8 bg-white dark:bg-gray-900 rounded-2xl shadow-sm p-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-50 flex items-center gap-2">
-              <FaUsers className="text-blue-600 dark:text-blue-300" />
-              Community Activity
-            </h3>
-          </div>
- 
-          <div className="space-y-4">
-            {[
-              {
-                icon: FaLeaf,
-                bg: "bg-green-100 dark:bg-green-900/30",
-                iconColor: "text-green-600 dark:text-green-300",
-                message: "You saved 3 meals from Green Bistro 🎉",
-                time: "2 hours ago",
-              },
-              {
-                icon: FaUtensils,
-                bg: "bg-purple-100 dark:bg-purple-900/30",
-                iconColor: "text-purple-600 dark:text-purple-300",
-                message: "Maria shared Homemade Biryani with 4 people",
-                time: "5 hours ago",
-              },
-              {
-                icon: FaStar,
-                bg: "bg-yellow-100 dark:bg-yellow-900/30",
-                iconColor: "text-yellow-600 dark:text-yellow-300",
-                message: "You received a 5-star rating from Rahul for your Pasta!",
-                time: "Yesterday",
-              },
-            ].map((item, i) => (
-              <motion.div
-                key={item.message}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <div className={`w-10 h-10 ${item.bg} rounded-full flex items-center justify-center mr-3`}>
-                  <item.icon className={`w-5 h-5 ${item.iconColor}`} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-gray-900 dark:text-gray-100">{item.message}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{item.time}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
       </div>
     </div>
   );
 }
- 
+
 // ---------------------------------------------------------------------
 // Consumer Reservation Card
 // ---------------------------------------------------------------------
- 
+
 function ConsumerReservationCard({
   reservation,
   index,
@@ -854,26 +675,24 @@ function ConsumerReservationCard({
 }) {
   const router = useRouter();
   const { cancelReservation, isCancelling } = useCancelReservation();
- 
+
   const handleCancel = async () => {
-    if (!window.confirm("Cancel this reservation?")) return;
-    // Errors are already toasted inside useCancelReservation's onError —
-    // no local try/catch needed here.
+    if (!window.confirm("Are you sure you want to cancel this reservation?")) return;
     await cancelReservation({ id: reservation.id }).catch(() => {});
   };
- 
+
   const isUpcoming = new Date(reservation.pickupTime) > new Date();
- 
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className="bg-white dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 p-0 border border-gray-100 dark:border-gray-700/50 overflow-hidden group"
+      transition={{ delay: index * 0.04 }}
+      className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800/80 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group"
     >
-      <div className="flex flex-col md:flex-row h-full">
-        {/* Image Section */}
-        <div className="relative w-full md:w-48 h-48 md:h-auto bg-gray-100 dark:bg-gray-700 shrink-0 overflow-hidden">
+      <div className="flex flex-col md:flex-row">
+        {/* Image / Fallback Container */}
+        <div className="relative w-full md:w-56 h-48 md:h-auto bg-gray-100 dark:bg-slate-800 shrink-0 overflow-hidden">
           {reservation.food?.images && reservation.food.images.length > 0 ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -882,18 +701,18 @@ function ConsumerReservationCard({
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-gray-800">
-              <FaShoppingBag className="w-12 h-12 text-blue-200 dark:text-gray-600" />
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-900">
+              <FaShoppingBag className="w-12 h-12 text-blue-300 dark:text-slate-600" />
             </div>
           )}
           <div className="absolute top-3 left-3">
             <span
-              className={`px-3 py-1.5 text-xs font-bold rounded-full shadow-md backdrop-blur-md border border-white/20 uppercase tracking-wider ${
+              className={`px-3 py-1 text-xs font-black rounded-full shadow-md uppercase tracking-wider backdrop-blur-md ${
                 reservation.status === "confirmed"
-                  ? "bg-green-500/90 text-white"
+                  ? "bg-emerald-500/90 text-white"
                   : reservation.status === "cancelled"
                     ? "bg-red-500/90 text-white"
-                    : "bg-yellow-500/90 text-white"
+                    : "bg-amber-500/90 text-white"
               }`}
             >
               {reservation.status}
@@ -902,69 +721,80 @@ function ConsumerReservationCard({
         </div>
 
         {/* Content Section */}
-        <div className="p-5 flex-1 flex flex-col justify-between">
-          <div className="flex flex-col md:flex-row justify-between gap-4">
-            <div>
-              <h4 className="font-bold text-gray-900 dark:text-white text-xl mb-1 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                {reservation.food?.name}
-              </h4>
-              <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1.5 font-medium">
-                <FaStore className="w-3.5 h-3.5" />
-                {reservation.food?.supplierName}
-              </p>
+        <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between">
+          <div>
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
+              <div>
+                <h4 className="font-extrabold text-gray-900 dark:text-white text-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  {reservation.food?.name}
+                </h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-1 font-medium">
+                  <FaStore className="text-blue-500" />
+                  <span>{reservation.food?.supplierName}</span>
+                </p>
+              </div>
+
+              <div className="text-left sm:text-right">
+                <div className="text-lg font-black text-emerald-600 dark:text-emerald-400 flex items-center sm:justify-end">
+                  <FaRupeeSign className="text-xs opacity-80" />
+                  {reservation.totalPrice}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                  Qty: {reservation.quantity} {reservation.food?.quantityUnit}
+                </p>
+              </div>
             </div>
-            
-            <div className="text-left md:text-right">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                {reservation.quantity} <span className="font-normal text-gray-500">{reservation.food?.quantityUnit}</span>
-              </p>
-              <p className="text-lg font-bold text-green-600 dark:text-green-400 flex items-center md:justify-end">
-                <FaRupeeSign className="w-4 h-4 opacity-80" />
-                {reservation.totalPrice}
-              </p>
+
+            {/* Details Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-slate-800 text-xs">
+              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                  <FaClock />
+                </div>
+                <div>
+                  <span className="text-gray-400 dark:text-gray-500 block text-[10px]">
+                    Pickup Time
+                  </span>
+                  <span className="font-semibold text-gray-800 dark:text-gray-200">
+                    {formatDate(reservation.pickupTime, "PPp")}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                  <FaMapMarkerAlt />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-gray-400 dark:text-gray-500 block text-[10px]">
+                    Location
+                  </span>
+                  <span className="font-semibold text-gray-800 dark:text-gray-200 truncate block">
+                    {reservation.pickupAddress}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5 pt-5 border-t border-gray-100 dark:border-gray-700/50">
-            <div className="flex items-start gap-2.5">
-              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg shrink-0">
-                <FaClock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Pickup Time</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                  {formatDate(reservation.pickupTime, "PPp")}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-2.5">
-              <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg shrink-0">
-                <FaMapMarkerAlt className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Location</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
-                  {reservation.pickupAddress}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3 mt-5">
-            <Button 
-              size="sm" 
-              className="w-full bg-linear-to-r from-blue-600 to-indigo-600 text-white shadow-sm hover:shadow-md flex-1"
-              onClick={() => router.push(`/protected/reservation/${reservation.id}`)}
+          {/* Action CTAs */}
+          <div className="flex items-center gap-3 mt-5 pt-3">
+            <Button
+              size="sm"
+              variant="secondary"
+              className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-md text-xs py-2.5"
+              onClick={() =>
+                router.push(`/protected/reservation/${reservation.id}`)
+              }
             >
-              View Details
+              View Pickup Details
             </Button>
-            
+
             {isUpcoming && reservation.status === "confirmed" && (
               <Button
                 size="sm"
                 variant="outline"
-                className="flex-1 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50 hover:bg-red-50 dark:hover:bg-red-900/30"
+                className="text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl text-xs py-2.5"
                 onClick={handleCancel}
                 loading={isCancelling}
               >
@@ -977,39 +807,41 @@ function ConsumerReservationCard({
     </motion.div>
   );
 }
- 
+
 // ---------------------------------------------------------------------
 // Supplier Food Card
 // ---------------------------------------------------------------------
- 
-function SupplierFoodCard({ food, index, tab }: { food: SharedFoodDTO; index: number; tab: SupplierTab }) {
+
+function SupplierFoodCard({
+  food,
+  index,
+  tab,
+}: {
+  food: SharedFoodDTO;
+  index: number;
+  tab: SupplierTab;
+}) {
   const { deleteFood, isDeleting } = useDeleteFood();
- 
+
   const handleDeactivate = async () => {
-    if (!window.confirm("Remove this listing?")) return;
-    // deleteFood() now exists and is wired to a real /api/food/[id]
-    // DELETE route — the original called a service function
-    // (foodService.deleteFood) that was commented out entirely.
+    if (!window.confirm("Remove this food listing?")) return;
     await deleteFood(food.id).catch(() => {});
   };
- 
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className={`bg-white dark:bg-gray-900 rounded-xl shadow-sm hover:shadow-md transition-all overflow-hidden border border-gray-100 dark:border-gray-800 relative ${tab === 'expired' ? 'opacity-70 grayscale-[30%]' : ''}`}
+      transition={{ delay: index * 0.04 }}
+      className={`bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800/80 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between ${
+        tab === "expired" ? "opacity-75 grayscale-[20%]" : ""
+      }`}
     >
-      {tab === 'expired' && (
-        <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none overflow-hidden">
-          <div className="transform -rotate-45 text-5xl font-black text-gray-500/10 dark:text-gray-400/10 uppercase tracking-widest border-8 border-gray-500/10 dark:border-gray-400/10 p-6 rounded-2xl whitespace-nowrap">
-            EXPIRED
-          </div>
-        </div>
-      )}
-      <div className="relative z-10">
-        <div className="h-40 w-full bg-linear-to-br from-purple-100 dark:from-purple-800 to-pink-100 dark:to-pink-800">
+      <div>
+        {/* Card Image */}
+        <div className="relative h-44 w-full bg-gradient-to-br from-purple-100 dark:from-purple-950 to-pink-100 dark:to-pink-950 overflow-hidden">
           {food.images && food.images.length > 0 ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={(food.images.find((img) => img.isPrimary) ?? food.images[0]).url}
               alt={food.name}
@@ -1017,138 +849,122 @@ function SupplierFoodCard({ food, index, tab }: { food: SharedFoodDTO; index: nu
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <FaUtensils className="w-10 h-10 text-purple-400 dark:text-purple-500" />
+              <FaUtensils className="w-10 h-10 text-purple-300 dark:text-purple-700" />
             </div>
           )}
-        </div>
- 
-        <span
-          className={`absolute top-2 right-2 px-2 py-1 text-xs font-medium rounded-full ${
-            isFoodExpired(food)
-              ? "bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-100"
+
+          {/* Status Badge */}
+          <span
+            className={`absolute top-3 right-3 px-3 py-1 text-xs font-black rounded-full shadow-md backdrop-blur-md uppercase tracking-wider ${
+              isFoodExpired(food)
+                ? "bg-red-500/90 text-white"
+                : food.quantity > food.availableQty
+                  ? "bg-amber-500/90 text-white"
+                  : "bg-emerald-500/90 text-white"
+            }`}
+          >
+            {isFoodExpired(food)
+              ? "Expired"
               : food.quantity > food.availableQty
-                ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-100"
-                : "bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-100"
-          }`}
-        >
-          {isFoodExpired(food) ? "Expired" : food.quantity > food.availableQty ? "Reserved" : "Active"}
-        </span>
- 
-        {food.isHomeCooked && (
-          <span className="absolute top-2 left-2 px-2 py-1 bg-purple-100 dark:bg-purple-800/30 text-purple-800 dark:text-purple-100 text-xs font-medium rounded-full flex items-center gap-1">
-            <FaHome size={10} />
-            Home Cook
+                ? "Reserved"
+                : "Active"}
           </span>
-        )}
-      </div>
- 
-      <div className="p-4">
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <h4 className="font-semibold text-gray-900 dark:text-gray-50">{food.name}</h4>
-            <p className="text-xs text-gray-500 mt-1 line-clamp-1">{food.description}</p>
-          </div>
-          <div className="text-right">
-            <div className="font-bold text-gray-900 dark:text-gray-50">
-              {formatPrice(food.price)}
-            </div>
-            {food.discountPct > 0 && (
-              <div className="text-xs text-green-600 dark:text-green-300">
-                {food.discountPct}% off
-              </div>
-            )}
-          </div>
-        </div>
- 
-        <div className="space-y-2 mt-3">
-          <div className="flex flex-col gap-1 mt-3 text-xs">
-            {tab === "active" && (
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500 dark:text-gray-400">Active Quantity:</span>
-                <span className="font-medium text-purple-600 dark:text-purple-300">
-                  {food.availableQty} {food.quantityUnit}
-                </span>
-              </div>
-            )}
-            {tab === "reserved" && (
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500 dark:text-gray-400">Reserved Quantity:</span>
-                <span className="font-medium text-yellow-600 dark:text-yellow-400">
-                  {food.quantity - food.availableQty} {food.quantityUnit}
-                </span>
-              </div>
-            )}
-            {tab === "expired" && (
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500 dark:text-gray-400">Total Quantity:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-50">
-                  {food.quantity} {food.quantityUnit}
-                </span>
-              </div>
-            )}
-          </div>
- 
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-gray-500 dark:text-gray-400">Expires:</span>
-            <span
-              className={`font-medium ${
-                new Date(food.expiresAt).getTime() - Date.now() < 3600000
-                  ? "text-red-600 dark:text-red-300"
-                  : "text-orange-600 dark:text-orange-300"
-              }`}
-            >
-              {formatTimeRemaining(food.expiresAt)}
+
+          {food.isHomeCooked && (
+            <span className="absolute top-3 left-3 px-3 py-1 bg-purple-900/80 backdrop-blur-md text-white text-xs font-bold rounded-full flex items-center gap-1.5 shadow-md">
+              <FaHome size={10} />
+              <span>Home Cook</span>
             </span>
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="p-5">
+          <div className="flex justify-between items-start gap-2">
+            <div>
+              <h4 className="font-bold text-gray-900 dark:text-white text-base line-clamp-1">
+                {food.name}
+              </h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
+                {food.description}
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="font-extrabold text-gray-900 dark:text-white text-base">
+                {formatPrice(food.price)}
+              </div>
+              {food.discountPct > 0 && (
+                <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                  {food.discountPct}% OFF
+                </div>
+              )}
+            </div>
           </div>
- 
-          {food.reviewCount > 0 && (
-            <div className="flex items-center gap-1">
-              <FaStar className="w-3 h-3 text-yellow-500 dark:text-yellow-400" />
-              <span className="text-xs font-medium text-gray-900 dark:text-gray-50">
-                {food.averageRating.toFixed(1)}
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                ({food.reviewCount})
+
+          <div className="space-y-2 mt-4 pt-4 border-t border-gray-100 dark:border-slate-800 text-xs">
+            <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
+              <span className="text-gray-400 dark:text-gray-500">Available:</span>
+              <span className="font-bold text-purple-600 dark:text-purple-400">
+                {food.availableQty} / {food.quantity} {food.quantityUnit}
               </span>
             </div>
-          )}
+
+            <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
+              <span className="text-gray-400 dark:text-gray-500">Expires in:</span>
+              <span className="font-bold text-amber-600 dark:text-amber-400">
+                {formatTimeRemaining(food.expiresAt)}
+              </span>
+            </div>
+          </div>
         </div>
- 
-        <div className="flex gap-2 mt-4 relative z-10">
-          {tab === "active" && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1 text-red-600 dark:text-red-300 border-red-200 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs"
-                onClick={handleDeactivate}
-                loading={isDeleting}
-              >
-                <FaTimesCircle className="mr-1" />
-                Remove
-              </Button>
-              <Link href={`/protected/food/${food.id}`} className="flex-1">
-                <Button size="sm" className="w-full bg-linear-to-r from-purple-600 to-pink-600 text-xs">
-                  View Details
-                </Button>
-              </Link>
-            </>
-          )}
-          {tab === "reserved" && (
-            <Link href={`/protected/food/${food.id}/requests`} className="flex-1">
-              <Button size="sm" className="w-full bg-linear-to-r from-yellow-500 to-orange-500 text-xs">
-                View Reservations
-              </Button>
-            </Link>
-          )}
-          {tab === "expired" && (
+      </div>
+
+      {/* Action CTA */}
+      <div className="p-5 pt-0 flex gap-2">
+        {tab === "active" && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/40 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl text-xs py-2"
+              onClick={handleDeactivate}
+              loading={isDeleting}
+            >
+              <FaTimesCircle className="mr-1" />
+              Remove
+            </Button>
             <Link href={`/protected/food/${food.id}`} className="flex-1">
-              <Button size="sm" variant="outline" className="w-full text-xs bg-white/50 dark:bg-gray-800/50">
-                View Details
+              <Button
+                size="sm"
+                variant="secondary"
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-xl text-xs py-2 shadow-md"
+              >
+                View
               </Button>
             </Link>
-          )}
-        </div>
+          </>
+        )}
+        {tab === "reserved" && (
+          <Link href={`/protected/food/${food.id}/requests`} className="flex-1">
+            <Button
+              size="sm"
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-xl text-xs py-2 shadow-md"
+            >
+              Manage Reservations
+            </Button>
+          </Link>
+        )}
+        {tab === "expired" && (
+          <Link href={`/protected/food/${food.id}`} className="flex-1">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full text-xs py-2 rounded-xl"
+            >
+              Details
+            </Button>
+          </Link>
+        )}
       </div>
     </motion.div>
   );

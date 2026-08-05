@@ -10,15 +10,19 @@ import {
   FaDownload,
   FaCalendar,
   FaBoxOpen,
-  FaExchangeAlt,
   FaHeart,
-  FaHandHoldingMedical,
+  FaHandHoldingHeart,
+  FaLeaf,
+  FaCheckCircle,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { formatDate, formatPrice } from "@/lib/formatters";
 import { useAuth } from "@/hooks/useAuth";
-import { useMyReservations, useCancelReservation } from "@/hooks/useReservationQueries";
+import {
+  useMyReservations,
+  useCancelReservation,
+} from "@/hooks/useReservationQueries";
 import type { ReservationDTO } from "@/types/reservation";
 
 // ---------------------------------------------------------------------------
@@ -39,10 +43,11 @@ function computeStats(reservations: ReservationDTO[]): NGOStats {
 
   const totalMeals = completed.reduce((s, r) => s + r.quantity, 0);
   const totalMoneySaved = completed.reduce((sum, r) => {
-    // Fix: Money saved is the difference between original price and what was paid.
-    // If original price is not set, they didn't 'save' a trackable amount, they just spent money.
     if (r.food?.originalPrice) {
-      return sum + Math.max(0, (r.food.originalPrice * r.quantity) - (r.totalPrice || 0));
+      return (
+        sum +
+        Math.max(0, r.food.originalPrice * r.quantity - (r.totalPrice || 0))
+      );
     }
     return sum;
   }, 0);
@@ -61,22 +66,24 @@ function computeStats(reservations: ReservationDTO[]): NGOStats {
 }
 
 // ---------------------------------------------------------------------------
-// Status badge
+// Status badge styles
 // ---------------------------------------------------------------------------
 
 const STATUS_STYLES: Record<string, string> = {
   picked_up:
-    "bg-green-100 dark:bg-green-800/60 text-green-800 dark:text-green-100",
+    "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200",
   confirmed:
-    "bg-blue-100 dark:bg-blue-800/60 text-blue-800 dark:text-blue-100",
+    "bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300 border border-blue-200",
   pending:
-    "bg-yellow-100 dark:bg-yellow-800/60 text-yellow-800 dark:text-yellow-100",
-  cancelled: "bg-red-100 dark:bg-red-800/60 text-red-800 dark:text-red-100",
-  expired: "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100",
+    "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200",
+  cancelled:
+    "bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border border-rose-200",
+  expired:
+    "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 border border-gray-200",
 };
 
 // ---------------------------------------------------------------------------
-// Page
+// NGO Dashboard Component
 // ---------------------------------------------------------------------------
 
 export default function NGODashboard() {
@@ -90,7 +97,7 @@ export default function NGODashboard() {
   const welcomeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    welcomeTimerRef.current = setTimeout(() => setShowWelcome(false), 4000);
+    welcomeTimerRef.current = setTimeout(() => setShowWelcome(false), 4500);
     return () => {
       if (welcomeTimerRef.current) clearTimeout(welcomeTimerRef.current);
     };
@@ -103,43 +110,43 @@ export default function NGODashboard() {
   ).length;
 
   const generateReport = () => {
-    toast.success("Report generation started. You will receive it via email.");
+    toast.success("Community Impact Report has been dispatched to your email!");
   };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center">
-        <LoadingSpinner text="Loading NGO dashboard..." />
+        <LoadingSpinner text="Loading NGO impact dashboard..." />
       </div>
     );
   }
 
   const displayName =
-    user?.name?.split(" ")[0] ?? user?.email?.split("@")[0] ?? "there";
+    user?.name?.split(" ")[0] ?? user?.email?.split("@")[0] ?? "Partner";
 
   return (
-    <div className="min-h-screen bg-transparent">
+    <div className="min-h-screen bg-transparent pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Toast */}
+        {/* Welcome Toast Notification */}
         <AnimatePresence>
           {showWelcome && (
             <motion.div
-              initial={{ opacity: 0, y: -50 }}
+              initial={{ opacity: 0, y: -40 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -50 }}
-              className="fixed top-20 right-4 z-50 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-4 border-l-4 border-pink-500 max-w-sm"
+              exit={{ opacity: 0, y: -40 }}
+              className="fixed top-24 right-6 z-50 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-4 border-l-4 border-purple-500 border border-gray-200 dark:border-slate-800 max-w-sm backdrop-blur-xl"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-linear-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center">
-                  <FaHeart className="w-5 h-5 text-white" />
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 bg-gradient-to-tr from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md">
+                  <FaHeart className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-gray-50">
-                    Welcome back, {displayName}! 🎉
+                  <p className="font-bold text-sm text-gray-900 dark:text-white">
+                    Welcome, {displayName}! 🎉
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    You have {upcomingPickups} upcoming pickup
-                    {upcomingPickups !== 1 ? "s" : ""}
+                    You have {upcomingPickups} active pickup
+                    {upcomingPickups !== 1 ? "s" : ""} scheduled
                   </p>
                 </div>
               </div>
@@ -147,210 +154,236 @@ export default function NGODashboard() {
           )}
         </AnimatePresence>
 
-        {/* Hero Banner */}
+        {/* Hero Impact Banner */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-linear-to-r from-pink-600 via-purple-600 to-blue-600 rounded-3xl shadow-2xl p-8 mb-8 mt-20 text-white relative overflow-hidden"
+          className="bg-gradient-to-r from-purple-700 via-indigo-700 to-emerald-700 rounded-3xl shadow-2xl p-8 mb-8 text-white relative overflow-hidden"
         >
-          <div className="absolute inset-0 opacity-10 pointer-events-none">
-            <div className="absolute -top-20 -right-20 w-64 h-64 bg-white rounded-full" />
-            <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-white rounded-full" />
+          <div className="absolute inset-0 opacity-15 pointer-events-none">
+            <div className="absolute -top-24 -right-24 w-80 h-80 bg-white rounded-full blur-2xl" />
+            <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-purple-400 rounded-full blur-2xl" />
           </div>
 
-          <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center">
-            <div className="flex items-center space-x-4 mb-4 md:mb-0">
-              <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                <FaHandHoldingMedical className="w-10 h-10" />
+          <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/25 shadow-lg">
+                <FaHandHoldingHeart className="w-8 h-8 sm:w-10 sm:h-10 text-white drop-shadow-md" />
               </div>
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold mb-2">
-                  Hey {displayName}! 👋
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-bold uppercase tracking-wider backdrop-blur-xs border border-white/20">
+                    NGO Partner & Rescue Hub
+                  </span>
+                </div>
+                <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
+                  Welcome back, {displayName}! 🤝
                 </h1>
-                <p className="text-white/90 flex items-center gap-2">
-                  <FaExchangeAlt className="w-4 h-4" />
-                  You&apos;re making a difference as both a saver &amp; sharer
+                <p className="text-sm text-purple-100 mt-1">
+                  Coordinating bulk food rescue and serving vulnerable communities.
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-col md:flex-row w-full md:w-fit gap-3">
+            <div className="flex flex-wrap sm:flex-nowrap gap-3 shrink-0">
               <button
-                onClick={() => router.push("/protected/food")}
-                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-purple-700 font-semibold rounded-xl hover:bg-white/90 transition-colors shadow"
+                onClick={() => router.push("/public/food")}
+                className="flex items-center gap-2 px-5 py-3.5 bg-white hover:bg-white/90 text-purple-800 font-extrabold text-sm rounded-2xl shadow-xl hover:scale-103 transition-all cursor-pointer"
               >
-                <FaBoxOpen className="w-4 h-4" />
-                Bulk Reservation
+                <FaBoxOpen className="text-purple-600" />
+                <span>Rescue Food Now</span>
               </button>
               <button
                 onClick={generateReport}
-                className="flex items-center justify-center gap-2 px-5 py-2.5 border-2 border-white/60 text-white font-semibold rounded-xl hover:bg-white/10 transition-colors"
+                className="flex items-center gap-2 px-5 py-3.5 bg-white/15 hover:bg-white/25 border border-white/30 text-white font-bold text-sm rounded-2xl backdrop-blur-md transition-all cursor-pointer"
               >
-                <FaDownload className="w-4 h-4" />
-                Generate Report
+                <FaDownload />
+                <span>Export Report</span>
               </button>
+            </div>
+          </div>
+
+          {/* Quick Stat Pill Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8 pt-6 border-t border-white/20">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15">
+              <div className="text-2xl font-black">{stats.totalMeals}</div>
+              <div className="text-xs text-purple-100 font-medium">Meals Rescued</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15">
+              <div className="text-2xl font-black">{stats.peopleServed}</div>
+              <div className="text-xs text-purple-100 font-medium">Individuals Fed</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15">
+              <div className="text-2xl font-black">{stats.co2Reduced} kg</div>
+              <div className="text-xs text-purple-100 font-medium">CO₂ Prevented</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15">
+              <div className="text-2xl font-black">{formatPrice(stats.moneySaved)}</div>
+              <div className="text-xs text-purple-100 font-medium">Funds Saved</div>
             </div>
           </div>
         </motion.div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* 4 Metric Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
           {[
             {
-              label: "Total Meals",
+              label: "Total Rescued Meals",
               value: stats.totalMeals,
-              sub: `${stats.thisWeekCount} this week`,
+              sub: `${stats.thisWeekCount} pickups this week`,
               icon: FaHandsHelping,
-              colors: "from-green-50 dark:from-green-950 to-green-100 dark:to-green-900 border-green-200 dark:border-green-700",
-              iconBg: "bg-green-500 dark:bg-green-400",
-              textColors: "text-green-800 dark:text-green-100",
-              valueColors: "text-green-900 dark:text-green-50",
-              subColors: "text-green-700 dark:text-green-200",
+              bg: "from-purple-500/10 to-indigo-500/10 border-purple-200 dark:border-purple-800/60",
+              iconBg: "bg-purple-600 text-white",
+              valColor: "text-purple-600 dark:text-purple-400",
             },
             {
               label: "People Served",
               value: stats.peopleServed,
-              sub: "Estimated individuals",
+              sub: "Estimated direct beneficiaries",
               icon: FaUsers,
-              colors: "from-blue-50 dark:from-blue-950 to-blue-100 dark:to-blue-900 border-blue-200 dark:border-blue-700",
-              iconBg: "bg-blue-500 dark:bg-blue-400",
-              textColors: "text-blue-800 dark:text-blue-100",
-              valueColors: "text-blue-900 dark:text-blue-50",
-              subColors: "text-blue-700 dark:text-blue-200",
+              bg: "from-blue-500/10 to-cyan-500/10 border-blue-200 dark:border-blue-800/60",
+              iconBg: "bg-blue-600 text-white",
+              valColor: "text-blue-600 dark:text-blue-400",
             },
             {
-              label: "CO₂ Reduced",
-              value: `${stats.co2Reduced}kg`,
-              sub: "Eco-friendly impact",
-              icon: FaChartPie,
-              colors: "from-purple-50 dark:from-purple-950 to-purple-100 dark:to-purple-900 border-purple-200 dark:border-purple-700",
-              iconBg: "bg-purple-500 dark:bg-purple-400",
-              textColors: "text-purple-800 dark:text-purple-100",
-              valueColors: "text-purple-900 dark:text-purple-50",
-              subColors: "text-purple-700 dark:text-purple-200",
+              label: "Carbon Offset",
+              value: `${stats.co2Reduced} kg`,
+              sub: "Green environmental impact",
+              icon: FaLeaf,
+              bg: "from-emerald-500/10 to-green-500/10 border-emerald-200 dark:border-emerald-800/60",
+              iconBg: "bg-emerald-600 text-white",
+              valColor: "text-emerald-600 dark:text-emerald-400",
             },
             {
               label: "This Week",
               value: stats.thisWeekCount,
-              sub: "Meals distributed",
+              sub: "Active pickups scheduled",
               icon: FaCalendar,
-              colors: "from-orange-50 dark:from-orange-950 to-orange-100 dark:to-orange-900 border-orange-200 dark:border-orange-700",
-              iconBg: "bg-orange-500 dark:bg-orange-400",
-              textColors: "text-orange-800 dark:text-orange-100",
-              valueColors: "text-orange-900 dark:text-orange-50",
-              subColors: "text-orange-700 dark:text-orange-200",
+              bg: "from-amber-500/10 to-orange-500/10 border-amber-200 dark:border-amber-800/60",
+              iconBg: "bg-amber-500 text-white",
+              valColor: "text-amber-600 dark:text-amber-400",
             },
-          ].map((card) => (
-            <div
+          ].map((card, idx) => (
+            <motion.div
               key={card.label}
-              className={`bg-linear-to-br ${card.colors} border rounded-xl p-6`}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05 }}
+              className={`bg-gradient-to-br ${card.bg} bg-white dark:bg-slate-900 border rounded-3xl p-5 sm:p-6 shadow-md hover:shadow-lg transition-all`}
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className={`text-sm font-medium ${card.textColors}`}>
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     {card.label}
                   </p>
-                  <p className={`text-3xl font-bold mt-2 ${card.valueColors}`}>
+                  <p className={`text-3xl font-black mt-1 ${card.valColor}`}>
                     {card.value}
                   </p>
                 </div>
                 <div
-                  className={`w-12 h-12 ${card.iconBg} rounded-lg flex items-center justify-center`}
+                  className={`w-12 h-12 ${card.iconBg} rounded-2xl flex items-center justify-center shadow-md`}
                 >
-                  <card.icon className="w-6 h-6 text-white" />
+                  <card.icon className="w-5 h-5" />
                 </div>
               </div>
-              <p className={`text-sm mt-4 ${card.subColors}`}>{card.sub}</p>
-            </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 font-medium">
+                {card.sub}
+              </p>
+            </motion.div>
           ))}
         </div>
 
-        {/* Recent Distributions */}
-        <div className="card p-6 mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              Recent Distributions
-            </h2>
+        {/* Recent Distributions Table Card */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-xl overflow-hidden mb-8">
+          <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                Recent Food Distributions &amp; Pickups
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Track your active reservations, pickup codes, and status.
+              </p>
+            </div>
             <button
-              onClick={() => router.push("/protected/dashboard/ngo")}
-              className="text-green-600 dark:text-green-300 hover:text-green-700 dark:hover:text-green-200 font-medium text-sm"
+              onClick={() => router.push("/public/food")}
+              className="text-purple-600 dark:text-purple-400 hover:text-purple-700 font-bold text-xs cursor-pointer"
             >
-              View All
+              Browse All Food →
             </button>
           </div>
 
           {reservations.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-24 h-24 mx-auto bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-                <FaHandsHelping className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+            <div className="text-center py-16 px-4">
+              <div className="w-20 h-20 mx-auto bg-purple-50 dark:bg-purple-950/60 rounded-3xl flex items-center justify-center mb-4 text-purple-600 text-2xl">
+                <FaHandsHelping />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                No distributions yet
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                No active distributions yet
               </h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-6">
-                Start by making your first bulk reservation.
+              <p className="text-gray-500 dark:text-gray-400 mb-6 text-sm max-w-sm mx-auto">
+                Explore nearby surplus food donations from restaurants and home cooks to begin rescuing food.
               </p>
               <button
-                onClick={() => router.push("/protected/food")}
-                className="px-5 py-2 rounded-xl border-2 border-green-600 text-green-600 dark:text-green-300 dark:border-green-300 font-semibold hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors"
+                onClick={() => router.push("/public/food")}
+                className="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm shadow-md transition-all cursor-pointer"
               >
-                Browse Food
+                Browse Surplus Food
               </button>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead>
+              <table className="min-w-full divide-y divide-gray-100 dark:divide-slate-800/60">
+                <thead className="bg-gray-50/80 dark:bg-slate-800/80">
                   <tr>
                     {[
                       "Food Item",
                       "Supplier",
                       "Quantity",
-                      "Pickup Date",
+                      "Scheduled Pickup",
                       "Status",
                       "Action",
                     ].map((h) => (
                       <th
                         key={h}
-                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase"
+                        className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                       >
                         {h}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {reservations.slice(0, 8).map((r) => (
+                <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60 bg-transparent">
+                  {reservations.slice(0, 10).map((r) => (
                     <tr
                       key={r.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer"
+                      className="hover:bg-purple-50/40 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
                       onClick={() =>
                         router.push(`/protected/reservation/${r.id}`)
                       }
                     >
-                      <td className="px-4 py-3 font-medium text-gray-900 dark:text-white text-sm">
+                      <td className="px-6 py-4 font-bold text-gray-900 dark:text-white text-sm">
                         {r.food.name}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">
+                      <td className="px-6 py-4 text-xs font-medium text-gray-600 dark:text-gray-300">
                         {r.food.supplierName}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">
+                      <td className="px-6 py-4 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                         {r.quantity} {r.food.quantityUnit}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">
-                        {formatDate(r.pickupTime, "MMM d, yyyy")}
+                      <td className="px-6 py-4 text-xs text-gray-600 dark:text-gray-300 font-medium">
+                        {formatDate(r.pickupTime, "MMM d, yyyy - h:mm a")}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-6 py-4">
                         <span
-                          className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${
                             STATUS_STYLES[r.status] ?? STATUS_STYLES.expired
                           }`}
                         >
-                          {r.status.replace("_", " ")}
+                          {r.status.replace("_", " ").toUpperCase()}
                         </span>
                       </td>
                       <td
-                        className="px-4 py-3"
+                        className="px-6 py-4"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {(r.status === "pending" ||
@@ -358,7 +391,7 @@ export default function NGODashboard() {
                           <button
                             disabled={isCancelling}
                             onClick={() => cancelReservation({ id: r.id })}
-                            className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40 font-medium"
+                            className="text-xs text-rose-600 hover:text-rose-700 disabled:opacity-40 font-bold cursor-pointer"
                           >
                             Cancel
                           </button>
@@ -372,91 +405,82 @@ export default function NGODashboard() {
           )}
         </div>
 
-        {/* Impact Summary */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Environmental Impact */}
-          <div className="bg-linear-to-br from-green-400 dark:from-green-900/60 to-green-300 dark:to-green-800/60 rounded-xl shadow-lg p-8 text-gray-900 dark:text-white">
-            <h3 className="text-xl font-bold mb-6">Environmental Impact</h3>
+        {/* Environmental & Quick Actions Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Environmental Metrics */}
+          <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-8 text-white shadow-xl">
+            <h3 className="text-xl font-black mb-6 flex items-center gap-2">
+              <FaLeaf />
+              Environmental Impact Metrics
+            </h3>
             <div className="space-y-4">
               {[
                 {
-                  label: "CO₂ Emissions Reduced",
+                  label: "CO₂ Greenhouse Emissions Prevented",
                   value: `${stats.co2Reduced} kg`,
                 },
                 {
-                  label: "Water Saved",
-                  value: `${(stats.totalMeals * 1000).toLocaleString()} L`,
+                  label: "Water Conserved",
+                  value: `${(stats.totalMeals * 1000).toLocaleString()} Litres`,
                 },
                 {
-                  label: "Landfill Waste Reduced",
+                  label: "Organic Landfill Waste Diverted",
                   value: `${(stats.totalMeals * 0.5).toFixed(1)} kg`,
                 },
                 {
-                  label: "Money Saved",
+                  label: "Value Saved for Community",
                   value: formatPrice(stats.moneySaved),
                 },
               ].map((item) => (
                 <div
                   key={item.label}
-                  className="flex justify-between items-center"
+                  className="flex justify-between items-center pb-3 border-b border-white/20 text-sm"
                 >
-                  <span className="text-sm">{item.label}</span>
-                  <span className="font-bold">{item.value}</span>
+                  <span className="text-emerald-100 font-medium">{item.label}</span>
+                  <span className="font-extrabold text-white">{item.value}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="card p-8">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
-              Quick Actions
-            </h3>
-            <div className="space-y-3">
-              {[
-                {
-                  icon: FaBoxOpen,
-                  label: "Browse Available Food",
-                  color: "green",
-                  href: "/protected/food",
-                },
-                {
-                  icon: FaDownload,
-                  label: "Download Monthly Report",
-                  color: "blue",
-                  onClick: generateReport,
-                },
-                {
-                  icon: FaUsers,
-                  label: "View All Reservations",
-                  color: "purple",
-                  href: "/protected/dashboard/ngo",
-                },
-              ].map((action) => (
+          {/* Quick Hub Navigation */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-gray-200/80 dark:border-slate-800 shadow-xl flex flex-col justify-between">
+            <div>
+              <h3 className="text-xl font-black text-gray-900 dark:text-white mb-4">
+                Rescue Hub Actions
+              </h3>
+              <div className="space-y-3">
                 <button
-                  key={action.label}
-                  className={`w-full flex items-center justify-between p-4 bg-${action.color}-50 dark:bg-${action.color}-900/40 hover:bg-${action.color}-100 dark:hover:bg-${action.color}-900/60 rounded-xl transition-colors cursor-pointer`}
-                  onClick={() =>
-                    action.href
-                      ? router.push(action.href)
-                      : action.onClick?.()
-                  }
+                  onClick={() => router.push("/public/food")}
+                  className="w-full flex items-center justify-between p-4 bg-emerald-50 dark:bg-slate-800 hover:bg-emerald-100 dark:hover:bg-slate-700/80 rounded-2xl transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <action.icon
-                      className={`w-5 h-5 text-${action.color}-600 dark:text-${action.color}-300`}
-                    />
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {action.label}
+                    <FaBoxOpen className="text-emerald-600 text-lg" />
+                    <span className="font-bold text-sm text-gray-900 dark:text-white">
+                      Explore Food Listings Near You
                     </span>
                   </div>
-                  <span
-                    className={`text-${action.color}-600 dark:text-${action.color}-300 text-lg`}
-                  >
-                    →
-                  </span>
+                  <span className="text-emerald-600 font-bold">→</span>
                 </button>
-              ))}
+
+                <button
+                  onClick={generateReport}
+                  className="w-full flex items-center justify-between p-4 bg-purple-50 dark:bg-slate-800 hover:bg-purple-100 dark:hover:bg-slate-700/80 rounded-2xl transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <FaDownload className="text-purple-600 text-lg" />
+                    <span className="font-bold text-sm text-gray-900 dark:text-white">
+                      Generate Impact Verification Certificate
+                    </span>
+                  </div>
+                  <span className="text-purple-600 font-bold">→</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-gray-100 dark:border-slate-800 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+              <FaCheckCircle className="text-emerald-500" />
+              <span>All bulk claims are verified via encrypted QR token authentication.</span>
             </div>
           </div>
         </div>
