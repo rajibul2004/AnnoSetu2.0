@@ -114,83 +114,104 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen w-full bg-transparent">
-      {/* ================= HERO ================= */}
-      <div className="w-full relative overflow-hidden bg-linear-to-b from-transparent dark:from-gray-600 via-green-100 dark:via-slate-900 to-green-300 dark:to-zinc-950 dark:text-white text-gray-900">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-10 w-64 h-64 bg-green-800 dark:bg-slate-200 rounded-full filter blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-amber-700 dark:bg-gray-200 rounded-full filter blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-40 right-40 w-48 h-48 bg-lime-950 dark:bg-zinc-200 rounded-full filter blur-3xl animate-pulse delay-700"></div>
+      {/* ================= HERO WITH FULL BACKGROUND VIDEO ================= */}
+      <div className="w-full relative overflow-hidden min-h-[90vh] md:min-h-[85vh] flex flex-col justify-between text-gray-900 dark:text-white transition-colors duration-500">
+        {/* Full-Cover Background Video & Ambient Adaptive Gradient Overlays */}
+        <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="w-full h-full object-cover scale-105"
+          >
+            <source src="/donation_video.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+          {/* Multi-layered adaptive gradient overlays for crisp contrast without washing out the video */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/35 via-white/10 to-white/60 dark:from-black/90 dark:via-black/75 dark:to-zinc-950/95 transition-colors duration-500" />
+          <div className="absolute inset-0 bg-radial from-transparent via-transparent to-white/30 dark:via-black/20 dark:to-black/70 pointer-events-none transition-colors duration-500" />
         </div>
 
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 md:pt-28 md:pb-20">
+        {/* Ambient Glowing Blobs in Background */}
+        <div className="absolute inset-0 opacity-20 dark:opacity-20 pointer-events-none z-0">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-400 dark:bg-emerald-500 rounded-full filter blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-amber-300 dark:bg-amber-500 rounded-full filter blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-40 right-40 w-48 h-48 bg-green-300 dark:bg-green-400 rounded-full filter blur-3xl animate-pulse delay-700"></div>
+        </div>
+
+        {/* Hero Content Container */}
+        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 md:pt-28 md:pb-20 text-center flex-1 flex flex-col justify-center">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center"
           >
+            {/* Pill Badge */}
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring" }}
-              className="inline-flex items-center gap-2 px-4 py-2 dark:bg-white/20 bg-black/40 backdrop-blur-sm rounded-full mb-8 border border-black/50 dark:border-white/30"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-white/15 backdrop-blur-md rounded-full mb-8 border border-emerald-500/30 dark:border-white/25 shadow-md dark:shadow-lg"
             >
-              <FaLeaf className="w-4 h-4 text-green-400" />
-              <span className="text-sm font-medium">
-                <span className="logotext font-semibold">অন্নসেতু</span> — the
-                food bridge
+              <FaLeaf className="w-4 h-4 text-emerald-600 dark:text-emerald-400 animate-bounce" />
+              <span className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                <span className="logotext font-semibold text-emerald-950 dark:text-white">অন্নসেতু</span> — the food bridge
               </span>
             </motion.div>
 
+            {/* Headline */}
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35 }}
-              className="text-5xl md:text-6xl bg-linear-to-r from-gray-600 dark:text-white via-gray-700 to-gray-950 bg-clip-text text-transparent font-bold mb-6 leading-tight"
+              className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-6 leading-tight drop-shadow-xs dark:drop-shadow-md"
             >
-              Save Food!
-              <br />
-              <span className="bg-linear-to-r from-amber-500 via-amber-700 to-amber-950 bg-clip-text text-transparent">
+              Save Food! <br />
+              <span className="logotext">
                 Serve Community!
               </span>
             </motion.h1>
 
+            {/* Subtext */}
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
-              className="text-sm lg:text-lg mb-10 max-w-2xl mx-auto"
+              className="text-base sm:text-lg md:text-xl text-gray-700 dark:text-gray-200 mb-10 max-w-2xl mx-auto leading-relaxed"
             >
               Every day, restaurants and home cooks have food left over — and
               every day, someone nearby could use it. Connect, rescue surplus
-              food, and make a difference today.
+              food, and make a real difference today.
             </motion.p>
 
+            {/* Search Bar */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              className="max-w-2xl mx-auto"
+              className="max-w-2xl mx-auto mb-8"
             >
               <form onSubmit={handleSearchSubmit} className="relative group">
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full px-6 py-1 lg:px-12 lg:py-3 pl-14 pr-4 rounded-2xl border-2 dark:border-white/30 border-black/30 dark:bg-white/20 bg-black/40 backdrop-blur-md dark:placeholder-white/70 placeholder-black/70 focus:outline-none dark:focus:border-white focus:border-black/10 focus:ring-4 dark:focus:ring-white/30 focus:ring-black/20 transition-all duration-300 text-lg"
+                  className="w-full px-6 py-3.5 pl-14 pr-28 rounded-2xl border-2 border-gray-300/80 dark:border-white/30 bg-white/90 dark:bg-black/40 backdrop-blur-xl placeholder-gray-500 dark:placeholder-gray-300 text-gray-900 dark:text-white focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 dark:focus:ring-emerald-500/30 transition-all duration-300 text-base sm:text-lg shadow-xl dark:shadow-2xl"
                 />
-                <FaSearch className="absolute left-5 top-1/2 transform -translate-y-1/2 dark:text-white/70 text-black/50 text-xl pointer-events-none" />
+                <FaSearch className="absolute left-5 top-1/2 transform -translate-y-1/2 text-emerald-600 dark:text-emerald-400 text-xl pointer-events-none" />
                 {!search && (
                   <div className="absolute left-14 top-1/2 -translate-y-1/2 overflow-hidden h-7 pointer-events-none">
                     <motion.div
                       animate={{ y: -placeholderIndex * 28 }}
                       transition={{ duration: 0.3 }}
-                      className="space-y-0.5"
+                      className="space-y-0.5 text-left"
                     >
                       {PLACEHOLDERS.map((text) => (
                         <div
                           key={text}
-                          className="h-7 dark:text-white/70 text-black"
+                          className="h-7 text-gray-600 dark:text-gray-300 text-base sm:text-lg font-normal"
                         >
                           {text}
                         </div>
@@ -200,48 +221,88 @@ export default function HomePage() {
                 )}
                 <button
                   type="submit"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1 dark:bg-black/60 bg-white/60 text-green-600 rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all duration-300 hidden md:block cursor-pointer"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 px-5 py-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white rounded-xl font-semibold shadow-lg hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer hidden md:block"
                 >
                   Search
                 </button>
               </form>
             </motion.div>
 
+            {/* Action CTA Buttons */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.65 }}
+              className="flex flex-wrap items-center justify-center gap-4 text-sm sm:text-base font-semibold"
+            >
+              <Link
+                href="/public/food"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white shadow-xl hover:shadow-emerald-500/30 hover:scale-105 transition-all duration-200"
+              >
+                <FaUtensils className="w-4 h-4" />
+                Browse Available Food
+              </Link>
+              <Link
+                href="/protected/add-food"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-gray-300/80 dark:border-white/30 bg-white/85 dark:bg-white/15 hover:bg-white dark:hover:bg-white/25 text-gray-900 dark:text-white backdrop-blur-md shadow-lg hover:scale-105 transition-all duration-200"
+              >
+                <FaHeart className="w-4 h-4 text-rose-500 dark:text-rose-400" />
+                Donate / Share Food
+              </Link>
+            </motion.div>
+
+            {/* Floating Live Badge */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.7 }}
-              className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16 max-w-3xl mx-auto"
+              className="mt-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/75 dark:bg-black/40 backdrop-blur-md border border-emerald-200 dark:border-white/20 text-xs font-medium text-emerald-900 dark:text-gray-200 shadow-sm"
             >
-              <div className="card backdrop-blur-sm rounded-xl p-4">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-ping" />
+              <span>Direct Hand-to-Hand Surplus Rescue Movement</span>
+            </motion.div>
+
+            {/* Stats Cards */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.75 }}
+              className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-6 mt-12 sm:mt-16 max-w-4xl mx-auto"
+            >
+              <div className="backdrop-blur-xl bg-white/80 dark:bg-black/35 border border-gray-200 dark:border-white/20 rounded-2xl p-5 text-center shadow-lg dark:shadow-2xl hover:border-emerald-500/50 dark:hover:border-emerald-400/50 transition-all">
                 <AnimatedNumber
                   value={12.5}
                   decimals={1}
                   suffix="K+"
                   duration={0.5}
-                  className="mb-2"
+                  className="mb-1"
                 />
-                <div className="text-sm">Meals Saved</div>
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Meals Saved</div>
               </div>
-              <div className="card backdrop-blur-sm rounded-xl p-4">
-                <AnimatedNumber value={150} duration={2} className="mb-2" />
-                <div className="text-sm">Partner Restaurants</div>
+              <div className="backdrop-blur-xl bg-white/80 dark:bg-black/35 border border-gray-200 dark:border-white/20 rounded-2xl p-5 text-center shadow-lg dark:shadow-2xl hover:border-amber-500/50 dark:hover:border-amber-400/50 transition-all">
+                <AnimatedNumber
+                  value={150}
+                  duration={2}
+                  className="mb-1"
+                />
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Partner Donors</div>
               </div>
-              <div className="card backdrop-blur-sm rounded-xl p-4">
+              <div className="backdrop-blur-xl bg-white/80 dark:bg-black/35 border border-gray-200 dark:border-white/20 rounded-2xl p-5 text-center shadow-lg dark:shadow-2xl hover:border-teal-500/50 dark:hover:border-teal-400/50 transition-all">
                 <AnimatedNumber
                   value={8.2}
                   decimals={1}
                   suffix="T"
                   duration={1}
-                  className="mb-2"
+                  className="mb-1"
                 />
-                <div className="text-sm">CO₂ Reduced</div>
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">CO₂ Reduced</div>
               </div>
             </motion.div>
           </motion.div>
         </div>
 
-        <div className="absolute -bottom-px left-0 right-0 leading-none">
+        {/* Bottom Wave Divider */}
+        <div className="relative z-10 -bottom-px left-0 right-0 leading-none">
           <svg
             viewBox="0 0 1440 120"
             fill="none"
@@ -250,7 +311,7 @@ export default function HomePage() {
           >
             <path
               d="M0 120L60 105C120 90 240 60 360 45C480 30 600 30 720 37.5C840 45 960 60 1080 67.5C1200 75 1320 75 1380 75L1440 75V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z"
-              fill={isDark ? "#0A192F" : "#ffff"}
+              fill={isDark ? "#0A192F" : "#ffffff"}
             />
           </svg>
         </div>
