@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaBell,
@@ -11,6 +12,10 @@ import {
   FaFilter,
   FaChevronRight,
   FaBoxOpen,
+  FaArrowLeft,
+  FaSyncAlt,
+  FaCompass,
+  FaUtensils,
 } from "react-icons/fa";
 import { formatDistanceToNow, format } from "date-fns";
 import {
@@ -25,7 +30,7 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import type { NotificationDTO, NotificationType } from "@/types/notification";
 
 // ---------------------------------------------------------------------------
-// Constants
+// Constants & Color Schemes
 // ---------------------------------------------------------------------------
 
 const TYPE_ICONS: Record<NotificationType, string> = {
@@ -42,29 +47,52 @@ const TYPE_ICONS: Record<NotificationType, string> = {
 };
 
 const TYPE_LABELS: Record<NotificationType, string> = {
-  reservation_request: "Reservation",
-  reservation_confirmed: "Confirmed",
-  pickup_code_generated: "Pickup",
-  pickup_reminder: "Reminder",
-  food_expiring: "Expiry",
-  payment_success: "Payment",
-  payment_failed: "Payment",
-  review_received: "Review",
-  report_received: "Report",
-  system_alert: "System",
+  reservation_request: "Reservation Request",
+  reservation_confirmed: "Reservation Confirmed",
+  pickup_code_generated: "Pickup Code Ready",
+  pickup_reminder: "Pickup Reminder",
+  food_expiring: "Food Expiring Soon",
+  payment_success: "Payment Received",
+  payment_failed: "Payment Failed",
+  review_received: "Review Received",
+  report_received: "Community Report",
+  system_alert: "System Notification",
 };
 
-const PRIORITY_STYLES: Record<string, { bar: string; badge: string }> = {
-  urgent: { bar: "border-l-red-500", badge: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" },
-  high: { bar: "border-l-orange-500", badge: "bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300" },
-  medium: { bar: "border-l-blue-400", badge: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" },
-  low: { bar: "border-l-gray-300 dark:border-l-gray-600", badge: "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300" },
+const PRIORITY_STYLES: Record<
+  string,
+  { border: string; bg: string; badge: string; dot: string }
+> = {
+  urgent: {
+    border: "border-l-rose-500",
+    bg: "bg-rose-500/5 dark:bg-rose-950/20",
+    badge: "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30",
+    dot: "bg-rose-500 shadow-rose-500/50",
+  },
+  high: {
+    border: "border-l-amber-500",
+    bg: "bg-amber-500/5 dark:bg-amber-950/20",
+    badge: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+    dot: "bg-amber-500 shadow-amber-500/50",
+  },
+  medium: {
+    border: "border-l-blue-500",
+    bg: "bg-blue-500/5 dark:bg-blue-950/20",
+    badge: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
+    dot: "bg-blue-500 shadow-blue-500/50",
+  },
+  low: {
+    border: "border-l-gray-400 dark:border-l-gray-600",
+    bg: "bg-gray-500/5 dark:bg-gray-900/20",
+    badge: "bg-gray-500/15 text-gray-700 dark:text-gray-300 border-gray-500/30",
+    dot: "bg-gray-400 shadow-gray-400/50",
+  },
 };
 
-type FilterTab = "all" | "unread" | NotificationType;
+type FilterTab = "all" | "unread" | "priority" | NotificationType;
 
 // ---------------------------------------------------------------------------
-// NotificationCard
+// NotificationCard Component
 // ---------------------------------------------------------------------------
 
 function NotificationCard({ notification }: { notification: NotificationDTO }) {
@@ -88,112 +116,136 @@ function NotificationCard({ notification }: { notification: NotificationDTO }) {
       layout
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className={`relative flex gap-4 p-4 rounded-2xl border-l-4 ${styles.bar} ${
-        notification.isRead
-          ? "bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800"
-          : "bg-blue-50/60 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 shadow-sm"
-      } cursor-pointer hover:shadow-md transition-all duration-200`}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.2 }}
       onClick={handleCardClick}
+      className={`group relative p-5 rounded-3xl border-l-4 ${styles.border} transition-all duration-200 cursor-pointer ${
+        notification.isRead
+          ? "bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-gray-800/80 hover:bg-white dark:hover:bg-gray-800/90 shadow-sm hover:shadow-md"
+          : `${styles.bg} backdrop-blur-xl border border-blue-500/30 dark:border-blue-500/20 shadow-md hover:shadow-lg`
+      }`}
     >
-      {/* Unread dot */}
-      {!notification.isRead && (
-        <span className="absolute top-4 right-4 w-2.5 h-2.5 rounded-full bg-blue-500 dark:bg-blue-400" />
-      )}
+      <div className="flex items-start gap-4">
+        {/* Type Emoji Icon */}
+        <div className="shrink-0 w-12 h-12 rounded-2xl bg-white/90 dark:bg-gray-800/90 shadow-sm border border-gray-200/80 dark:border-gray-700/80 flex items-center justify-center text-2xl group-hover:scale-105 transition-transform">
+          {TYPE_ICONS[notification.type] ?? "🔔"}
+        </div>
 
-      {/* Icon */}
-      <div className="shrink-0 w-12 h-12 rounded-2xl bg-white dark:bg-gray-800 shadow flex items-center justify-center text-2xl border border-gray-100 dark:border-gray-700">
-        {TYPE_ICONS[notification.type] ?? "🔔"}
-      </div>
+        {/* Text and Details */}
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+            <div className="flex items-center gap-2">
+              <h3
+                className={`font-black text-sm md:text-base leading-snug tracking-tight ${
+                  notification.isRead
+                    ? "text-gray-800 dark:text-gray-200"
+                    : "text-gray-900 dark:text-white"
+                }`}
+              >
+                {notification.title}
+              </h3>
+              {!notification.isRead && (
+                <span
+                  className={`w-2.5 h-2.5 rounded-full ${styles.dot} animate-pulse shrink-0`}
+                  title="Unread notification"
+                />
+              )}
+            </div>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0 pr-6">
-        <div className="flex items-start justify-between gap-2 mb-1">
-          <h3 className={`font-semibold text-sm leading-tight ${notification.isRead ? "text-gray-700 dark:text-gray-200" : "text-gray-900 dark:text-white"}`}>
-            {notification.title}
-          </h3>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${styles.badge}`}>
+            <span
+              className={`text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-0.5 rounded-full border ${styles.badge}`}
+            >
               {notification.priority}
             </span>
           </div>
-        </div>
 
-        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-          {notification.message}
-        </p>
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+            {notification.message}
+          </p>
 
-        <div className="flex items-center justify-between mt-2 gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400 dark:text-gray-500">
-              {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
-            </span>
-            <span className="text-gray-300 dark:text-gray-600">·</span>
-            <span className="text-xs text-gray-400 dark:text-gray-500">
-              {format(new Date(notification.createdAt), "MMM d, h:mm a")}
-            </span>
+          {/* Bottom Metas & Actions */}
+          <div className="flex flex-wrap items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-800/80 gap-2">
+            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+              <span className="font-medium">
+                {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+              </span>
+              <span>•</span>
+              <span>{format(new Date(notification.createdAt), "MMM d, h:mm a")}</span>
+              <span className="hidden sm:inline">•</span>
+              <span className="hidden sm:inline font-semibold text-emerald-600 dark:text-emerald-400">
+                {TYPE_LABELS[notification.type] ?? "Alert"}
+              </span>
+            </div>
+
+            {/* Action Buttons */}
+            <div
+              className="flex items-center gap-2 shrink-0"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {notification.actionUrl && (
+                <button
+                  type="button"
+                  onClick={handleCardClick}
+                  className="px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <span>Details</span>
+                  <FaChevronRight className="w-2.5 h-2.5" />
+                </button>
+              )}
+
+              {!notification.isRead && (
+                <button
+                  type="button"
+                  onClick={() => markRead(notification.id)}
+                  title="Mark as read"
+                  className="w-8 h-8 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <FaCheck className="w-3 h-3" />
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => remove(notification.id)}
+                disabled={isRemoving}
+                title="Delete notification"
+                className="w-8 h-8 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex items-center justify-center transition-colors disabled:opacity-40 cursor-pointer"
+              >
+                <FaTrash className="w-3 h-3" />
+              </button>
+            </div>
           </div>
-          <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">
-            {TYPE_LABELS[notification.type] ?? "Alert"}
-          </span>
         </div>
-
-        {notification.actionUrl && (
-          <div className="flex items-center gap-1 mt-1.5 text-xs text-blue-600 dark:text-blue-400 font-medium">
-            View details <FaChevronRight className="w-2.5 h-2.5" />
-          </div>
-        )}
-      </div>
-
-      {/* Action buttons */}
-      <div
-        className="absolute bottom-3 right-3 flex gap-1.5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {!notification.isRead && (
-          <button
-            onClick={() => markRead(notification.id)}
-            title="Mark as read"
-            className="p-1.5 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors"
-          >
-            <FaCheck className="w-3 h-3" />
-          </button>
-        )}
-        <button
-          onClick={() => remove(notification.id)}
-          disabled={isRemoving}
-          title="Delete"
-          className="p-1.5 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors disabled:opacity-40"
-        >
-          <FaTrash className="w-3 h-3" />
-        </button>
       </div>
     </motion.div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Page
+// Page Component
 // ---------------------------------------------------------------------------
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const [filter, setFilter] = useState<FilterTab>("all");
 
-  // Real-time stream for this page too
+  // Real-time SSE stream listener
   useNotificationStream(true);
 
-  const { notifications, unreadCount, isLoading } = useNotifications(50, 0);
+  const { notifications, unreadCount, isLoading, refetch } = useNotifications(50, 0);
   const { mutate: markAllRead, isPending: isMarkingAll } = useMarkAllAsRead();
 
   const filtered = notifications.filter((n) => {
     if (filter === "all") return true;
     if (filter === "unread") return !n.isRead;
+    if (filter === "priority") return n.priority === "urgent" || n.priority === "high";
     return n.type === filter;
   });
 
   const filterTabs: { id: FilterTab; label: string; emoji: string }[] = [
     { id: "all", label: "All", emoji: "🔔" },
     { id: "unread", label: "Unread", emoji: "🔵" },
+    { id: "priority", label: "Urgent & High", emoji: "🚨" },
     { id: "reservation_request", label: "Reservations", emoji: "🍽️" },
     { id: "reservation_confirmed", label: "Confirmed", emoji: "✅" },
     { id: "payment_success", label: "Payments", emoji: "💰" },
@@ -201,76 +253,115 @@ export default function NotificationsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-transparent pb-16 pt-24 sm:pt-28">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        {/* Header */}
+    <div className="min-h-screen bg-transparent pt-24 pb-20 sm:pt-28 md:pb-28 relative z-10">
+      {/* Ambient background glows */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div className="absolute top-24 left-1/3 w-96 h-96 rounded-full blur-3xl opacity-15 dark:opacity-20 bg-linear-to-tr from-violet-600 via-indigo-600 to-emerald-500" />
+        <div className="absolute bottom-24 right-1/3 w-96 h-96 rounded-full blur-3xl opacity-15 dark:opacity-20 bg-linear-to-bl from-emerald-600 via-teal-600 to-blue-500" />
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Top Header */}
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-linear-to-br from-violet-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-                <FaBell className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {unreadCount > 0
-                    ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
-                    : "You're all caught up!"}
-                </p>
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="w-10 h-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl flex items-center justify-center border border-gray-200/80 dark:border-gray-700/80 hover:bg-white dark:hover:bg-gray-700 shadow-sm transition-all cursor-pointer"
+              >
+                <FaArrowLeft className="w-4 h-4 text-gray-700 dark:text-gray-200" />
+              </button>
+
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-linear-to-tr from-violet-600 via-indigo-600 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg text-white">
+                  <FaBell className="w-5 h-5" />
+                </div>
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                    Notifications
+                  </h1>
+                  <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                    {unreadCount > 0
+                      ? `${unreadCount} unread update${unreadCount === 1 ? "" : "s"} waiting for your review`
+                      : "You're all caught up with your meals and requests"}
+                  </p>
+                </div>
               </div>
             </div>
 
-            {unreadCount > 0 && (
+            {/* Controls Bar */}
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => markAllRead()}
-                disabled={isMarkingAll}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 shadow-sm"
+                type="button"
+                onClick={() => refetch()}
+                title="Refresh notifications"
+                className="w-10 h-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl flex items-center justify-center border border-gray-200/80 dark:border-gray-700/80 hover:bg-white dark:hover:bg-gray-700 shadow-sm transition-all text-gray-600 dark:text-gray-300 cursor-pointer"
               >
-                <FaCheckDouble className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
-                <span className="text-gray-700 dark:text-gray-200">Mark all read</span>
+                <FaSyncAlt className="w-3.5 h-3.5" />
               </button>
-            )}
+
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => markAllRead()}
+                  disabled={isMarkingAll}
+                  className="flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl shadow-md shadow-emerald-500/20 hover:shadow-lg transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  <FaCheckDouble className="w-3.5 h-3.5" />
+                  <span>Mark all read</span>
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Live indicator */}
-          <div className="flex items-center gap-2 mt-4">
-            <span className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              Live updates active
+          {/* Live stream badge */}
+          <div className="flex items-center gap-2 mt-2">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
+              <span>Real-time SSE Stream Active</span>
             </span>
           </div>
         </motion.div>
 
-        {/* Filter tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
+        {/* Filter Pills Bar */}
+        <div className="flex gap-2 overflow-x-auto pb-3 mb-6 scrollbar-hide">
           {filterTabs.map((tab) => {
             const count =
               tab.id === "all"
                 ? notifications.length
                 : tab.id === "unread"
-                  ? unreadCount
-                  : notifications.filter((n) => n.type === tab.id).length;
+                ? unreadCount
+                : tab.id === "priority"
+                ? notifications.filter((n) => n.priority === "urgent" || n.priority === "high")
+                    .length
+                : notifications.filter((n) => n.type === tab.id).length;
+
+            const isActive = filter === tab.id;
 
             return (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => setFilter(tab.id)}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
-                  filter === tab.id
-                    ? "bg-violet-600 border-violet-600 text-white shadow-md"
-                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-violet-400"
+                className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer border ${
+                  isActive
+                    ? "bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                    : "bg-white/80 dark:bg-gray-900/80 border-gray-200/80 dark:border-gray-800/80 text-gray-600 dark:text-gray-300 hover:border-emerald-500/50"
                 }`}
               >
                 <span>{tab.emoji}</span>
                 <span>{tab.label}</span>
                 {count > 0 && (
                   <span
-                    className={`text-[10px] rounded-full px-1.5 py-0.5 font-bold ${
-                      filter === tab.id ? "bg-white/20 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                    className={`text-[10px] rounded-full px-2 py-0.5 font-black ${
+                      isActive
+                        ? "bg-white/25 text-white"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
                     }`}
                   >
                     {count}
@@ -281,38 +372,55 @@ export default function NotificationsPage() {
           })}
         </div>
 
-        {/* Content */}
+        {/* Content List */}
         {isLoading ? (
-          <div className="flex justify-center py-20">
-            <LoadingSpinner text="Loading notifications..." />
+          <div className="flex justify-center py-24">
+            <LoadingSpinner text="Loading your notifications..." />
           </div>
         ) : filtered.length === 0 ? (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-20"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-20 p-8 rounded-3xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-xl"
           >
-            <FaBoxOpen className="w-16 h-16 text-gray-200 dark:text-gray-700 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-1">
-              {filter === "unread" ? "No unread notifications" : "No notifications"}
+            <div className="w-20 h-20 mx-auto rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-4xl mb-4">
+              {filter === "unread" ? "🎉" : "📭"}
+            </div>
+            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">
+              {filter === "unread"
+                ? "All caught up!"
+                : filter === "priority"
+                ? "No high priority alerts"
+                : "No notifications found"}
             </h3>
-            <p className="text-sm text-gray-400 dark:text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
               {filter === "all"
-                ? "You'll see notifications about reservations, confirmations, and more here."
-                : `No ${filter.replace("_", " ")} notifications yet.`}
+                ? "You'll see real-time updates when someone reserves your food, sends confirmation, or makes a pickup."
+                : `No notifications match the "${filter.replace("_", " ")}" filter.`}
             </p>
-            {filter !== "all" && (
-              <button
-                onClick={() => setFilter("all")}
-                className="mt-4 flex items-center gap-1 mx-auto text-sm text-violet-600 dark:text-violet-400 hover:underline"
+
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {filter !== "all" && (
+                <button
+                  type="button"
+                  onClick={() => setFilter("all")}
+                  className="px-4 py-2.5 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <FaFilter className="w-3 h-3" />
+                  <span>Show All Notifications</span>
+                </button>
+              )}
+              <Link
+                href="/public/food"
+                className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all flex items-center gap-2"
               >
-                <FaFilter className="w-3 h-3" />
-                Show all notifications
-              </button>
-            )}
+                <FaUtensils className="w-3 h-3" />
+                <span>Explore Available Food</span>
+              </Link>
+            </div>
           </motion.div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <AnimatePresence mode="popLayout" initial={false}>
               {filtered.map((n) => (
                 <NotificationCard key={n.id} notification={n} />

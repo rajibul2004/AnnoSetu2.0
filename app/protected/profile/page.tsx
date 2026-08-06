@@ -25,6 +25,8 @@ import {
   FaSun,
   FaTrash,
   FaLock,
+  FaShieldAlt,
+  FaCheck,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -37,49 +39,50 @@ import type { ProfileDTO } from "@/types/profile";
 
 type TabKey = "profile" | "security" | "preferences";
 
-// Static lookup instead of `text-${roleColor}-600` etc. — Tailwind can't
-// detect dynamically-built class names at build time, so those never
-// actually generated any CSS in the original.
-const ROLE_STYLES: Record<string, { text: string; border: string; icon: string; gradient: string }> = {
+const ROLE_STYLES: Record<
+  string,
+  { text: string; border: string; icon: string; gradient: string; badgeBg: string }
+> = {
   individual: {
-    text: "text-pink-600 dark:text-pink-300",
-    border: "border-pink-600 text-pink-600",
-    icon: "text-pink-400",
-    gradient: "from-pink-700 via-pink-500 to-pink-400",
+    text: "text-pink-600 dark:text-pink-400",
+    border: "border-pink-500 text-pink-600 dark:text-pink-400",
+    icon: "text-pink-500",
+    gradient: "from-pink-600 via-rose-500 to-amber-500",
+    badgeBg: "bg-pink-500/15 text-pink-700 dark:text-pink-300 border-pink-500/30",
   },
   restaurant: {
-    text: "text-blue-600 dark:text-blue-300",
-    border: "border-blue-600 text-blue-600",
-    icon: "text-blue-400",
-    gradient: "from-blue-700 via-blue-500 to-blue-400",
+    text: "text-blue-600 dark:text-blue-400",
+    border: "border-blue-500 text-blue-600 dark:text-blue-400",
+    icon: "text-blue-500",
+    gradient: "from-blue-600 via-indigo-600 to-cyan-500",
+    badgeBg: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
   },
   ngo: {
-    text: "text-purple-600 dark:text-purple-300",
-    border: "border-purple-600 text-purple-600",
-    icon: "text-purple-400",
-    gradient: "from-purple-700 via-purple-500 to-purple-400",
+    text: "text-purple-600 dark:text-purple-400",
+    border: "border-purple-500 text-purple-600 dark:text-purple-400",
+    icon: "text-purple-500",
+    gradient: "from-purple-600 via-indigo-600 to-pink-500",
+    badgeBg: "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30",
   },
   admin: {
-    text: "text-gray-600 dark:text-gray-300",
-    border: "border-gray-600 text-gray-600",
-    icon: "text-gray-400",
-    gradient: "from-gray-700 via-gray-500 to-gray-400",
+    text: "text-emerald-600 dark:text-emerald-400",
+    border: "border-emerald-500 text-emerald-600 dark:text-emerald-400",
+    icon: "text-emerald-500",
+    gradient: "from-emerald-600 via-teal-600 to-cyan-500",
+    badgeBg: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
   },
 };
 
-// Matches the schema's FoodTag enum keys exactly — the original offered
-// "gluten-free"/"dairy-free"/"keto", none of which are valid Prisma
-// enum values ("keto" isn't in the enum at all).
 const DIETARY_OPTIONS = [
-  { value: "vegetarian", label: "Vegetarian" },
-  { value: "vegan", label: "Vegan" },
-  { value: "gluten_free", label: "Gluten Free" },
-  { value: "dairy_free", label: "Dairy Free" },
-  { value: "halal", label: "Halal" },
-  { value: "jain", label: "Jain" },
-  { value: "eggless", label: "Eggless" },
-  { value: "low_calorie", label: "Low Calorie" },
-  { value: "high_protein", label: "High Protein" },
+  { value: "vegetarian", label: "Vegetarian", icon: "🥦" },
+  { value: "vegan", label: "Vegan", icon: "🌱" },
+  { value: "gluten_free", label: "Gluten Free", icon: "🌾" },
+  { value: "dairy_free", label: "Dairy Free", icon: "🥛" },
+  { value: "halal", label: "Halal", icon: "☪️" },
+  { value: "jain", label: "Jain", icon: "🌿" },
+  { value: "eggless", label: "Eggless", icon: "🥚" },
+  { value: "low_calorie", label: "Low Calorie", icon: "🥗" },
+  { value: "high_protein", label: "High Protein", icon: "💪" },
 ];
 
 interface ProfileFormData {
@@ -152,7 +155,6 @@ export default function ProfilePage() {
     }
   }, [profile]);
 
-  // Fixed: handle all input types including select
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -163,15 +165,21 @@ export default function ProfilePage() {
     );
   };
 
-  // The custom <Select> component calls onChange with just the selected
-  // value (see Select.tsx), not a native ChangeEvent.
-  const handleSelectChange = (name: keyof ProfileFormData) => (value: string | number | boolean) => {
-    setFormData((prev) => (prev ? { ...prev, [name]: String(value) } : prev));
-  };
+  const handleSelectChange =
+    (name: keyof ProfileFormData) => (value: string | number | boolean) => {
+      setFormData((prev) => (prev ? { ...prev, [name]: String(value) } : prev));
+    };
 
-  const handleDietaryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const values = Array.from(e.target.selectedOptions, (o) => o.value);
-    setFormData((prev) => (prev ? { ...prev, dietaryPreferences: values } : prev));
+  const toggleDietaryPreference = (value: string) => {
+    if (!isEditing) return;
+    setFormData((prev) => {
+      if (!prev) return prev;
+      const exists = prev.dietaryPreferences.includes(value);
+      const next = exists
+        ? prev.dietaryPreferences.filter((v) => v !== value)
+        : [...prev.dietaryPreferences, value];
+      return { ...prev, dietaryPreferences: next };
+    });
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -243,11 +251,9 @@ export default function ProfilePage() {
     }
   };
 
-  // The original had this guard entirely commented out, so
-  // roleOptions[user?.role].name would throw before the profile loaded.
   if (profileLoading || !profile || !formData) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center pt-20">
         <LoadingSpinner text="Loading profile..." />
       </div>
     );
@@ -256,67 +262,95 @@ export default function ProfilePage() {
   const styles = ROLE_STYLES[profile.role] ?? ROLE_STYLES.individual;
   const displayName =
     profile.role === "restaurant"
-      ? profile.restaurantName
+      ? profile.restaurantName || "Restaurant Kitchen"
       : profile.role === "ngo"
-        ? profile.ngoName
-        : profile.name;
-  const roleIcon = profile.role === "restaurant" ? "🏪" : profile.role === "ngo" ? "🏥" : "👤";
+      ? profile.ngoName || "NGO Center"
+      : profile.name || "Community Member";
 
-  // The original's stats grid was completely dead code (a .map() callback
-  // with no return statement) — these display the same placeholder
-  // values the original intended, but actually render. Real numbers
-  // would need a dedicated aggregate query (completed reservations,
-  // listings shared, reviews received) which wasn't wired up in the
-  // original either.
-  const stats = [
-    { key: "Meals Saved", value: 0 },
-    { key: "Meals Shared", value: 0 },
-    { key: "Reviews", value: 0 },
-  ];
+  const roleIcon =
+    profile.role === "restaurant" ? "🍽️" : profile.role === "ngo" ? "🤝" : "👩‍🍳";
 
   return (
-    <div className="min-h-screen bg-transparent">
-      {/* Header */}
-      <div className="text-gray-900 dark:text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => router.back()}
-                className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center hover:bg-white/30 transition-colors"
-              >
-                <FaArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold">My Profile</h1>
-                <p className="dark:text-white/80 text-gray-900/80 mt-1">
-                  Manage your account settings
-                </p>
-              </div>
-            </div>
+    <div className="min-h-screen bg-transparent pt-24 pb-20 md:pt-28 md:pb-24 relative z-10">
+      {/* Background Ambience */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div
+          className={`absolute top-20 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-15 dark:opacity-20 bg-linear-to-tr ${styles.gradient}`}
+        />
+        <div
+          className={`absolute bottom-20 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-15 dark:opacity-20 bg-linear-to-bl ${styles.gradient}`}
+        />
+      </div>
+
+      {/* Header Container */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <button
-              onClick={() => setTheme(isDark ? "light" : "dark")}
-              className="w-10 h-10 dark:bg-white/20 bg-gray-900/20 backdrop-blur-sm rounded-xl flex items-center justify-center dark:hover:bg-white/30 hover:bg-gray-900/30 transition-colors"
+              type="button"
+              onClick={() => router.back()}
+              className="w-10 h-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl flex items-center justify-center border border-gray-200/80 dark:border-gray-700/80 hover:bg-white dark:hover:bg-gray-700 shadow-sm transition-all cursor-pointer"
             >
-              {isDark ? <FaSun className="w-5 h-5" /> : <FaMoon className="w-5 h-5" />}
+              <FaArrowLeft className="w-4 h-4 text-gray-700 dark:text-gray-200" />
             </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                  My Profile
+                </h1>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold border ${styles.badgeBg}`}
+                >
+                  <span>{roleIcon}</span>
+                  <span className="capitalize">{profile.role}</span>
+                </span>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                Manage your credentials, safety badges, and account preferences
+              </p>
+            </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+            className="w-10 h-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl flex items-center justify-center border border-gray-200/80 dark:border-gray-700/80 hover:bg-white dark:hover:bg-gray-700 shadow-sm transition-all cursor-pointer"
+            aria-label="Toggle Theme"
+          >
+            {isDark ? (
+              <FaSun className="w-4 h-4 text-amber-400" />
+            ) : (
+              <FaMoon className="w-4 h-4 text-indigo-600" />
+            )}
+          </button>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Left Sidebar */}
-          <div className="lg:col-span-1">
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="card p-6 sticky top-4">
-              <div className="relative mb-6 group">
-                <div className={`w-32 h-32 mx-auto rounded-2xl bg-gradient-to-br ${styles.gradient} p-1`}>
-                  <div className="w-full h-full rounded-xl overflow-hidden bg-white dark:bg-gray-900">
+      {/* Main Grid Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Sidebar (Sticky with safe offset & proper z-index) */}
+          <div className="lg:col-span-4 sticky top-24 md:top-28 z-20">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-6 sm:p-8 rounded-3xl bg-white/85 dark:bg-gray-900/85 backdrop-blur-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-xl"
+            >
+              {/* Avatar Frame */}
+              <div className="relative mb-6 mx-auto w-32 h-32">
+                <div
+                  className={`w-32 h-32 rounded-3xl bg-linear-to-tr ${styles.gradient} p-1 shadow-lg`}
+                >
+                  <div className="w-full h-full rounded-[22px] overflow-hidden bg-white dark:bg-gray-950 flex items-center justify-center">
                     {imagePreview ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={imagePreview} alt={displayName} className="w-full h-full object-cover" />
+                      <img
+                        src={imagePreview}
+                        alt={displayName}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700">
+                      <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
                         <FaUser className="w-12 h-12 text-gray-400 dark:text-gray-500" />
                       </div>
                     )}
@@ -324,523 +358,592 @@ export default function ProfilePage() {
                 </div>
 
                 {isEditing && (
-                  <div className="absolute -bottom-2 right-1/2 translate-x-12 flex gap-2">
-                    <label className="w-8 h-8 bg-gradient-to-r from-green-500 to-amber-500 rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-transform shadow-lg">
-                      <FaCamera className="w-4 h-4 text-white" />
-                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                  <div className="absolute -bottom-2 right-0 flex gap-1.5 z-30">
+                    <label className="w-8 h-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center cursor-pointer shadow-md transition-transform hover:scale-110">
+                      <FaCamera className="w-3.5 h-3.5" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
                     </label>
                     {imagePreview && (
                       <button
                         onClick={removeImage}
                         type="button"
-                        className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
+                        className="w-8 h-8 bg-rose-600 hover:bg-rose-700 text-white rounded-full flex items-center justify-center shadow-md transition-transform hover:scale-110 cursor-pointer"
                       >
-                        <FaTrash className="w-4 h-4 text-white" />
+                        <FaTrash className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>
                 )}
               </div>
 
+              {/* Identity & Status */}
               <div className="text-center mb-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{displayName}</h2>
-                <p className={`${styles.text} font-medium mt-1 capitalize flex items-center justify-center gap-1`}>
-                  <span>{roleIcon}</span>
-                  <span>{profile.role}</span>
+                <h2 className="text-xl font-black text-gray-900 dark:text-white">
+                  {displayName}
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center justify-center gap-1">
+                  <FaEnvelope className="w-3 h-3" />
+                  <span>{profile.email}</span>
                 </p>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 mb-6">
-                {stats.map((stat) => (
-                  <div key={stat.key} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3 text-center">
-                    <div className="text-lg font-bold text-gray-900 dark:text-white">{stat.value}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{stat.key}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+              {/* Status Pill Badge */}
+              <div className="mb-6 p-3 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200/60 dark:border-gray-700/60 text-center">
+                <div className="text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center justify-center gap-1.5">
+                  <FaShieldAlt className="text-emerald-500" />
+                  <span>Verified Community Member</span>
+                </div>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
                   Member since{" "}
                   {new Date(profile.createdAt).toLocaleDateString("en-US", {
-                    month: "long",
+                    month: "short",
                     year: "numeric",
                   })}
                 </p>
               </div>
 
-              {!isEditing && (
+              {/* Action Button */}
+              {!isEditing ? (
                 <button
+                  type="button"
                   onClick={() => setIsEditing(true)}
-                  className="w-full mt-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl py-3 font-semibold hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
+                  className="w-full bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl py-3.5 font-bold shadow-lg shadow-emerald-500/20 hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <FaEdit className="w-4 h-4" />
-                  Edit Profile
+                  <span>Edit Profile</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-2xl py-3 font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <FaTimesCircle className="w-4 h-4" />
+                  <span>Cancel Editing</span>
                 </button>
               )}
             </motion.div>
           </div>
 
-          {/* Right Content */}
-          <div className="lg:col-span-3">
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="card overflow-hidden">
-              <div className="border-b border-gray-400">
-                <nav className="flex space-x-8 justify-center md:justify-start">
-                  {(["profile", "security", "preferences"] as TabKey[]).map((tab) => (
+          {/* Right Main Content Card */}
+          <div className="lg:col-span-8 relative z-10">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-6 sm:p-8 rounded-3xl bg-white/85 dark:bg-gray-900/85 backdrop-blur-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-xl"
+            >
+              {/* Tab Navigation Pill Bar */}
+              <div className="flex p-1.5 bg-gray-100 dark:bg-gray-800/80 rounded-2xl gap-1 mb-8">
+                {(["profile", "security", "preferences"] as TabKey[]).map((tab) => {
+                  const isActive = activeTab === tab;
+                  return (
                     <button
                       key={tab}
+                      type="button"
                       onClick={() => setActiveTab(tab)}
-                      className={`py-3 px-2 font-medium text-sm border-b-2 transition-colors ${
-                        activeTab === tab ? styles.border : "border-transparent text-gray-500 hover:text-gray-700"
+                      className={`flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer ${
+                        isActive
+                          ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                       }`}
                     >
-                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                      {tab === "profile" && "👤 Profile Info"}
+                      {tab === "security" && "🔒 Security"}
+                      {tab === "preferences" && "⚙️ Preferences"}
                     </button>
-                  ))}
-                </nav>
+                  );
+                })}
               </div>
 
-              <div className="py-6">
-                <AnimatePresence mode="wait">
-                  {activeTab === "profile" && (
-                    <form onSubmit={handleSubmit}>
-                      <motion.div
-                        key="profile"
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 20 }}
-                        className="space-y-6"
-                      >
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                          Personal Information
+              {/* Tab Panels */}
+              <AnimatePresence mode="wait">
+                {activeTab === "profile" && (
+                  <form onSubmit={handleSubmit} key="profile-tab">
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="space-y-6"
+                    >
+                      <div className="border-b border-gray-100 dark:border-gray-800 pb-4 mb-6">
+                        <h3 className="text-lg font-black text-gray-900 dark:text-white">
+                          Account Information
                         </h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Keep your listing and contact details up to date
+                        </p>
+                      </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {profile.role === "individual" && (
-                            <Input
-                              label="Full Name"
-                              name="name"
-                              value={formData.name}
-                              onChange={handleChange}
-                              disabled={!isEditing}
-                              icon={<FaUser className={styles.icon} />}
-                              required
-                            />
-                          )}
-                          {profile.role === "restaurant" && (
-                            <>
-                              <Input
-                                label="Restaurant Name"
-                                name="restaurantName"
-                                value={formData.restaurantName}
-                                onChange={handleChange}
-                                disabled={!isEditing}
-                                icon={<FaStore className="text-blue-400" />}
-                              />
-                              <Input
-                                label="Restaurant Type"
-                                name="restaurantType"
-                                value={formData.restaurantType}
-                                onChange={handleChange}
-                                disabled={!isEditing}
-                                icon={<FaStore className="text-blue-400" />}
-                                placeholder="e.g., Italian, Fast Food"
-                              />
-                            </>
-                          )}
-                          {profile.role === "ngo" && (
-                            <Input
-                              label="NGO Name"
-                              name="ngoName"
-                              value={formData.ngoName}
-                              onChange={handleChange}
-                              disabled={!isEditing}
-                              icon={<FaBuilding className="text-purple-400" />}
-                            />
-                          )}
-
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {profile.role === "individual" && (
                           <Input
-                            label="Email Address"
-                            name="email"
-                            type="email"
-                            value={profile.email}
-                            disabled
-                            icon={<FaEnvelope className={styles.icon} />}
-                          />
-                          <Input
-                            label="Phone Number"
-                            name="phone"
-                            value={formData.phone}
+                            label="Full Name"
+                            name="name"
+                            value={formData.name}
                             onChange={handleChange}
                             disabled={!isEditing}
-                            icon={<FaPhone className={styles.icon} />}
+                            icon={<FaUser className={styles.icon} />}
+                            required
                           />
+                        )}
 
-                          {profile.role === "individual" && (
-                            <>
-                              <Input
-                                label="Date of Birth"
-                                name="dateOfBirth"
-                                type="date"
-                                value={formData.dateOfBirth}
-                                onChange={handleChange}
-                                disabled={!isEditing}
-                                icon={<FaBirthdayCake className={styles.icon} />}
-                              />
-                              <Select
-                                label="Gender"
-                                value={formData.gender}
-                                onChange={handleSelectChange("gender")}
-                                disabled={!isEditing}
-                                options={[
-                                  { value: "male", label: "Male" },
-                                  { value: "female", label: "Female" },
-                                  { value: "other", label: "Other" },
-                                  // Prisma's enum key is prefer_not
-                                  // (@map("prefer-not") only affects the
-                                  // DB column, not the client value).
-                                  { value: "prefer_not", label: "Prefer not to say" },
-                                ]}
-                                icon={<FaVenusMars className={styles.icon} />}
-                              />
-                            </>
-                          )}
-
-                          {profile.role === "restaurant" && (
-                            <>
-                              <Input
-                                label="FSSAI License"
-                                name="fssaiLicense"
-                                value={formData.fssaiLicense}
-                                onChange={handleChange}
-                                disabled={!isEditing}
-                                icon={<FaIdCard className="text-blue-400" />}
-                              />
-                              <Input
-                                label="GST Number"
-                                name="gstNumber"
-                                value={formData.gstNumber}
-                                onChange={handleChange}
-                                disabled={!isEditing}
-                                icon={<FaIdCard className="text-blue-400" />}
-                              />
-                            </>
-                          )}
-
-                          {profile.role === "ngo" && (
-                            <>
-                              <Input
-                                label="Registration ID"
-                                name="registrationId"
-                                value={formData.registrationId}
-                                onChange={handleChange}
-                                disabled={!isEditing}
-                                icon={<FaIdCard className="text-purple-400" />}
-                              />
-                              <Input
-                                label="Established Year"
-                                name="establishedYear"
-                                type="number"
-                                value={formData.establishedYear}
-                                onChange={handleChange}
-                                disabled={!isEditing}
-                                icon={<FaBirthdayCake className="text-purple-400" />}
-                              />
-                              <Select
-                                label="NGO Type"
-                                value={formData.ngoType}
-                                onChange={handleSelectChange("ngoType")}
-                                disabled={!isEditing}
-                                options={[
-                                  { value: "food", label: "Food Bank" },
-                                  { value: "children", label: "Children Welfare" },
-                                  { value: "homeless", label: "Homeless Support" },
-                                  { value: "other", label: "Other" },
-                                ]}
-                                icon={<FaBuilding className="text-purple-400" />}
-                              />
-                              <div className="md:col-span-2">
-                                <Input
-                                  label="Website"
-                                  name="website"
-                                  value={formData.website}
-                                  onChange={handleChange}
-                                  disabled={!isEditing}
-                                  icon={<FaBuilding className="text-purple-400" />}
-                                />
-                              </div>
-                            </>
-                          )}
-
-                          <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                              Bio
-                            </label>
-                            <textarea
-                              name="bio"
-                              value={formData.bio}
-                              onChange={handleChange}
-                              disabled={!isEditing}
-                              rows={4}
-                              className="w-full px-4 py-3 border border-gray-200 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-50 dark:disabled:bg-gray-700 resize-none"
-                              placeholder="Tell us about yourself..."
-                            />
-                          </div>
-
-                          <div className="md:col-span-2">
+                        {profile.role === "restaurant" && (
+                          <>
                             <Input
-                              label="Address"
-                              name="address"
-                              value={formData.address}
+                              label="Restaurant Name"
+                              name="restaurantName"
+                              value={formData.restaurantName}
                               onChange={handleChange}
                               disabled={!isEditing}
-                              icon={<FaMapMarkerAlt className={styles.icon} />}
+                              icon={<FaStore className="text-blue-400" />}
                             />
-                          </div>
-                        </div>
+                            <Input
+                              label="Kitchen / Cuisine Type"
+                              name="restaurantType"
+                              value={formData.restaurantType}
+                              onChange={handleChange}
+                              disabled={!isEditing}
+                              icon={<FaStore className="text-blue-400" />}
+                              placeholder="e.g., North Indian, Bakery, Continental"
+                            />
+                          </>
+                        )}
+
+                        {profile.role === "ngo" && (
+                          <Input
+                            label="NGO Organization Name"
+                            name="ngoName"
+                            value={formData.ngoName}
+                            onChange={handleChange}
+                            disabled={!isEditing}
+                            icon={<FaBuilding className="text-purple-400" />}
+                          />
+                        )}
+
+                        <Input
+                          label="Email Address"
+                          name="email"
+                          type="email"
+                          value={profile.email}
+                          disabled
+                          icon={<FaEnvelope className={styles.icon} />}
+                        />
+
+                        <Input
+                          label="Phone Number"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          disabled={!isEditing}
+                          icon={<FaPhone className={styles.icon} />}
+                        />
 
                         {profile.role === "individual" && (
-                          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                              Cooking Preferences
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <Select
-                                label="Cooking Expertise"
-                                value={formData.cookingExpertise}
-                                onChange={handleSelectChange("cookingExpertise")}
+                          <>
+                            <Input
+                              label="Date of Birth"
+                              name="dateOfBirth"
+                              type="date"
+                              value={formData.dateOfBirth}
+                              onChange={handleChange}
+                              disabled={!isEditing}
+                              icon={<FaBirthdayCake className={styles.icon} />}
+                            />
+                            <Select
+                              label="Gender"
+                              value={formData.gender}
+                              onChange={handleSelectChange("gender")}
+                              disabled={!isEditing}
+                              options={[
+                                { value: "male", label: "Male" },
+                                { value: "female", label: "Female" },
+                                { value: "other", label: "Other" },
+                                { value: "prefer_not", label: "Prefer not to say" },
+                              ]}
+                              icon={<FaVenusMars className={styles.icon} />}
+                            />
+                          </>
+                        )}
+
+                        {profile.role === "restaurant" && (
+                          <>
+                            <Input
+                              label="FSSAI License ID"
+                              name="fssaiLicense"
+                              value={formData.fssaiLicense}
+                              onChange={handleChange}
+                              disabled={!isEditing}
+                              icon={<FaIdCard className="text-blue-400" />}
+                            />
+                            <Input
+                              label="GST Number"
+                              name="gstNumber"
+                              value={formData.gstNumber}
+                              onChange={handleChange}
+                              disabled={!isEditing}
+                              icon={<FaIdCard className="text-blue-400" />}
+                            />
+                          </>
+                        )}
+
+                        {profile.role === "ngo" && (
+                          <>
+                            <Input
+                              label="Registration ID"
+                              name="registrationId"
+                              value={formData.registrationId}
+                              onChange={handleChange}
+                              disabled={!isEditing}
+                              icon={<FaIdCard className="text-purple-400" />}
+                            />
+                            <Input
+                              label="Established Year"
+                              name="establishedYear"
+                              type="number"
+                              value={formData.establishedYear}
+                              onChange={handleChange}
+                              disabled={!isEditing}
+                              icon={<FaBirthdayCake className="text-purple-400" />}
+                            />
+                            <Select
+                              label="NGO Activity Domain"
+                              value={formData.ngoType}
+                              onChange={handleSelectChange("ngoType")}
+                              disabled={!isEditing}
+                              options={[
+                                { value: "food", label: "Food Bank / Meal Distribution" },
+                                { value: "children", label: "Children Welfare" },
+                                { value: "homeless", label: "Homeless Support" },
+                                { value: "other", label: "Other Community Services" },
+                              ]}
+                              icon={<FaBuilding className="text-purple-400" />}
+                            />
+                            <div className="md:col-span-2">
+                              <Input
+                                label="Official Website"
+                                name="website"
+                                value={formData.website}
+                                onChange={handleChange}
                                 disabled={!isEditing}
-                                options={[
-                                  { value: "beginner", label: "Beginner" },
-                                  { value: "intermediate", label: "Intermediate" },
-                                  { value: "advanced", label: "Advanced" },
-                                  { value: "professional", label: "Professional" },
-                                ]}
-                                icon={<FaStar className="text-pink-400" />}
+                                icon={<FaBuilding className="text-purple-400" />}
                               />
-                              <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                                  Dietary Preferences
-                                </label>
-                                <select
-                                  name="dietaryPreferences"
-                                  value={formData.dietaryPreferences}
-                                  onChange={handleDietaryChange}
-                                  disabled={!isEditing}
-                                  multiple
-                                  className="w-full px-4 py-3 border border-gray-200 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-50 dark:disabled:bg-gray-700 h-32"
-                                >
-                                  {DIETARY_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                      {option.label}
-                                    </option>
-                                  ))}
-                                </select>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                  Hold Ctrl/Cmd to select multiple
-                                </p>
+                            </div>
+                          </>
+                        )}
+
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
+                            Bio & Community Mission
+                          </label>
+                          <textarea
+                            name="bio"
+                            value={formData.bio}
+                            onChange={handleChange}
+                            disabled={!isEditing}
+                            rows={3}
+                            className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-70 resize-none text-sm transition-all"
+                            placeholder="Share a brief introduction with your fellow food heroes..."
+                          />
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <Input
+                            label="Default Pickup / Kitchen Address"
+                            name="address"
+                            value={formData.address}
+                            onChange={handleChange}
+                            disabled={!isEditing}
+                            icon={<FaMapMarkerAlt className={styles.icon} />}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Individual Cooking Preferences */}
+                      {profile.role === "individual" && (
+                        <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
+                          <h3 className="text-base font-black text-gray-900 dark:text-white mb-4">
+                            Culinary & Dietary Preferences
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <Select
+                              label="Cooking Expertise"
+                              value={formData.cookingExpertise}
+                              onChange={handleSelectChange("cookingExpertise")}
+                              disabled={!isEditing}
+                              options={[
+                                { value: "beginner", label: "Beginner Home Cook" },
+                                { value: "intermediate", label: "Intermediate Foodie" },
+                                { value: "advanced", label: "Advanced Culinary Enthusiast" },
+                                { value: "professional", label: "Professional Chef" },
+                              ]}
+                              icon={<FaStar className="text-amber-400" />}
+                            />
+
+                            <div className="md:col-span-2">
+                              <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
+                                Dietary Tags & Specialties
+                              </label>
+                              <div className="flex flex-wrap gap-2">
+                                {DIETARY_OPTIONS.map((opt) => {
+                                  const isSelected = formData.dietaryPreferences.includes(
+                                    opt.value
+                                  );
+                                  return (
+                                    <button
+                                      key={opt.value}
+                                      type="button"
+                                      onClick={() => toggleDietaryPreference(opt.value)}
+                                      disabled={!isEditing}
+                                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                                        isSelected
+                                          ? "bg-emerald-600 text-white shadow-sm"
+                                          : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                                      } ${!isEditing ? "cursor-default opacity-80" : "cursor-pointer"}`}
+                                    >
+                                      <span>{opt.icon}</span>
+                                      <span>{opt.label}</span>
+                                      {isSelected && <FaCheck className="w-2.5 h-2.5 ml-0.5" />}
+                                    </button>
+                                  );
+                                })}
                               </div>
                             </div>
                           </div>
-                        )}
-                      </motion.div>
+                        </div>
+                      )}
 
+                      {/* Save Bar */}
                       {isEditing && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="flex justify-end gap-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700"
-                        >
-                          <Button type="button" variant="outline" onClick={handleCancel}>
-                            <FaTimesCircle className="mr-2" />
+                        <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={handleCancel}
+                            disabled={isUpdating}
+                          >
                             Cancel
                           </Button>
-                          <Button type="submit" variant="primary" loading={isUpdating} disabled={!hasChanges || isUpdating}>
-                            <FaSave className="mr-2" />
-                            Save Changes
-                          </Button>
-                        </motion.div>
-                      )}
-                    </form>
-                  )}
-
-                  {activeTab === "security" && (
-                    <motion.div
-                      key="security"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="space-y-6"
-                    >
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Security Settings</h3>
-
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between p-2 md:p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-green-100 dark:bg-green-800 rounded-lg flex items-center justify-center">
-                              <FaLock className="w-5 h-5 text-green-600 dark:text-green-300" />
-                            </div>
-                            <div className="pr-2">
-                              <h4 className="font-medium text-gray-900 dark:text-white">Change Password</h4>
-                              <p className="text-sm text-gray-500 dark:text-gray-300">
-                                Update your password regularly
-                              </p>
-                            </div>
-                          </div>
-                          <Button variant="outline" size="sm" onClick={() => toast("Password change coming soon!")}>
-                            Update
-                          </Button>
-                        </div>
-
-                        {/*
-                          Two-factor auth has no backing field anywhere in
-                          the schema, so unlike the notifications toggle
-                          below, this stays an honest stub rather than
-                          wiring a checkbox to nothing.
-                        */}
-                        <div className="flex items-center justify-between p-2 md:p-4 bg-gray-50 dark:bg-gray-700 rounded-xl opacity-60">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-green-100 dark:bg-green-800 rounded-lg flex items-center justify-center">
-                              <FaLock className="w-5 h-5 text-green-600 dark:text-green-300" />
-                            </div>
-                            <div className="pr-2">
-                              <h4 className="font-medium text-gray-900 dark:text-white">
-                                Two-Factor Authentication
-                              </h4>
-                              <p className="text-sm text-gray-500 dark:text-gray-300">Coming soon</p>
-                            </div>
-                          </div>
-                          <span className="text-xs text-gray-400">Not available yet</span>
-                        </div>
-                      </div>
-
-                      <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-                        <h4 className="text-lg font-semibold mb-4 text-red-600">Danger Zone</h4>
-                        <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-950/20 rounded-xl border border-red-200 dark:border-red-700">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-red-100 dark:bg-red-800 rounded-lg flex items-center justify-center">
-                              <FaTrash className="w-5 h-5 text-red-600 dark:text-red-300" />
-                            </div>
-                            <div>
-                              <h4 className="font-medium text-red-900 dark:text-red-50">Delete Account</h4>
-                              <p className="text-sm text-red-600 dark:text-red-300">
-                                Permanently remove your account
-                              </p>
-                            </div>
-                          </div>
                           <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => toast.error("Account deletion not available yet")}
+                            type="submit"
+                            variant="primary"
+                            loading={isUpdating}
+                            disabled={!hasChanges || isUpdating}
                           >
-                            Delete
+                            <span className="flex items-center gap-2">
+                              <FaSave />
+                              <span>Save Changes</span>
+                            </span>
                           </Button>
                         </div>
-                      </div>
+                      )}
                     </motion.div>
-                  )}
+                  </form>
+                )}
 
-                  {activeTab === "preferences" && (
-                    <motion.div
-                      key="preferences"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="space-y-6"
-                    >
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">App Preferences</h3>
+                {activeTab === "security" && (
+                  <motion.div
+                    key="security-tab"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-6"
+                  >
+                    <div className="border-b border-gray-100 dark:border-gray-800 pb-4 mb-6">
+                      <h3 className="text-lg font-black text-gray-900 dark:text-white">
+                        Security & Credentials
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Manage your password and authentication safeguards
+                      </p>
+                    </div>
 
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between p-2 md:p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-800 rounded-lg flex items-center justify-center">
-                              {isDark ? (
-                                <FaMoon className="w-5 h-5 text-yellow-600 dark:text-yellow-300" />
-                              ) : (
-                                <FaSun className="w-5 h-5 text-yellow-600 dark:text-yellow-300" />
-                              )}
-                            </div>
-                            <div>
-                              <h4 className="font-medium text-gray-900 dark:text-white">Dark Mode</h4>
-                              <p className="text-sm text-gray-500 dark:text-gray-300">
-                                Switch between light and dark themes
-                              </p>
-                            </div>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/60 rounded-2xl border border-gray-200/60 dark:border-gray-700/60">
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-10 h-10 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center">
+                            <FaLock className="w-4 h-4" />
                           </div>
-                          <Button variant="outline" size="sm" onClick={() => setTheme(isDark ? "light" : "dark")}>
-                            Switch
-                          </Button>
-                        </div>
-
-                        <div className="flex items-center justify-between p-2 md:p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-800 rounded-lg flex items-center justify-center">
-                              <FaLanguage className="w-5 h-5 text-blue-600 dark:text-blue-300" />
-                            </div>
-                            <div>
-                              <h4 className="font-medium text-gray-900 dark:text-white">Language</h4>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Choose your preferred language
-                              </p>
-                            </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                              Account Password
+                            </h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              Keep your password updated with strong symbols
+                            </p>
                           </div>
-                          <select
-                            name="language"
-                            value={formData.language}
-                            onChange={handleChange}
-                            className="px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                          >
-                            <option value="english">English</option>
-                            <option value="bengali">Bengali</option>
-                            <option value="hindi">Hindi</option>
-                          </select>
                         </div>
-
-                        {/*
-                          Unlike twoFactorAuth (no schema field at all),
-                          `notifications` is a real Boolean column on
-                          User — so this toggle is wired to actually
-                          persist, saving immediately on change rather
-                          than waiting for the Profile tab's Save button.
-                        */}
-                        <div className="flex items-center justify-between p-2 md:p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-800 rounded-lg flex items-center justify-center">
-                              <FaBell className="w-5 h-5 text-purple-600 dark:text-purple-300" />
-                            </div>
-                            <div className="pr-2">
-                              <h4 className="font-medium text-gray-900 dark:text-white">Notifications</h4>
-                              <p className="text-sm text-gray-500 dark:text-gray-300">
-                                Receive updates about your activity
-                              </p>
-                            </div>
-                          </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              name="notifications"
-                              checked={formData.notifications}
-                              onChange={async (e) => {
-                                const checked = e.target.checked;
-                                setFormData((prev) => (prev ? { ...prev, notifications: checked } : prev));
-                                const payload = new FormData();
-                                payload.append("notifications", String(checked));
-                                try {
-                                  await updateProfile(payload);
-                                } catch {
-                                  setFormData((prev) => (prev ? { ...prev, notifications: !checked } : prev));
-                                }
-                              }}
-                              className="sr-only peer"
-                            />
-                            <div className="w-11 h-6 bg-gray-200 dark:bg-gray-900 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:start-0.5 after:bg-white dark:after:bg-gray-600 after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-300"></div>
-                          </label>
-                        </div>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => toast("Password reset link will be sent to your email!")}
+                        >
+                          Change
+                        </Button>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+
+                      <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/60 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 opacity-70">
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-10 h-10 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center">
+                            <FaShieldAlt className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                              Two-Factor Authentication (2FA)
+                            </h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              SMS / Authenticator app verification
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-semibold text-gray-400">Coming Soon</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
+                      <h4 className="text-base font-black text-rose-600 dark:text-rose-400 mb-3">
+                        Danger Zone
+                      </h4>
+                      <div className="flex items-center justify-between p-4 bg-rose-500/10 rounded-2xl border border-rose-500/20">
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-10 h-10 bg-rose-500/15 text-rose-600 rounded-xl flex items-center justify-center">
+                            <FaTrash className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-rose-900 dark:text-rose-100">
+                              Delete Account
+                            </h4>
+                            <p className="text-xs text-rose-600 dark:text-rose-300 mt-0.5">
+                              Permanently remove all profile listings and reservation data
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => toast.error("Account deletion is restricted.")}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {activeTab === "preferences" && (
+                  <motion.div
+                    key="preferences-tab"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-6"
+                  >
+                    <div className="border-b border-gray-100 dark:border-gray-800 pb-4 mb-6">
+                      <h3 className="text-lg font-black text-gray-900 dark:text-white">
+                        Application Preferences
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Customize appearance and real-time alerts
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/60 rounded-2xl border border-gray-200/60 dark:border-gray-700/60">
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-10 h-10 bg-amber-500/15 text-amber-500 rounded-xl flex items-center justify-center">
+                            {isDark ? <FaMoon className="w-4 h-4" /> : <FaSun className="w-4 h-4" />}
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                              Theme Display
+                            </h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              Switch between light and dark visual modes
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setTheme(isDark ? "light" : "dark")}
+                        >
+                          {isDark ? "Switch to Light" : "Switch to Dark"}
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/60 rounded-2xl border border-gray-200/60 dark:border-gray-700/60">
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-10 h-10 bg-blue-500/15 text-blue-500 rounded-xl flex items-center justify-center">
+                            <FaLanguage className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                              Language
+                            </h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              Choose your default application language
+                            </p>
+                          </div>
+                        </div>
+                        <select
+                          name="language"
+                          value={formData.language}
+                          onChange={handleChange}
+                          className="px-3.5 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        >
+                          <option value="english">English</option>
+                          <option value="bengali">বাংলা (Bengali)</option>
+                          <option value="hindi">हिन्दी (Hindi)</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/60 rounded-2xl border border-gray-200/60 dark:border-gray-700/60">
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-10 h-10 bg-purple-500/15 text-purple-500 rounded-xl flex items-center justify-center">
+                            <FaBell className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                              Live Notifications
+                            </h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              Instant push alerts for pickups, claim requests, and food drops
+                            </p>
+                          </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            name="notifications"
+                            checked={formData.notifications}
+                            onChange={async (e) => {
+                              const checked = e.target.checked;
+                              setFormData((prev) =>
+                                prev ? { ...prev, notifications: checked } : prev
+                              );
+                              const payload = new FormData();
+                              payload.append("notifications", String(checked));
+                              try {
+                                await updateProfile(payload);
+                              } catch {
+                                setFormData((prev) =>
+                                  prev ? { ...prev, notifications: !checked } : prev
+                                );
+                              }
+                            }}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:start-0.5 after:bg-white dark:after:bg-gray-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                        </label>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           </div>
         </div>

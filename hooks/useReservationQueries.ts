@@ -127,6 +127,7 @@ export function useConfirmReservationRequest() {
       toast.success("Reservation confirmed");
       queryClient.invalidateQueries({ queryKey: ["reservation", id] });
       queryClient.invalidateQueries({ queryKey: ["myreservations"] });
+      queryClient.invalidateQueries({ queryKey: ["incoming-reservations"] });
     },
     onError: (error: Error) => toast.error(error.message || "Failed to confirm reservation"),
   });
@@ -192,6 +193,7 @@ export function useVerifyPickup() {
       toast.success("Pickup verified successfully!");
       queryClient.invalidateQueries({ queryKey: ["recentPickups"] });
       queryClient.invalidateQueries({ queryKey: ["mysharedfood"] });
+      queryClient.invalidateQueries({ queryKey: ["incoming-reservations"] });
     },
     onError: (error: Error) => toast.error(error.message || "Verification failed"),
   });
@@ -199,6 +201,8 @@ export function useVerifyPickup() {
   return {
     verifyPickup: mutation.mutateAsync,
     isVerifying: mutation.isPending,
+    verificationData: mutation.data,
+    reset: mutation.reset,
   };
 }
  
@@ -218,6 +222,5 @@ export function useRecentPickups() {
     retry: false,
   });
  
-  return { recentPickups: query.data ?? [], isLoading: query.isLoading };
+  return { recentPickups: query.data ?? [], isLoading: query.isLoading, refetch: query.refetch };
 }
- 

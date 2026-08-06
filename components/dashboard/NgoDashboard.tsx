@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaHandsHelping,
@@ -14,6 +15,13 @@ import {
   FaHandHoldingHeart,
   FaLeaf,
   FaCheckCircle,
+  FaTimesCircle,
+  FaClock,
+  FaCopy,
+  FaQrcode,
+  FaChevronDown,
+  FaUtensils,
+  FaMapMarkerAlt,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
@@ -26,8 +34,10 @@ import {
 import type { ReservationDTO } from "@/types/reservation";
 
 // ---------------------------------------------------------------------------
-// Stat helpers
+// Types & Stat helpers
 // ---------------------------------------------------------------------------
+
+type NGOTab = "upcoming" | "completed" | "cancelled" | "all";
 
 interface NGOStats {
   totalMeals: number;
@@ -82,6 +92,75 @@ const STATUS_STYLES: Record<string, string> = {
     "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 border border-gray-200",
 };
 
+// ---------------------------------------------------------------------
+// Reusable Scrollable Container with Gradient Overflow Indicators
+// ---------------------------------------------------------------------
+
+function ScrollableContainer({
+  children,
+  maxHeight = "max-h-[680px]",
+}: {
+  children: React.ReactNode;
+  maxHeight?: string;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+
+  const checkScroll = () => {
+    const el = containerRef.current;
+    if (!el) return;
+    const hasOverflow = el.scrollHeight > el.clientHeight + 10;
+    setCanScrollUp(el.scrollTop > 15);
+    setCanScrollDown(
+      hasOverflow && el.scrollTop < el.scrollHeight - el.clientHeight - 15,
+    );
+  };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener("resize", checkScroll);
+    return () => window.removeEventListener("resize", checkScroll);
+  }, [children]);
+
+  return (
+    <div className="relative group">
+      {/* Top overflow shadow indicator */}
+      <div
+        className={`pointer-events-none absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-gray-900/10 dark:from-black/30 to-transparent z-10 rounded-t-3xl transition-opacity duration-300 ${
+          canScrollUp ? "opacity-100" : "opacity-0"
+        }`}
+      />
+
+      {/* Scrollable Body */}
+      <div
+        ref={containerRef}
+        onScroll={checkScroll}
+        className={`${maxHeight} overflow-y-auto custom-scrollbar scroll-smooth py-1`}
+      >
+        {children}
+      </div>
+
+      {/* Bottom overflow shadow indicator */}
+      <div
+        className={`pointer-events-none absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-gray-900/10 dark:from-black/30 to-transparent z-10 rounded-b-3xl transition-opacity duration-300 ${
+          canScrollDown ? "opacity-100" : "opacity-0"
+        }`}
+      />
+
+      {/* Scroll hint badge when content overflows */}
+      {canScrollDown && (
+        <div className="flex justify-center mt-2">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 text-[11px] font-bold text-gray-500 dark:text-gray-400 rounded-full shadow-sm animate-pulse">
+            <FaChevronDown className="w-2.5 h-2.5" />
+            Scroll for more distributions
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // NGO Dashboard Component
 // ---------------------------------------------------------------------------
@@ -91,6 +170,7 @@ export default function NGODashboard() {
   const { user } = useAuth();
   const { reservations, isLoading } = useMyReservations();
   const { cancelReservation, isCancelling } = useCancelReservation();
+  const [activeTab, setActiveTab] = useState<NGOTab>("upcoming");
 
   const stats = useMemo(() => computeStats(reservations), [reservations]);
   const [showWelcome, setShowWelcome] = useState(true);
@@ -103,14 +183,53 @@ export default function NGODashboard() {
     };
   }, []);
 
-  const upcomingPickups = reservations.filter(
-    (r) =>
-      (r.status === "confirmed" || r.status === "pending") &&
-      new Date(r.pickupTime) > new Date(),
-  ).length;
+  const now = new Date();
+  const upcomingReservations = useMemo(
+    () =>
+      reservations.filter(
+        (r) =>
+          (r.status === "confirmed" || r.status === "pending") &&
+          new Date(r.pickupTime) > now,
+      ),
+    [reservations],
+  );
+
+  const completedReservations = useMemo(
+    () =>
+      reservations.filter(
+        (r) =>
+          r.status === "picked_up" ||
+          (r.status !== "cancelled" && new Date(r.pickupTime) <= now),
+      ),
+    [reservations],
+  );
+
+  const cancelledReservations = useMemo(
+    () => reservations.filter((r) => r.status === "cancelled"),
+    [reservations],
+  );
+
+  const filteredReservations = useMemo(() => {
+    switch (activeTab) {
+      case "upcoming":
+        return upcomingReservations;
+      case "completed":
+        return completedReservations;
+      case "cancelled":
+        return cancelledReservations;
+      default:
+        return reservations;
+    }
+  }, [activeTab, upcomingReservations, completedReservations, cancelledReservations, reservations]);
 
   const generateReport = () => {
     toast.success("Community Impact Report has been dispatched to your email!");
+  };
+
+  const handleCopyCode = (code: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(code);
+    toast.success("Pickup pass code copied!");
   };
 
   if (isLoading) {
@@ -145,8 +264,8 @@ export default function NGODashboard() {
                     Welcome, {displayName}! 🎉
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    You have {upcomingPickups} active pickup
-                    {upcomingPickups !== 1 ? "s" : ""} scheduled
+                    You have {upcomingReservations.length} active pickup
+                    {upcomingReservations.length !== 1 ? "s" : ""} scheduled
                   </p>
                 </div>
               </div>
@@ -173,7 +292,7 @@ export default function NGODashboard() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-bold uppercase tracking-wider backdrop-blur-xs border border-white/20">
-                    NGO Partner & Rescue Hub
+                    NGO Partner &amp; Rescue Hub
                   </span>
                 </div>
                 <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
@@ -193,6 +312,12 @@ export default function NGODashboard() {
                 <FaBoxOpen className="text-purple-600" />
                 <span>Rescue Food Now</span>
               </button>
+              <Link href="/protected/reservation/pickup">
+                <button className="flex items-center gap-2 px-5 py-3.5 bg-white/15 hover:bg-white/25 border border-white/30 text-white font-bold text-sm rounded-2xl backdrop-blur-md transition-all cursor-pointer">
+                  <FaQrcode />
+                  <span>Pickup Scanner</span>
+                </button>
+              </Link>
               <button
                 onClick={generateReport}
                 className="flex items-center gap-2 px-5 py-3.5 bg-white/15 hover:bg-white/25 border border-white/30 text-white font-bold text-sm rounded-2xl backdrop-blur-md transition-all cursor-pointer"
@@ -293,15 +418,115 @@ export default function NGODashboard() {
           ))}
         </div>
 
-        {/* Recent Distributions Table Card */}
+        {/* Tab Navigation for NGO Distributions */}
+        <div className="bg-white dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl p-2 border border-gray-200/80 dark:border-slate-800 shadow-md mb-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="overflow-x-auto custom-scrollbar pb-0.5 flex-1">
+              <div className="flex items-center gap-2 min-w-max">
+                <button
+                  onClick={() => setActiveTab("upcoming")}
+                  className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
+                    activeTab === "upcoming"
+                      ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
+                      : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <FaClock className="text-xs" />
+                  <span>Upcoming Pickups</span>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-black ${
+                      activeTab === "upcoming"
+                        ? "bg-white/20 text-white"
+                        : "bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300"
+                    }`}
+                  >
+                    {upcomingReservations.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab("completed")}
+                  className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
+                    activeTab === "completed"
+                      ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
+                      : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <FaCheckCircle className="text-xs" />
+                  <span>Completed Rescues</span>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-black ${
+                      activeTab === "completed"
+                        ? "bg-white/20 text-white"
+                        : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300"
+                    }`}
+                  >
+                    {completedReservations.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab("cancelled")}
+                  className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
+                    activeTab === "cancelled"
+                      ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
+                      : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <FaTimesCircle className="text-xs" />
+                  <span>Cancelled</span>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-black ${
+                      activeTab === "cancelled"
+                        ? "bg-white/20 text-white"
+                        : "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300"
+                    }`}
+                  >
+                    {cancelledReservations.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab("all")}
+                  className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
+                    activeTab === "all"
+                      ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
+                      : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <span>All Rescues</span>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-black ${
+                      activeTab === "all"
+                        ? "bg-white/20 text-white"
+                        : "bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    {reservations.length}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={() => router.push("/public/food")}
+              className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition-colors shrink-0"
+            >
+              <FaBoxOpen />
+              <span>Browse Food</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Recent Distributions Table Card with Scroll Container */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-xl overflow-hidden mb-8">
           <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center">
             <div>
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                Recent Food Distributions &amp; Pickups
+                Food Distributions &amp; Pickups
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Track your active reservations, pickup codes, and status.
+                Showing {filteredReservations.length} {activeTab} distribution{filteredReservations.length === 1 ? "" : "s"}.
               </p>
             </div>
             <button
@@ -312,13 +537,13 @@ export default function NGODashboard() {
             </button>
           </div>
 
-          {reservations.length === 0 ? (
+          {filteredReservations.length === 0 ? (
             <div className="text-center py-16 px-4">
               <div className="w-20 h-20 mx-auto bg-purple-50 dark:bg-purple-950/60 rounded-3xl flex items-center justify-center mb-4 text-purple-600 text-2xl">
                 <FaHandsHelping />
               </div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                No active distributions yet
+                No {activeTab} distributions
               </h3>
               <p className="text-gray-500 dark:text-gray-400 mb-6 text-sm max-w-sm mx-auto">
                 Explore nearby surplus food donations from restaurants and home cooks to begin rescuing food.
@@ -331,77 +556,99 @@ export default function NGODashboard() {
               </button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-100 dark:divide-slate-800/60">
-                <thead className="bg-gray-50/80 dark:bg-slate-800/80">
-                  <tr>
-                    {[
-                      "Food Item",
-                      "Supplier",
-                      "Quantity",
-                      "Scheduled Pickup",
-                      "Status",
-                      "Action",
-                    ].map((h) => (
-                      <th
-                        key={h}
-                        className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60 bg-transparent">
-                  {reservations.slice(0, 10).map((r) => (
-                    <tr
-                      key={r.id}
-                      className="hover:bg-purple-50/40 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
-                      onClick={() =>
-                        router.push(`/protected/reservation/${r.id}`)
-                      }
-                    >
-                      <td className="px-6 py-4 font-bold text-gray-900 dark:text-white text-sm">
-                        {r.food.name}
-                      </td>
-                      <td className="px-6 py-4 text-xs font-medium text-gray-600 dark:text-gray-300">
-                        {r.food.supplierName}
-                      </td>
-                      <td className="px-6 py-4 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                        {r.quantity} {r.food.quantityUnit}
-                      </td>
-                      <td className="px-6 py-4 text-xs text-gray-600 dark:text-gray-300 font-medium">
-                        {formatDate(r.pickupTime, "MMM d, yyyy - h:mm a")}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${
-                            STATUS_STYLES[r.status] ?? STATUS_STYLES.expired
-                          }`}
+            <ScrollableContainer>
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="min-w-full divide-y divide-gray-100 dark:divide-slate-800/60">
+                  <thead className="bg-gray-50/80 dark:bg-slate-800/80">
+                    <tr>
+                      {[
+                        "Food Item",
+                        "Supplier",
+                        "Quantity",
+                        "Pickup Pass Code",
+                        "Scheduled Pickup",
+                        "Status",
+                        "Action",
+                      ].map((h) => (
+                        <th
+                          key={h}
+                          className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                         >
-                          {r.status.replace("_", " ").toUpperCase()}
-                        </span>
-                      </td>
-                      <td
-                        className="px-6 py-4"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {(r.status === "pending" ||
-                          r.status === "confirmed") && (
-                          <button
-                            disabled={isCancelling}
-                            onClick={() => cancelReservation({ id: r.id })}
-                            className="text-xs text-rose-600 hover:text-rose-700 disabled:opacity-40 font-bold cursor-pointer"
-                          >
-                            Cancel
-                          </button>
-                        )}
-                      </td>
+                          {h}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60 bg-transparent">
+                    {filteredReservations.map((r) => (
+                      <tr
+                        key={r.id}
+                        className="hover:bg-purple-50/40 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+                        onClick={() =>
+                          router.push(`/protected/reservation/${r.id}`)
+                        }
+                      >
+                        <td className="px-6 py-4 font-bold text-gray-900 dark:text-white text-sm">
+                          {r.food.name}
+                        </td>
+                        <td className="px-6 py-4 text-xs font-medium text-gray-600 dark:text-gray-300">
+                          {r.food.supplierName}
+                        </td>
+                        <td className="px-6 py-4 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                          {r.quantity} {r.food.quantityUnit}
+                        </td>
+                        <td
+                          className="px-6 py-4 text-xs font-mono font-bold"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {r.pickupCode ? (
+                            <button
+                              type="button"
+                              onClick={(e) => handleCopyCode(r.pickupCode!, e)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-slate-800 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-slate-700 border border-purple-200 dark:border-slate-700 transition-colors"
+                              title="Click to copy pickup code"
+                            >
+                              <FaQrcode className="text-xs text-purple-500" />
+                              <span>{r.pickupCode}</span>
+                              <FaCopy className="text-[10px] opacity-70" />
+                            </button>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-xs text-gray-600 dark:text-gray-300 font-medium">
+                          {formatDate(r.pickupTime, "MMM d, yyyy - h:mm a")}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${
+                              STATUS_STYLES[r.status] ?? STATUS_STYLES.expired
+                            }`}
+                          >
+                            {r.status.replace("_", " ").toUpperCase()}
+                          </span>
+                        </td>
+                        <td
+                          className="px-6 py-4"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {(r.status === "pending" ||
+                            r.status === "confirmed") && (
+                            <button
+                              disabled={isCancelling}
+                              onClick={() => cancelReservation({ id: r.id })}
+                              className="text-xs text-rose-600 hover:text-rose-700 disabled:opacity-40 font-bold cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </ScrollableContainer>
           )}
         </div>
 
@@ -464,6 +711,19 @@ export default function NGODashboard() {
                 </button>
 
                 <button
+                  onClick={() => router.push("/protected/reservation/pickup")}
+                  className="w-full flex items-center justify-between p-4 bg-blue-50 dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-slate-700/80 rounded-2xl transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <FaQrcode className="text-blue-600 text-lg" />
+                    <span className="font-bold text-sm text-gray-900 dark:text-white">
+                      Open Volunteer Pickup Scanner Station
+                    </span>
+                  </div>
+                  <span className="text-blue-600 font-bold">→</span>
+                </button>
+
+                <button
                   onClick={generateReport}
                   className="w-full flex items-center justify-between p-4 bg-purple-50 dark:bg-slate-800 hover:bg-purple-100 dark:hover:bg-slate-700/80 rounded-2xl transition-colors cursor-pointer"
                 >
@@ -478,9 +738,8 @@ export default function NGODashboard() {
               </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-gray-100 dark:border-slate-800 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-              <FaCheckCircle className="text-emerald-500" />
-              <span>All bulk claims are verified via encrypted QR token authentication.</span>
+            <div className="mt-6 pt-4 border-t border-gray-100 dark:border-slate-800 text-xs text-gray-500 dark:text-gray-400">
+              Need assistance coordinating large bulk distributions? Contact support at support@annosetu.org.
             </div>
           </div>
         </div>

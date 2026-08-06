@@ -129,16 +129,16 @@ export default function HomePage() {
             <source src="/donation_video.mp4" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
-          {/* Multi-layered adaptive gradient overlays for crisp contrast without washing out the video */}
-          <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/15 to-white/65 dark:from-black/90 dark:via-black/75 dark:to-zinc-950/95 transition-colors duration-500" />
-          <div className="absolute inset-0 bg-radial from-transparent via-transparent to-white/35 dark:via-black/20 dark:to-black/70 pointer-events-none transition-colors duration-500" />
+          {/* Multi-layered adaptive gradient overlays: subtle bluish-navy tint with high transparency for maximum video visibility */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/15 to-white/65 dark:from-[#0A192F]/55 dark:via-[#0c1f3d]/35 dark:to-[#0A192F]/70 transition-colors duration-500" />
+          <div className="absolute inset-0 bg-radial from-transparent via-transparent to-white/35 dark:from-transparent dark:via-transparent dark:to-[#0A192F]/40 pointer-events-none transition-colors duration-500" />
         </div>
 
-        {/* Ambient Glowing Blobs in Background */}
-        <div className="absolute inset-0 opacity-20 dark:opacity-20 pointer-events-none z-0">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-400 dark:bg-emerald-500 rounded-full filter blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-amber-300 dark:bg-amber-500 rounded-full filter blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-40 right-40 w-48 h-48 bg-green-300 dark:bg-green-400 rounded-full filter blur-3xl animate-pulse delay-700"></div>
+        {/* Ambient Glowing Blobs in Background with gentle transparency */}
+        <div className="absolute inset-0 opacity-20 dark:opacity-15 pointer-events-none z-0">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-400 dark:bg-teal-500/40 rounded-full filter blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-amber-300 dark:bg-blue-600/40 rounded-full filter blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-40 right-40 w-48 h-48 bg-green-300 dark:bg-cyan-400/30 rounded-full filter blur-3xl animate-pulse delay-700"></div>
         </div>
 
         {/* Hero Content Container */}

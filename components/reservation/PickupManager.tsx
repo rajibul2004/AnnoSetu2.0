@@ -1,8 +1,21 @@
 "use client";
- 
-import { useRef, useState } from "react";
-import { motion } from "framer-motion";
-import { FaQrcode, FaCheckCircle, FaSearch, FaCamera } from "react-icons/fa";
+
+import { useEffect, useRef, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  FaQrcode,
+  FaCheckCircle,
+  FaSearch,
+  FaCamera,
+  FaSyncAlt,
+  FaTimes,
+  FaUtensils,
+  FaShieldAlt,
+  FaPaste,
+  FaCheck,
+  FaInfoCircle,
+  FaClock,
+} from "react-icons/fa";
 import Webcam from "react-webcam";
 import jsQR from "jsqr";
 import Button from "@/components/common/Button";
@@ -10,232 +23,536 @@ import Input from "@/components/common/Input";
 import toast from "react-hot-toast";
 import { useVerifyPickup, useRecentPickups } from "@/hooks/useReservationQueries";
 import { formatDate } from "@/lib/formatters";
- 
+import type { PickupVerificationResult } from "@/types/reservation";
+
 type VerificationMethod = "code" | "qr";
- 
+
 interface QrPayload {
   reservationId?: string;
   pickupCode?: string;
+  code?: string;
+  id?: string;
   foodName?: string;
+  food?: string;
 }
- 
+
 export default function PickupManager() {
   const [verificationMethod, setVerificationMethod] = useState<VerificationMethod>("code");
   const [pickupCode, setPickupCode] = useState("");
   const [scanning, setScanning] = useState(false);
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
+  const [lastVerified, setLastVerified] = useState<PickupVerificationResult | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+
   const webcamRef = useRef<Webcam>(null);
- 
-  const { verifyPickup, isVerifying } = useVerifyPickup();
-  const { recentPickups, isLoading: pickupsLoading } = useRecentPickups();
- 
-  const handleVerifyCode = async () => {
-    if (!pickupCode.trim()) {
-      toast.error("Please enter pickup code");
+  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const { verifyPickup, isVerifying, reset } = useVerifyPickup();
+  const { recentPickups, isLoading: pickupsLoading, refetch: refetchRecent } = useRecentPickups();
+
+  const handleVerifyCode = async (codeToVerify: string) => {
+    const cleanCode = codeToVerify.trim().toUpperCase();
+    if (!cleanCode) {
+      toast.error("Please enter a valid pickup code");
       return;
     }
-    await verifyPickup(pickupCode.trim()).then(() => setPickupCode("")).catch(() => {});
+
+    try {
+      const result = await verifyPickup(cleanCode);
+      if (result) {
+        setLastVerified(result);
+        setPickupCode("");
+      }
+    } catch {
+      // Handled by mutation hook toast
+    }
   };
- 
-  // Actually decodes the captured frame with jsQR instead of the
-  // original's setTimeout(() => toast.success(...), 1500) — which never
-  // looked at the image at all and always reported success.
-  const handleQRScan = () => {
+
+  const decodeFrame = useCallback((): string | null => {
     const screenshot = webcamRef.current?.getScreenshot();
-    if (!screenshot) {
-      toast.error("Couldn't capture frame, try again");
+    if (!screenshot) return null;
+
+    const image = new Image();
+    image.src = screenshot;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width || 640;
+    canvas.height = image.height || 480;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return null;
+
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const decoded = jsQR(imageData.data, imageData.width, imageData.height);
+
+    if (!decoded || !decoded.data) return null;
+
+    const rawData = decoded.data.trim();
+
+    // 1. Check if JSON payload
+    try {
+      const parsed: QrPayload = JSON.parse(rawData);
+      const code = parsed.pickupCode || parsed.code;
+      if (code) return code.trim().toUpperCase();
+    } catch {
+      // Not JSON, check if raw string code
+    }
+
+    // 2. Direct string code
+    if (rawData.length >= 4 && rawData.length <= 30) {
+      return rawData.toUpperCase();
+    }
+
+    return null;
+  }, []);
+
+  // Continuous frame scanner loop while camera is active
+  useEffect(() => {
+    if (!scanning || isVerifying) {
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current);
+        scanIntervalRef.current = null;
+      }
       return;
     }
- 
-    const image = new Image();
-    image.onload = async () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = image.width;
-      canvas.height = image.height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
- 
-      ctx.drawImage(image, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const decoded = jsQR(imageData.data, imageData.width, imageData.height);
- 
-      if (!decoded) {
-        toast.error("No QR code detected — try lining it up again");
-        return;
+
+    scanIntervalRef.current = setInterval(() => {
+      const code = decodeFrame();
+      if (code) {
+        setScanning(false);
+        if (scanIntervalRef.current) {
+          clearInterval(scanIntervalRef.current);
+          scanIntervalRef.current = null;
+        }
+        toast.success(`QR detected: ${code}`);
+        handleVerifyCode(code);
       }
- 
-      let payload: QrPayload;
-      try {
-        payload = JSON.parse(decoded.data);
-      } catch {
-        toast.error("Unrecognized QR code");
-        return;
+    }, 400);
+
+    return () => {
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current);
+        scanIntervalRef.current = null;
       }
- 
-      if (!payload.pickupCode) {
-        toast.error("This QR code doesn't contain a pickup code");
-        return;
-      }
- 
-      await verifyPickup(payload.pickupCode)
-        .then(() => setScanning(false))
-        .catch(() => {});
     };
-    image.src = screenshot;
+  }, [scanning, isVerifying, decodeFrame]);
+
+  // Manual one-click capture fallback
+  const handleManualCapture = () => {
+    const code = decodeFrame();
+    if (!code) {
+      toast.error("No QR code detected. Center the QR code in the frame and try again.");
+      return;
+    }
+    setScanning(false);
+    toast.success(`QR detected: ${code}`);
+    handleVerifyCode(code);
   };
- 
+
+  const handlePasteCode = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setPickupCode(text.trim().toUpperCase());
+        toast.success("Pasted from clipboard");
+      }
+    } catch {
+      toast.error("Clipboard access denied or empty");
+    }
+  };
+
+  const handleResetVerification = () => {
+    setLastVerified(null);
+    setPickupCode("");
+    reset();
+  };
+
+  const toggleFacingMode = () => {
+    setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
+  };
+
   return (
-    <div className="bg-transparent overflow-hidden max-w-4xl mx-auto rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 dark:border-gray-800">
-      <div className="bg-gradient-to-r from-green-500 to-emerald-600 dark:from-green-900 dark:to-emerald-900 p-8 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
-        <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-emerald-300/10 rounded-full blur-xl"></div>
-        <div className="relative z-10 flex items-center gap-4">
-          <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
-            <FaCheckCircle className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h3 className="text-2xl font-bold mb-1 tracking-tight">Verify Pickup</h3>
-            <p className="opacity-90 font-medium">Scan QR code or enter the pickup code</p>
+    <div className="space-y-8 max-w-4xl mx-auto">
+      {/* Verification Card */}
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl border border-gray-200/80 dark:border-slate-800 overflow-hidden">
+        {/* Card Header */}
+        <div className="bg-linear-to-r from-emerald-600 to-teal-700 dark:from-emerald-900 dark:to-teal-950 p-6 sm:p-8 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-teal-400/10 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 shadow-inner shrink-0">
+                <FaShieldAlt className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                  Pickup Verification
+                </h2>
+                <p className="text-emerald-100 text-xs sm:text-sm font-medium mt-0.5">
+                  Confirm and handover reserved meals in real-time
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-sm border border-white/20">
+                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
+                Live Verification
+              </span>
+            </div>
           </div>
         </div>
-      </div>
- 
-      <div className="p-8 bg-white dark:bg-gray-900">
-        <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl mb-8 shadow-inner">
-          {(
-            [
-              { id: "code", label: "Manual Code", icon: FaSearch },
-              { id: "qr", label: "Scan QR", icon: FaQrcode },
-            ] as const
-          ).map((method) => (
-            <button
-              key={method.id}
-              onClick={() => setVerificationMethod(method.id)}
-              className={`flex-1 py-3 px-4 text-sm font-bold rounded-lg transition-all duration-300 ${
-                verificationMethod === method.id
-                  ? "bg-white dark:bg-gray-700 text-green-600 dark:text-green-400 shadow-md transform scale-[1.02]"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              }`}
+
+        {/* Card Body */}
+        <div className="p-6 sm:p-8">
+          {/* Method Switcher Tabs */}
+          <div className="flex bg-gray-100/90 dark:bg-slate-800/80 p-1.5 rounded-2xl mb-8 border border-gray-200/50 dark:border-slate-700/50">
+            {[
+              { id: "code", label: "Manual Code Entry", icon: FaSearch },
+              { id: "qr", label: "Camera QR Scanner", icon: FaQrcode },
+            ].map((method) => {
+              const isActive = verificationMethod === method.id;
+              return (
+                <button
+                  key={method.id}
+                  onClick={() => {
+                    setVerificationMethod(method.id as VerificationMethod);
+                    if (method.id === "qr") {
+                      setScanning(true);
+                      setCameraError(null);
+                    } else {
+                      setScanning(false);
+                    }
+                  }}
+                  className={`flex-1 py-3 px-4 text-xs sm:text-sm font-black rounded-xl transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
+                    isActive
+                      ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-md scale-101"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  }`}
+                >
+                  <method.icon className="w-4 h-4" />
+                  <span>{method.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Success Result Modal / Banner */}
+          <AnimatePresence>
+            {lastVerified && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="mb-8 p-6 bg-emerald-50 dark:bg-emerald-950/40 rounded-3xl border border-emerald-300 dark:border-emerald-800 text-center relative overflow-hidden shadow-xl shadow-emerald-500/5"
+              >
+                <div className="w-16 h-16 bg-emerald-500 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30">
+                  <FaCheck className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-black text-emerald-900 dark:text-emerald-200">
+                  Pickup Successfully Verified!
+                </h3>
+                <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1">
+                  The reservation status has been marked as <b>Picked Up</b>. You can now safely hand over the food.
+                </p>
+
+                <div className="mt-4 p-4 bg-white/80 dark:bg-slate-900/80 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 inline-flex flex-col sm:flex-row items-center gap-4 text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                      <FaUtensils className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-gray-400 uppercase">Item Rescued</div>
+                      <div className="text-sm font-black text-gray-900 dark:text-white">
+                        {lastVerified.foodName}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-6 w-px bg-gray-200 dark:bg-slate-800 hidden sm:block" />
+
+                  <div>
+                    <div className="text-xs font-bold text-gray-400 uppercase">Portions</div>
+                    <div className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                      {lastVerified.quantity} portions
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-center">
+                  <Button
+                    onClick={handleResetVerification}
+                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md cursor-pointer"
+                  >
+                    Verify Another Order
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Verification Mode 1: Manual Code */}
+          {verificationMethod === "code" && !lastVerified && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6 max-w-xl mx-auto"
             >
-              <method.icon className="inline w-4 h-4 mr-2" />
-              {method.label}
-            </button>
-          ))}
-        </div>
- 
-        <div className="space-y-6">
-          {verificationMethod === "code" && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 max-w-xl mx-auto">
+              <div className="text-center space-y-1">
+                <h3 className="text-base font-black text-gray-900 dark:text-white">
+                  Enter 8-Character Secret Code
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Ask the customer for the pickup code displayed on their confirmed digital ticket.
+                </p>
+              </div>
+
               <div className="relative">
-                <Input
-                  placeholder="Enter pickup code (e.g., ANO-8F3B)"
+                <input
+                  type="text"
+                  placeholder="e.g. ANO-8F3B9A"
                   value={pickupCode}
                   onChange={(e) => setPickupCode(e.target.value.toUpperCase())}
-                  className="pl-4 py-4 text-lg font-mono tracking-widest text-center shadow-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleVerifyCode(pickupCode);
+                  }}
+                  className="w-full text-center tracking-widest font-mono text-xl sm:text-2xl font-black py-4 px-12 rounded-2xl bg-gray-50 dark:bg-slate-800/80 border-2 border-gray-200 dark:border-slate-700 focus:border-emerald-500 focus:outline-hidden text-gray-900 dark:text-white shadow-inner uppercase"
                 />
+
+                <button
+                  type="button"
+                  onClick={handlePasteCode}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 p-2.5 text-xs text-gray-400 hover:text-emerald-600 transition-colors cursor-pointer"
+                  title="Paste from clipboard"
+                >
+                  <FaPaste className="w-4 h-4" />
+                </button>
               </div>
-              <Button 
-                onClick={handleVerifyCode} 
-                loading={isVerifying} 
-                className="w-full py-4 text-lg bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-500/30 transition-all hover:-translate-y-1" 
+
+              <Button
+                onClick={() => handleVerifyCode(pickupCode)}
+                loading={isVerifying}
+                disabled={!pickupCode.trim() || isVerifying}
+                className="w-full py-4 text-sm font-black bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.01] cursor-pointer flex items-center justify-center gap-2"
               >
-                Verify Code
+                <FaCheckCircle className="w-4 h-4" />
+                <span>Verify Pickup Code</span>
               </Button>
             </motion.div>
           )}
- 
-          {verificationMethod === "qr" && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 max-w-xl mx-auto text-center">
-              {scanning ? (
-                <div className="relative rounded-2xl overflow-hidden shadow-2xl ring-4 ring-gray-100 dark:ring-gray-800">
-                  <Webcam ref={webcamRef} screenshotFormat="image/jpeg" className="w-full aspect-square object-cover" />
-                  
-                  {/* Viewfinder overlay */}
-                  <div className="absolute inset-0 border-[40px] border-black/50 backdrop-blur-sm pointer-events-none">
-                     <div className="absolute inset-0 border-2 border-green-500/50">
-                        {/* Corner markers */}
-                        <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-green-500"></div>
-                        <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-green-500"></div>
-                        <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-green-500"></div>
-                        <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-green-500"></div>
-                     </div>
+
+          {/* Verification Mode 2: Camera QR Scanner */}
+          {verificationMethod === "qr" && !lastVerified && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6 max-w-xl mx-auto text-center"
+            >
+              {cameraError ? (
+                <div className="p-8 bg-rose-50 dark:bg-rose-950/30 rounded-3xl border border-rose-200 dark:border-rose-900/50 text-center space-y-4">
+                  <div className="w-14 h-14 bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center mx-auto">
+                    <FaTimes className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-base font-black text-rose-900 dark:text-rose-200">
+                    Camera Access Required
+                  </h4>
+                  <p className="text-xs text-rose-700 dark:text-rose-400 max-w-sm mx-auto">
+                    {cameraError}
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setCameraError(null);
+                      setScanning(true);
+                    }}
+                    className="text-xs font-bold"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              ) : scanning ? (
+                <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-emerald-500/30 bg-black aspect-square max-w-md mx-auto">
+                  <Webcam
+                    ref={webcamRef}
+                    audio={false}
+                    screenshotFormat="image/jpeg"
+                    videoConstraints={{ facingMode }}
+                    onUserMediaError={(err) => {
+                      setCameraError(
+                        typeof err === "string"
+                          ? err
+                          : "Please grant camera permissions to scan QR codes."
+                      );
+                      setScanning(false);
+                    }}
+                    className="w-full h-full object-cover"
+                  />
+
+                  {/* Viewfinder Overlay with Reticle & Animated Laser */}
+                  <div className="absolute inset-0 border-[48px] sm:border-[64px] border-black/60 pointer-events-none flex items-center justify-center">
+                    <div className="relative w-full h-full border-2 border-dashed border-emerald-400/80 rounded-2xl">
+                      {/* Reticle corner accents */}
+                      <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-emerald-400 rounded-tl-lg" />
+                      <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-emerald-400 rounded-tr-lg" />
+                      <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-emerald-400 rounded-bl-lg" />
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-emerald-400 rounded-br-lg" />
+
+                      {/* Laser scanning bar */}
+                      <motion.div
+                        animate={{ y: ["0%", "100%", "0%"] }}
+                        transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                        className="w-full h-0.5 bg-linear-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_#34d399]"
+                      />
+                    </div>
                   </div>
 
-                  <button
-                    onClick={() => setScanning(false)}
-                    className="absolute top-4 right-4 p-3 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg transition-transform hover:scale-110"
-                    aria-label="Stop scanning"
-                  >
-                    ✕
-                  </button>
-                  <div className="absolute bottom-6 left-0 right-0 px-6">
-                    <Button onClick={handleQRScan} loading={isVerifying} className="w-full bg-white/90 text-green-700 hover:bg-white backdrop-blur-md shadow-xl py-3 font-bold text-lg">
-                      <FaCamera className="mr-2" />
-                      Capture QR
+                  {/* Controls bar */}
+                  <div className="absolute top-4 right-4 flex items-center gap-2">
+                    <button
+                      onClick={toggleFacingMode}
+                      className="p-2.5 rounded-full bg-black/60 text-white hover:bg-black/80 backdrop-blur-md transition-colors text-xs font-bold cursor-pointer"
+                      title="Switch Camera"
+                    >
+                      <FaSyncAlt className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setScanning(false)}
+                      className="p-2.5 rounded-full bg-rose-600/90 text-white hover:bg-rose-700 backdrop-blur-md transition-colors text-xs cursor-pointer"
+                      title="Stop Scanner"
+                    >
+                      <FaTimes className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Bottom Scan CTA */}
+                  <div className="absolute bottom-4 inset-x-4">
+                    <Button
+                      onClick={handleManualCapture}
+                      loading={isVerifying}
+                      className="w-full bg-white/95 text-emerald-800 hover:bg-white backdrop-blur-md py-3 text-xs font-black rounded-xl shadow-xl flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <FaCamera className="w-3.5 h-3.5" />
+                      <span>Capture & Decode Frame</span>
                     </Button>
                   </div>
                 </div>
               ) : (
-                <div className="py-12 border-2 border-dashed border-green-200 dark:border-green-900/50 rounded-3xl bg-green-50/50 dark:bg-green-900/10">
-                  <div className="w-20 h-20 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center mx-auto mb-4">
-                     <FaQrcode className="w-10 h-10 text-green-600 dark:text-green-400" />
+                <div className="p-10 border-2 border-dashed border-emerald-200 dark:border-emerald-900/50 rounded-3xl bg-emerald-50/50 dark:bg-emerald-950/20 text-center space-y-4">
+                  <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/40 rounded-3xl flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400">
+                    <FaQrcode className="w-10 h-10" />
                   </div>
-                  <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Ready to Scan</h4>
-                  <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm mx-auto">
-                    Ask the customer to show their QR code from their reservation screen.
+                  <h4 className="text-base font-black text-gray-900 dark:text-white">
+                    Camera Scanner Ready
+                  </h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                    Point your camera at the customer&apos;s digital boarding pass QR code for automatic verification.
                   </p>
-                  <Button variant="primary" onClick={() => setScanning(true)} className="px-8 py-3 bg-green-600 hover:bg-green-700 shadow-lg shadow-green-500/25">
-                    <FaCamera className="mr-2" />
-                    Open Camera
+                  <Button
+                    onClick={() => {
+                      setScanning(true);
+                      setCameraError(null);
+                    }}
+                    className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-lg shadow-emerald-500/20 cursor-pointer inline-flex items-center gap-2"
+                  >
+                    <FaCamera className="w-3.5 h-3.5" />
+                    <span>Open Camera Scanner</span>
                   </Button>
                 </div>
               )}
             </motion.div>
           )}
         </div>
- 
-        <div className="mt-12 pt-8 border-t border-gray-100 dark:border-gray-800">
-          <div className="flex items-center justify-between mb-6">
-             <h4 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                Recent Pickups
-                <span className="px-2.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs rounded-full font-medium">
-                  {recentPickups?.length || 0}
-                </span>
-             </h4>
+      </div>
+
+      {/* Recent Pickups Section */}
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-xl border border-gray-200/80 dark:border-slate-800">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2.5">
+            <h3 className="text-lg font-black text-gray-900 dark:text-white">
+              Recently Verified Pickups
+            </h3>
+            <span className="px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-xs rounded-full font-black">
+              {recentPickups?.length || 0}
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {pickupsLoading ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400 col-span-2">Loading recent pickups...</p>
-            ) : recentPickups.length === 0 ? (
-              <div className="col-span-2 py-8 text-center bg-gray-50 dark:bg-gray-800/30 rounded-2xl border border-gray-100 dark:border-gray-800">
-                 <p className="text-gray-500 dark:text-gray-400 font-medium">No recent pickups found today.</p>
-              </div>
-            ) : (
-              recentPickups.map((pickup, index) => (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  key={pickup.id}
-                  className="p-4 bg-green-50/50 dark:bg-green-900/10 border border-green-100 dark:border-green-800/50 rounded-2xl flex items-center gap-4 hover:shadow-md transition-shadow"
-                >
-                  <div className="w-12 h-12 bg-green-100 dark:bg-green-900/40 rounded-xl flex items-center justify-center shrink-0">
-                     <FaCheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+          <button
+            onClick={() => refetchRecent()}
+            className="p-2 rounded-xl text-gray-400 hover:text-emerald-600 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors cursor-pointer text-xs flex items-center gap-1 font-bold"
+            title="Refresh list"
+          >
+            <FaSyncAlt className={`w-3 h-3 ${pickupsLoading ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {pickupsLoading ? (
+            <div className="col-span-2 py-8 text-center text-xs text-gray-400">
+              Loading recent pickups...
+            </div>
+          ) : recentPickups.length === 0 ? (
+            <div className="col-span-2 py-10 text-center bg-gray-50/80 dark:bg-slate-800/40 rounded-2xl border border-gray-100 dark:border-slate-800">
+              <FaClock className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+              <p className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                No recent pickups recorded today.
+              </p>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                Verified pickup orders will appear here automatically.
+              </p>
+            </div>
+          ) : (
+            recentPickups.map((pickup, index) => (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.04 }}
+                key={pickup.id}
+                className="p-4 bg-gray-50/80 dark:bg-slate-800/60 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl flex items-center gap-4 hover:border-emerald-300 dark:hover:border-emerald-800 transition-all shadow-xs"
+              >
+                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-950/80 rounded-xl flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
+                  <FaCheckCircle className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black text-gray-900 dark:text-white truncate">
+                    {pickup.foodName}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {pickup.pickupCode && (
+                      <span className="font-mono text-[10px] font-black px-2 py-0.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md text-emerald-600 dark:text-emerald-400">
+                        {pickup.pickupCode}
+                      </span>
+                    )}
+                    <span className="text-[10px] font-semibold text-gray-400">
+                      {formatDate(pickup.pickedUpAt, "p")}
+                    </span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-900 dark:text-white truncate">{pickup.foodName}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                       <span className="font-mono text-xs font-bold px-2 py-0.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-gray-600 dark:text-gray-300">
-                         {pickup.pickupCode}
-                       </span>
-                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                         {formatDate(pickup.pickedUpAt, "p")}
-                       </span>
-                    </div>
-                  </div>
-                </motion.div>
-              ))
-            )}
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Supplier Quick Guide */}
+      <div className="p-6 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-3xl border border-emerald-200/70 dark:border-emerald-900/40">
+        <h4 className="text-xs font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-2 mb-3">
+          <FaInfoCircle className="w-4 h-4 text-emerald-600" />
+          <span>How Verification Works</span>
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-emerald-900 dark:text-emerald-200">
+          <div className="bg-white/80 dark:bg-slate-900/60 p-3 rounded-2xl border border-emerald-100 dark:border-emerald-900/30">
+            <b className="text-emerald-600 block mb-1">1. Customer Arrives</b>
+            Customer presents their Digital Pass or 8-digit pickup code upon arrival.
+          </div>
+          <div className="bg-white/80 dark:bg-slate-900/60 p-3 rounded-2xl border border-emerald-100 dark:border-emerald-900/30">
+            <b className="text-emerald-600 block mb-1">2. Scan or Enter Code</b>
+            Scan the QR with your camera or type the code in the box above.
+          </div>
+          <div className="bg-white/80 dark:bg-slate-900/60 p-3 rounded-2xl border border-emerald-100 dark:border-emerald-900/30">
+            <b className="text-emerald-600 block mb-1">3. Hand Over Food</b>
+            Once verified, hand over the packaged rescue food with confidence.
           </div>
         </div>
       </div>

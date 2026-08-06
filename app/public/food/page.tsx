@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTheme } from "next-themes";
 import {
   FaSearch,
   FaFilter,
@@ -22,6 +21,9 @@ import {
   FaSlidersH,
   FaLeaf,
   FaTag,
+  FaHandHoldingHeart,
+  FaBolt,
+  FaUndo,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,7 +38,7 @@ import type { PublicFoodDTO } from "@/types/food";
 const DEFAULT_FILTERS: FoodFilters = {
   supplierType: "all",
   isDonation: "all",
-  maxDistance: 10,
+  maxDistance: 15,
   minPrice: "",
   maxPrice: "",
   cuisineType: "all",
@@ -45,15 +47,15 @@ const DEFAULT_FILTERS: FoodFilters = {
 
 const supplierOptions = [
   { value: "all", label: "All Suppliers" },
-  { value: "restaurant", label: "Restaurants" },
-  { value: "individual", label: "Home Cooks" },
-  { value: "ngo", label: "NGOs" },
+  { value: "restaurant", label: "Restaurants & Cafes" },
+  { value: "individual", label: "Home Cooks & Bakers" },
+  { value: "ngo", label: "NGOs & Community Hubs" },
 ];
 
 const donationOptions = [
-  { value: "all", label: "All Items" },
-  { value: "true", label: "Donations Only" },
-  { value: "false", label: "Paid Items Only" },
+  { value: "all", label: "All Items (Free & Paid)" },
+  { value: "true", label: "Free Donations Only" },
+  { value: "false", label: "Paid Surplus Deals" },
 ];
 
 const cuisineOptions = [
@@ -70,23 +72,20 @@ const cuisineOptions = [
   { value: "continental", label: "Continental" },
   { value: "fast_food", label: "Fast Food" },
   { value: "street_food", label: "Street Food" },
-  { value: "bakery", label: "Bakery" },
-  { value: "other", label: "Other" },
+  { value: "bakery", label: "Bakery & Desserts" },
+  { value: "other", label: "Other Specialties" },
 ];
 
 const sortOptions = [
   { value: "newest", label: "Newest First" },
-  { value: "oldest", label: "Oldest First" },
+  { value: "expiring", label: "Expiring Soonest" },
   { value: "price_low", label: "Price: Low to High" },
   { value: "price_high", label: "Price: High to Low" },
-  { value: "expiring", label: "Expiring Soon" },
-  { value: "popular", label: "Most Popular" },
+  { value: "popular", label: "Highest Rated" },
 ];
 
 export default function AllFoodPage() {
   const { user, isAuthenticated } = useAuth();
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
   const router = useRouter();
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -96,6 +95,7 @@ export default function AllFoodPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<FoodFilters>(DEFAULT_FILTERS);
 
+  // Debounced search
   useEffect(() => {
     const id = setTimeout(() => setSearchTerm(searchInput), 300);
     return () => clearTimeout(id);
@@ -109,7 +109,7 @@ export default function AllFoodPage() {
     filters,
     searchTerm,
     currentPage,
-    9,
+    12,
   );
   const totalPages = meta?.totalPages || 1;
 
@@ -137,120 +137,177 @@ export default function AllFoodPage() {
     router.push(`/protected/food/${food.id}/reserve`);
   };
 
-  const getSupplierIcon = (type: string) => {
-    switch (type) {
-      case "restaurant":
-        return <FaStore className="w-4 h-4 text-blue-500" />;
-      case "individual":
-        return <FaHome className="w-4 h-4 text-pink-500" />;
-      case "ngo":
-        return <FaBuilding className="w-4 h-4 text-purple-500" />;
-      default:
-        return <FaUtensils className="w-4 h-4 text-emerald-500" />;
-    }
-  };
-
   const hasActiveFilters =
     filters.supplierType !== "all" ||
     filters.isDonation !== "all" ||
     filters.cuisineType !== "all" ||
+    filters.sortBy !== "newest" ||
+    filters.maxDistance !== 15 ||
     Boolean(filters.minPrice) ||
-    Boolean(filters.maxPrice);
+    Boolean(filters.maxPrice) ||
+    Boolean(searchTerm);
 
   return (
-    <div className="min-h-screen w-full bg-transparent overflow-x-hidden">
-      {/* Header Banner */}
-      <div className="w-full pb-6 sm:pb-12 lg:pb-16 relative overflow-hidden bg-gradient-to-b from-emerald-100/60 via-green-50/40 to-white dark:from-[#0A192F] dark:via-slate-900/90 dark:to-[#0A192F] text-gray-900 dark:text-white transition-colors duration-300">
+    <div className="min-h-screen w-full bg-transparent overflow-x-hidden pb-16">
+      {/* Hero Header Section */}
+      <div className="w-full pb-8 pt-4 relative overflow-hidden bg-linear-to-b from-emerald-100/50 via-teal-50/30 to-transparent dark:from-[#0A192F] dark:via-slate-900/80 dark:to-transparent">
         <div className="absolute inset-0 opacity-20 pointer-events-none">
-          <div className="absolute top-10 left-10 w-72 h-72 bg-emerald-400 dark:bg-emerald-600 rounded-full filter blur-3xl animate-pulse" />
-          <div className="absolute bottom-10 right-10 w-96 h-96 bg-amber-300 dark:bg-amber-500 rounded-full filter blur-3xl animate-pulse delay-1000" />
+          <div className="absolute top-6 left-1/4 w-80 h-80 bg-emerald-400 dark:bg-emerald-600 rounded-full filter blur-3xl" />
+          <div className="absolute bottom-6 right-1/4 w-80 h-80 bg-teal-400 dark:bg-teal-600 rounded-full filter blur-3xl" />
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-6">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center max-w-3xl mx-auto"
           >
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-700/50 text-emerald-800 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider mb-4">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 dark:bg-emerald-950/80 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-black uppercase tracking-wider mb-4 backdrop-blur-md">
               <FaLeaf className="w-3.5 h-3.5 text-emerald-500" />
-              Live Community Marketplace
+              Live Surplus Food Rescue Hub
             </div>
 
-            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4 text-gray-900 dark:text-white">
+            <h1 className="text-3xl sm:text-5xl font-black tracking-tight mb-3 text-gray-900 dark:text-white">
               Discover & Rescue{" "}
-              <span className="bg-gradient-to-r from-emerald-600 via-green-600 to-amber-600 dark:from-emerald-400 dark:via-green-300 dark:to-amber-300 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-emerald-600 via-teal-600 to-green-500 dark:from-emerald-400 dark:via-teal-300 dark:to-green-400 bg-clip-text text-transparent">
                 Surplus Food
               </span>
             </h1>
-            <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-              Find fresh, wholesome meals from restaurants, bakeries, and home chefs nearby before good food goes to waste.
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-6 max-w-2xl mx-auto">
+              Wholesome, delicious meals from certified restaurants, cloud kitchens, and home chefs at high discounts or free donation.
             </p>
 
             {/* Search Bar */}
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-2xl mx-auto mb-6">
               <div className="relative group">
                 <input
                   type="text"
                   placeholder="Search by food name, restaurant, or cuisine..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  className="w-full px-6 py-3.5 pl-12 pr-10 rounded-2xl border-2 border-gray-300/80 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 shadow-xl transition-all"
+                  className="w-full px-6 py-4 pl-12 pr-10 rounded-2xl border-2 border-gray-200 dark:border-slate-700/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white font-medium focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 shadow-xl transition-all"
                 />
                 <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 dark:text-emerald-400 text-lg pointer-events-none" />
                 {searchInput && (
                   <button
                     onClick={() => setSearchInput("")}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer p-1"
                   >
                     <FaTimes />
                   </button>
                 )}
               </div>
             </div>
-          </motion.div>
-        </div>
 
-        {/* Wave Divider */}
-        <div className="relative z-10 -bottom-px left-0 right-0 leading-none">
-          <svg
-            viewBox="0 0 1440 120"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="block w-full h-full"
-          >
-            <path
-              d="M0 120L60 105C120 90 240 60 360 45C480 30 600 30 720 37.5C840 45 960 60 1080 67.5C1200 75 1320 75 1380 75L1440 75V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z"
-              fill={isDark ? "#0A192F" : "#ffffff"}
-            />
-          </svg>
+            {/* Quick Filter Category Chips */}
+            <div className="flex flex-wrap items-center justify-center gap-2 max-w-4xl mx-auto">
+              {[
+                {
+                  label: "🌟 All Food",
+                  active:
+                    filters.supplierType === "all" &&
+                    filters.isDonation === "all" &&
+                    filters.sortBy === "newest",
+                  onClick: () => clearFilters(),
+                },
+                {
+                  label: "🎁 Free Donations",
+                  active: filters.isDonation === "true",
+                  onClick: () =>
+                    handleFilterChange(
+                      "isDonation",
+                      filters.isDonation === "true" ? "all" : "true",
+                    ),
+                },
+                {
+                  label: "🍽️ Restaurants",
+                  active: filters.supplierType === "restaurant",
+                  onClick: () =>
+                    handleFilterChange(
+                      "supplierType",
+                      filters.supplierType === "restaurant" ? "all" : "restaurant",
+                    ),
+                },
+                {
+                  label: "🍳 Home Cooks",
+                  active: filters.supplierType === "individual",
+                  onClick: () =>
+                    handleFilterChange(
+                      "supplierType",
+                      filters.supplierType === "individual" ? "all" : "individual",
+                    ),
+                },
+                {
+                  label: "⚡ Expiring Soon",
+                  active: filters.sortBy === "expiring",
+                  onClick: () =>
+                    handleFilterChange(
+                      "sortBy",
+                      filters.sortBy === "expiring" ? "newest" : "expiring",
+                    ),
+                },
+                {
+                  label: "⭐ Top Rated",
+                  active: filters.sortBy === "popular",
+                  onClick: () =>
+                    handleFilterChange(
+                      "sortBy",
+                      filters.sortBy === "popular" ? "newest" : "popular",
+                    ),
+                },
+              ].map((chip) => (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={chip.onClick}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-xs ${
+                    chip.active
+                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30 scale-105"
+                      : "bg-white/90 dark:bg-slate-900/90 hover:bg-emerald-50 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300 border border-gray-200/80 dark:border-slate-800"
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          </motion.div>
         </div>
       </div>
 
       {/* Main Marketplace Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Top Control Bar */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <div>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
             <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">
               Showing{" "}
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+              <span className="text-emerald-600 dark:text-emerald-400 font-black">
                 {meta?.count || 0}
               </span>{" "}
-              of <span className="font-bold">{meta?.total || 0}</span> available listings
+              of <span className="font-bold">{meta?.total || 0}</span> live listings
             </p>
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="ml-2 px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 text-xs font-bold hover:bg-rose-100 transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <FaUndo className="w-2.5 h-2.5" />
+                Reset Filters
+              </button>
+            )}
           </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            {/* Mobile Filters Toggle */}
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            {/* Mobile Filters Toggle Button */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="md:hidden flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-md text-sm font-semibold text-gray-800 dark:text-gray-200 cursor-pointer"
+              className="md:hidden flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-md text-xs font-bold text-gray-800 dark:text-gray-200 cursor-pointer"
             >
               <FaSlidersH className="text-emerald-500" />
               <span>{showFilters ? "Hide Filters" : "Filters"}</span>
               {hasActiveFilters && (
-                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
+                <span className="w-2 h-2 bg-emerald-500 rounded-full" />
               )}
             </button>
 
@@ -259,12 +316,13 @@ export default function AllFoodPage() {
               value={filters.sortBy}
               onChange={(value) => handleFilterChange("sortBy", String(value))}
               options={sortOptions}
-              className="w-full md:w-48"
+              className="w-full sm:w-48"
             />
 
-            {/* View Mode Toggle */}
-            <div className="flex bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-1 shadow-sm">
+            {/* View Mode Toggle (Grid / List) */}
+            <div className="flex bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-1 shadow-sm shrink-0">
               <button
+                type="button"
                 onClick={() => setViewMode("grid")}
                 className={`p-2 rounded-lg transition-colors cursor-pointer ${
                   viewMode === "grid"
@@ -276,6 +334,7 @@ export default function AllFoodPage() {
                 <FaTh className="w-4 h-4" />
               </button>
               <button
+                type="button"
                 onClick={() => setViewMode("list")}
                 className={`p-2 rounded-lg transition-colors cursor-pointer ${
                   viewMode === "list"
@@ -290,156 +349,152 @@ export default function AllFoodPage() {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Filter Sidebar */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className={`${
-                showFilters ? "block" : "hidden"
-              } md:block md:w-80 space-y-4`}
-            >
-              <div className="rounded-3xl p-6 bg-white dark:bg-slate-900/90 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800 shadow-xl sticky top-24">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100 dark:border-slate-800">
-                  <h3 className="font-extrabold text-gray-900 dark:text-white flex items-center gap-2 text-base">
-                    <FaFilter className="text-emerald-600 dark:text-emerald-400" />
-                    Filters
-                  </h3>
-                  {hasActiveFilters && (
-                    <button
-                      onClick={clearFilters}
-                      className="text-xs font-bold text-rose-600 hover:text-rose-700 dark:text-rose-400 cursor-pointer"
-                    >
-                      Reset All
-                    </button>
-                  )}
-                </div>
+        <div className="flex flex-col md:flex-row gap-8 items-start">
+          {/* Sidebar Filter Panel */}
+          <div
+            className={`${
+              showFilters ? "block" : "hidden"
+            } md:block md:w-80 w-full shrink-0`}
+          >
+            <div className="rounded-3xl p-6 bg-white dark:bg-slate-900/90 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800 shadow-xl sticky top-24 space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-slate-800">
+                <h3 className="font-extrabold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
+                  <FaFilter className="text-emerald-600 dark:text-emerald-400" />
+                  Filter Listings
+                </h3>
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="text-xs font-bold text-rose-600 hover:text-rose-700 dark:text-rose-400 cursor-pointer"
+                  >
+                    Reset All
+                  </button>
+                )}
+              </div>
 
-                <div className="mb-4">
-                  <Select
-                    label="Supplier Type"
-                    value={filters.supplierType}
-                    onChange={(value) =>
-                      handleFilterChange("supplierType", String(value))
-                    }
-                    options={supplierOptions}
-                  />
-                </div>
+              {/* Supplier Category */}
+              <div>
+                <Select
+                  label="Supplier Type"
+                  value={filters.supplierType}
+                  onChange={(value) =>
+                    handleFilterChange("supplierType", String(value))
+                  }
+                  options={supplierOptions}
+                />
+              </div>
 
-                <div className="mb-4">
-                  <Select
-                    label="Listing Type"
-                    value={filters.isDonation}
-                    onChange={(value) =>
-                      handleFilterChange("isDonation", String(value))
-                    }
-                    options={donationOptions}
-                  />
-                </div>
+              {/* Listing Type */}
+              <div>
+                <Select
+                  label="Listing Type"
+                  value={filters.isDonation}
+                  onChange={(value) =>
+                    handleFilterChange("isDonation", String(value))
+                  }
+                  options={donationOptions}
+                />
+              </div>
 
-                <div className="mb-4">
-                  <Select
-                    label="Cuisine Category"
-                    value={filters.cuisineType}
-                    onChange={(value) =>
-                      handleFilterChange("cuisineType", String(value))
-                    }
-                    options={cuisineOptions}
-                  />
-                </div>
+              {/* Cuisine Category */}
+              <div>
+                <Select
+                  label="Cuisine Category"
+                  value={filters.cuisineType}
+                  onChange={(value) =>
+                    handleFilterChange("cuisineType", String(value))
+                  }
+                  options={cuisineOptions}
+                />
+              </div>
 
-                <div className="mb-5">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 mb-2">
-                    Max Distance: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{filters.maxDistance} km</span>
+              {/* Distance Radius */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                    Max Distance
                   </label>
-                  <input
-                    type="range"
-                    min="1"
-                    max="50"
-                    value={filters.maxDistance}
-                    onChange={(e) =>
-                      handleFilterChange("maxDistance", Number(e.target.value))
-                    }
-                    className="w-full accent-emerald-600 cursor-pointer"
-                  />
-                  <div className="flex justify-between text-xs text-gray-400 mt-1">
-                    <span>1 km</span>
-                    <span>25 km</span>
-                    <span>50 km</span>
-                  </div>
+                  <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/40">
+                    {filters.maxDistance} km
+                  </span>
                 </div>
-
-                <div className="mb-5">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 mb-2">
-                    Price Range (₹)
-                  </label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      placeholder="Min"
-                      value={filters.minPrice}
-                      onChange={(e) =>
-                        handleFilterChange("minPrice", e.target.value)
-                      }
-                      className="w-1/2"
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Max"
-                      value={filters.maxPrice}
-                      onChange={(e) =>
-                        handleFilterChange("maxPrice", e.target.value)
-                      }
-                      className="w-1/2"
-                    />
-                  </div>
-                </div>
-
-                {/* Quick Tag Pills */}
-                <div className="pt-4 border-t border-gray-100 dark:border-slate-800">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">
-                    Quick Filters
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => handleFilterChange("isDonation", "true")}
-                      className="px-3 py-1 bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 rounded-xl text-xs font-semibold hover:bg-purple-200 cursor-pointer transition-colors"
-                    >
-                      🎁 Free Donations
-                    </button>
-                    <button
-                      onClick={() => handleFilterChange("isDonation", "false")}
-                      className="px-3 py-1 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-semibold hover:bg-emerald-200 cursor-pointer transition-colors"
-                    >
-                      🏷️ Discounted
-                    </button>
-                    <button
-                      onClick={() => handleFilterChange("sortBy", "expiring")}
-                      className="px-3 py-1 bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 rounded-xl text-xs font-semibold hover:bg-amber-200 cursor-pointer transition-colors"
-                    >
-                      ⏳ Expiring Soon
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleFilterChange("supplierType", "individual")
-                      }
-                      className="px-3 py-1 bg-pink-100 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 rounded-xl text-xs font-semibold hover:bg-pink-200 cursor-pointer transition-colors"
-                    >
-                      🏠 Home Cooked
-                    </button>
-                  </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="50"
+                  value={filters.maxDistance}
+                  onChange={(e) =>
+                    handleFilterChange("maxDistance", Number(e.target.value))
+                  }
+                  className="w-full accent-emerald-600 cursor-pointer h-2 bg-gray-200 dark:bg-slate-800 rounded-lg"
+                />
+                <div className="flex justify-between text-[10px] text-gray-400 mt-1 font-semibold">
+                  <span>1 km</span>
+                  <span>25 km</span>
+                  <span>50 km</span>
                 </div>
               </div>
-            </motion.div>
-          </AnimatePresence>
 
-          {/* Listings Grid / List */}
-          <div className="flex-1">
+              {/* Price Range */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 mb-2">
+                  Price Range (₹)
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={filters.minPrice}
+                    onChange={(e) =>
+                      handleFilterChange("minPrice", e.target.value)
+                    }
+                    className="w-1/2 text-xs"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={filters.maxPrice}
+                    onChange={(e) =>
+                      handleFilterChange("maxPrice", e.target.value)
+                    }
+                    className="w-1/2 text-xs"
+                  />
+                </div>
+
+                {/* Quick Price Buttons */}
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {[
+                    { label: "Free", min: "0", max: "0" },
+                    { label: "< ₹50", min: "0", max: "50" },
+                    { label: "< ₹100", min: "0", max: "100" },
+                    { label: "Any", min: "", max: "" },
+                  ].map((p) => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => {
+                        handleFilterChange("minPrice", p.min);
+                        handleFilterChange("maxPrice", p.max);
+                      }}
+                      className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-colors cursor-pointer ${
+                        filters.minPrice === p.min && filters.maxPrice === p.max
+                          ? "bg-emerald-600 text-white"
+                          : "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Listings Marketplace Content */}
+          <div className="flex-1 w-full min-w-0">
             {isLoading ? (
-              <div className="flex justify-center py-20">
-                <LoadingSpinner text="Loading delicious surplus food..." />
+              <div className="flex justify-center py-24">
+                <LoadingSpinner text="Searching available surplus food..." />
               </div>
             ) : allFood.length === 0 ? (
               <motion.div
@@ -447,20 +502,20 @@ export default function AllFoodPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="rounded-3xl p-12 text-center bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-xl"
               >
-                <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-4 text-2xl">
+                <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-4 text-2xl shadow-inner">
                   <FaUtensils />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  No food listings found
+                <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-2">
+                  No Food Listings Found
                 </h3>
-                <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto text-sm">
-                  We couldn&apos;t find any food items matching your exact filters. Try clearing some filters or widening your search radius.
+                <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto text-sm leading-relaxed">
+                  No surplus food matches your current search and filter combination. Try adjusting your distance radius or removing price limits.
                 </p>
                 <Button
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow-lg"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow-lg cursor-pointer"
                   onClick={clearFilters}
                 >
-                  Clear All Filters
+                  Reset All Filters
                 </Button>
               </motion.div>
             ) : viewMode === "grid" ? (
@@ -468,9 +523,9 @@ export default function AllFoodPage() {
                 {allFood.map((food, index) => (
                   <motion.div
                     key={food.id}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.04 }}
+                    transition={{ delay: index * 0.03 }}
                     whileHover={{ y: -4 }}
                   >
                     <FoodCard
@@ -478,6 +533,7 @@ export default function AllFoodPage() {
                       onReserve={handleReserve}
                       isAuthenticated={isAuthenticated}
                       userRole={user?.role}
+                      variant="grid"
                     />
                   </motion.div>
                 ))}
@@ -487,100 +543,17 @@ export default function AllFoodPage() {
                 {allFood.map((food, index) => (
                   <motion.div
                     key={food.id}
-                    initial={{ opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, x: -15 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.04 }}
-                    className="group cursor-pointer bg-white dark:bg-slate-900 rounded-2xl shadow-md hover:shadow-xl border border-gray-200/80 dark:border-slate-800 overflow-hidden transition-all duration-300 p-5 flex flex-col sm:flex-row gap-5 items-center"
-                    onClick={() => handleReserve(food)}
+                    transition={{ delay: index * 0.03 }}
                   >
-                    <div className="w-full sm:w-44 h-36 bg-gradient-to-br from-emerald-100 dark:from-slate-800 to-amber-100 dark:to-slate-700 rounded-xl overflow-hidden relative shrink-0">
-                      {food.images && food.images.length > 0 ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={
-                            (
-                              food.images.find((img) => img.isPrimary) ??
-                              food.images[0]
-                            ).url
-                          }
-                          alt={food.name}
-                          className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <FaUtensils className="w-8 h-8 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1 w-full">
-                      <div className="flex justify-between items-start gap-3">
-                        <div>
-                          <h3 className="font-bold text-lg text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                            {food.name}
-                          </h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 font-medium">
-                              {getSupplierIcon(food.supplierType)}
-                              <span>{food.supplierName}</span>
-                            </div>
-                            {food.averageRating > 0 && (
-                              <div className="flex items-center gap-1 text-amber-500 font-semibold text-xs">
-                                <FaStar className="w-3 h-3" />
-                                <span>{food.averageRating.toFixed(1)}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="text-right">
-                          <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                            ₹{food.price}
-                          </div>
-                          {food.originalPrice !== null &&
-                            food.originalPrice > food.price && (
-                              <div className="text-xs text-gray-400 line-through">
-                                ₹{food.originalPrice}
-                              </div>
-                            )}
-                        </div>
-                      </div>
-
-                      <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 line-clamp-2 leading-relaxed">
-                        {food.description}
-                      </p>
-
-                      <div className="flex flex-wrap items-center gap-2.5 mt-4">
-                        <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                          <FaClock className="w-3 h-3 text-emerald-500" />
-                          {new Date(food.expiresAt).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                          <FaMapMarkerAlt className="w-3 h-3 text-rose-500" />
-                          {food.distance !== null
-                            ? `${food.distance.toFixed(1)} km`
-                            : "Nearby"}
-                        </span>
-                        {food.isDonation && (
-                          <span className="px-2.5 py-0.5 bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 text-[10px] font-bold rounded-full">
-                            FREE DONATION
-                          </span>
-                        )}
-                        {food.discountPct > 0 && (
-                          <span className="px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold rounded-full">
-                            {food.discountPct}% OFF
-                          </span>
-                        )}
-                        {food.isHomeCooked && (
-                          <span className="px-2.5 py-0.5 bg-pink-100 dark:bg-pink-950/80 text-pink-700 dark:text-pink-300 text-[10px] font-bold rounded-full">
-                            HOME COOKED
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                    <FoodCard
+                      food={food}
+                      onReserve={handleReserve}
+                      isAuthenticated={isAuthenticated}
+                      userRole={user?.role}
+                      variant="list"
+                    />
                   </motion.div>
                 ))}
               </div>
@@ -588,14 +561,15 @@ export default function AllFoodPage() {
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className="mt-10 flex justify-center">
-                <nav className="flex items-center gap-2">
+              <div className="mt-12 flex justify-center">
+                <nav className="flex items-center gap-2 bg-white dark:bg-slate-900/90 backdrop-blur-xl p-2 rounded-2xl border border-gray-200/80 dark:border-slate-800 shadow-md">
                   <button
                     onClick={() =>
                       setCurrentPage((prev) => Math.max(prev - 1, 1))
                     }
                     disabled={currentPage === 1}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-gray-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-xs"
+                    className="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-xs text-gray-700 dark:text-gray-200"
+                    aria-label="Previous Page"
                   >
                     <FaChevronLeft className="w-3.5 h-3.5" />
                   </button>
@@ -611,10 +585,10 @@ export default function AllFoodPage() {
                         <button
                           key={pageNum}
                           onClick={() => setCurrentPage(pageNum)}
-                          className={`w-10 h-10 rounded-xl font-bold text-sm transition-all cursor-pointer ${
+                          className={`w-10 h-10 rounded-xl font-black text-sm transition-all cursor-pointer ${
                             currentPage === pageNum
-                              ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
-                              : "border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300"
+                              ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30 scale-105"
+                              : "border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300"
                           }`}
                         >
                           {pageNum}
@@ -626,7 +600,7 @@ export default function AllFoodPage() {
                       pageNum === currentPage + 3
                     ) {
                       return (
-                        <span key={pageNum} className="px-1 text-gray-400">
+                        <span key={pageNum} className="px-1 text-gray-400 font-bold">
                           ...
                         </span>
                       );
@@ -639,7 +613,8 @@ export default function AllFoodPage() {
                       setCurrentPage((prev) => Math.min(prev + 1, totalPages))
                     }
                     disabled={currentPage === totalPages}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-gray-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-xs"
+                    className="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-xs text-gray-700 dark:text-gray-200"
+                    aria-label="Next Page"
                   >
                     <FaChevronRight className="w-3.5 h-3.5" />
                   </button>

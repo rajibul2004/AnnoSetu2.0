@@ -2,7 +2,8 @@
 
 import React, { useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   FaCheckCircle,
   FaTimesCircle,
@@ -13,13 +14,19 @@ import {
   FaMapMarkerAlt,
   FaClock,
   FaRupeeSign,
-  FaCalendarAlt,
   FaExclamationTriangle,
   FaArrowLeft,
   FaQrcode,
   FaCopy,
   FaDownload,
   FaShare,
+  FaDirections,
+  FaStore,
+  FaShieldAlt,
+  FaHourglassHalf,
+  FaCheck,
+  FaHandsHelping,
+  FaArrowRight,
 } from "react-icons/fa";
 import Button from "@/components/common/Button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
@@ -30,6 +37,7 @@ import {
   useConfirmReservationRequest,
   useCancelReservation,
 } from "@/hooks/useReservationQueries";
+import { formatPrice } from "@/lib/formatters";
 
 export default function ConfirmReservationContent() {
   const params = useParams();
@@ -37,36 +45,41 @@ export default function ConfirmReservationContent() {
   const id = params?.id as string;
 
   const [copied, setCopied] = useState(false);
-  const [showQR, setShowQR] = useState(false);
+  const [addressCopied, setAddressCopied] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
-  
-  // Cancel note state
+
+  // Cancel note & modal prompt
   const [cancelNote, setCancelNote] = useState("");
   const [showCancelPrompt, setShowCancelPrompt] = useState(false);
 
-  // Use shared React Query hooks so cache stays consistent with the rest of
-  // the app (e.g. dashboard reservation lists auto-refresh after an action).
   const { reservation, isLoading } = useReservationDetails(id);
   const { confirmReservation, isConfirming } = useConfirmReservationRequest();
   const { cancelReservation, isCancelling } = useCancelReservation();
 
   const actionLoading = isConfirming || isCancelling;
 
-  // The real pickup code is generated server-side only when the reservation
-  // is confirmed. Never generate a fake code on the client — it's misleading
-  // and is never persisted anywhere.
   const pickupCode = reservation?.pickupCode ?? null;
 
   const handleConfirm = async () => {
     if (!reservation) return;
-    await confirmReservation(reservation.id).catch(() => {});
+    try {
+      await confirmReservation(reservation.id);
+      toast.success("Reservation confirmed! Pickup code generated.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to confirm reservation");
+    }
   };
 
   const handleCancel = async () => {
     if (!reservation) return;
-    await cancelReservation({ id: reservation.id, note: cancelNote }).catch(() => {});
-    setShowCancelPrompt(false);
-    router.back();
+    try {
+      await cancelReservation({ id: reservation.id, note: cancelNote });
+      toast.success("Reservation cancelled.");
+      setShowCancelPrompt(false);
+      router.push("/protected/dashboard");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to cancel reservation");
+    }
   };
 
   const handleCopyCode = () => {
@@ -77,12 +90,20 @@ export default function ConfirmReservationContent() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleCopyAddress = () => {
+    if (!reservation?.pickupAddress) return;
+    navigator.clipboard.writeText(reservation.pickupAddress);
+    setAddressCopied(true);
+    toast.success("Pickup address copied!");
+    setTimeout(() => setAddressCopied(false), 2000);
+  };
+
   const handleDownloadQR = () => {
     const canvas = qrRef.current?.querySelector("canvas");
     if (canvas) {
       const url = canvas.toDataURL("image/png");
       const link = document.createElement("a");
-      link.download = `pickup-${pickupCode}.png`;
+      link.download = `annosetu-pass-${pickupCode || id.slice(-6)}.png`;
       link.href = url;
       link.click();
       toast.success("QR code downloaded!");
@@ -94,311 +115,478 @@ export default function ConfirmReservationContent() {
     try {
       if (navigator.share) {
         await navigator.share({
-          title: "Pickup Code",
-          text: `Pickup code: ${pickupCode}`,
+          title: `AnnoSetu Pickup Pass: ${reservation?.food?.name}`,
+          text: `Reservation for ${reservation?.food?.name}. Pickup Code: ${pickupCode}`,
+          url: window.location.href,
         });
       } else {
-        await navigator.clipboard.writeText(`Pickup code: ${pickupCode}`);
+        await navigator.clipboard.writeText(
+          `Pickup code for ${reservation?.food?.name}: ${pickupCode}`
+        );
         toast.success("Pickup code copied to clipboard!");
       }
     } catch {
-      // User cancelled share — no error toast needed
+      // User cancelled share
     }
   };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center">
-        <LoadingSpinner text="Loading reservation details..." />
+        <LoadingSpinner text="Loading reservation review..." />
       </div>
     );
   }
 
   if (!reservation) {
     return (
-      <div className="min-h-screen bg-transparent flex items-center justify-center">
-        <div className="text-center">
-          <FaExclamationTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            Reservation not found
+      <div className="min-h-screen bg-transparent flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-10 max-w-md w-full text-center border border-gray-200/80 dark:border-slate-800"
+        >
+          <div className="w-20 h-20 bg-rose-50 dark:bg-rose-950/60 rounded-3xl flex items-center justify-center mx-auto mb-5 text-rose-500 text-3xl">
+            <FaExclamationTriangle />
+          </div>
+          <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">
+            Reservation Not Found
           </h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">
-            It may have been removed, or you don&apos;t have access to it.
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+            This reservation may have been removed or you do not have permission to view it.
           </p>
-          <Button onClick={() => router.push("/protected/dashboard/restaurant")}>
+          <Button
+            onClick={() => router.push("/protected/dashboard")}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg cursor-pointer"
+          >
             Back to Dashboard
           </Button>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-transparent py-8">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Back Button */}
-        <button
-          onClick={() => router.back()}
-          className="flex items-center cursor-pointer text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-300 mb-6 transition-colors"
-        >
-          <FaArrowLeft className="mr-2" />
-          Back to Previous
-        </button>
+  const isConfirmed = reservation.status === "confirmed";
+  const isPending = reservation.status === "pending";
+  const isPickedUp = reservation.status === "picked_up";
+  const isCancelled = reservation.status === "cancelled" || reservation.status === "expired";
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Reservation Details */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Status Banner */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`rounded-2xl p-6 ${
-                reservation.status === "confirmed"
-                  ? "bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-700"
-                  : reservation.status === "pending"
-                    ? "bg-yellow-50 dark:bg-yellow-900/40 border border-yellow-200 dark:border-yellow-700"
-                  : reservation.status === "picked_up"
-                    ? "bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700"
-                    : "bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700"
-              }`}
+  const mapsUrl = reservation.pickupAddress
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(reservation.pickupAddress)}`
+    : null;
+
+  const primaryImage =
+    reservation.food?.images && reservation.food.images.length > 0
+      ? (reservation.food.images.find((img) => img.isPrimary) ?? reservation.food.images[0]).url
+      : null;
+
+  return (
+    <div className="min-h-screen bg-transparent py-6 pb-20">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Top Header & Breadcrumb */}
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <nav className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400">
+            <button
+              onClick={() => router.push("/protected/dashboard")}
+              className="hover:text-emerald-600 transition-colors cursor-pointer"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {reservation.status === "confirmed" ? (
-                    <FaCheckCircle className="w-8 h-8 text-green-600 dark:text-green-300" />
-                  ) : reservation.status === "pending" ? (
-                    <FaClock className="w-8 h-8 text-yellow-600 dark:text-yellow-300" />
-                  ) : reservation.status === "picked_up" ? (
-                    <FaCheckCircle className="w-8 h-8 text-blue-600 dark:text-blue-300" />
-                  ) : (
-                    <FaTimesCircle className="w-8 h-8 text-gray-600 dark:text-gray-300" />
+              Dashboard
+            </button>
+            <span>/</span>
+            <Link
+              href={`/protected/food/${reservation.food?.id}/requests`}
+              className="hover:text-emerald-600 transition-colors cursor-pointer truncate max-w-[120px] sm:max-w-none"
+            >
+              Requests
+            </Link>
+            <span>/</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold truncate">
+              Review #{reservation.id.slice(-6).toUpperCase()}
+            </span>
+          </nav>
+
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-gray-200/80 dark:border-slate-800 text-xs font-bold text-gray-700 dark:text-gray-300 hover:text-emerald-600 transition-colors shadow-xs cursor-pointer"
+          >
+            <FaArrowLeft className="w-3 h-3" />
+            <span>Back</span>
+          </button>
+        </div>
+
+        {/* Status Alert Banner */}
+        <motion.div
+          initial={{ opacity: 0, y: -15 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`rounded-3xl p-5 sm:p-6 mb-8 border backdrop-blur-xl shadow-lg relative overflow-hidden ${
+            isConfirmed
+              ? "bg-emerald-500/10 dark:bg-emerald-950/40 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+              : isPending
+                ? "bg-amber-500/10 dark:bg-amber-950/40 border-amber-500/30 text-amber-700 dark:text-amber-300"
+                : isPickedUp
+                  ? "bg-blue-500/10 dark:bg-blue-950/40 border-blue-500/30 text-blue-700 dark:text-blue-300"
+                  : "bg-rose-500/10 dark:bg-rose-950/40 border-rose-500/30 text-rose-700 dark:text-rose-300"
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+            <div className="flex items-start sm:items-center gap-4">
+              <div
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0 shadow-md ${
+                  isConfirmed
+                    ? "bg-emerald-500 text-white"
+                    : isPending
+                      ? "bg-amber-500 text-white"
+                      : isPickedUp
+                        ? "bg-blue-500 text-white"
+                        : "bg-rose-500 text-white"
+                }`}
+              >
+                {isConfirmed && <FaCheckCircle />}
+                {isPending && <FaHourglassHalf />}
+                {isPickedUp && <FaHandsHelping />}
+                {isCancelled && <FaTimesCircle />}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-lg sm:text-xl font-black tracking-tight">
+                    {isConfirmed && "Reservation Confirmed"}
+                    {isPending && "Pending Confirmation"}
+                    {isPickedUp && "Order Collected & Completed"}
+                    {isCancelled && "Reservation Cancelled"}
+                  </h1>
+                  {isPending && reservation.isSupplierView && (
+                    <span className="px-2.5 py-0.5 bg-amber-500 text-white text-[10px] font-black uppercase rounded-full animate-pulse shadow-xs">
+                      Action Required
+                    </span>
                   )}
+                </div>
+                <p className="text-xs sm:text-sm mt-0.5 opacity-90 leading-relaxed max-w-2xl">
+                  {isConfirmed && "Pickup code generated. The customer can present this code or QR pass at pickup."}
+                  {isPending &&
+                    (reservation.isSupplierView
+                      ? "Review the request details below and click confirm to approve this pickup."
+                      : "Awaiting approval from the food provider.")}
+                  {isPickedUp && "This reservation was verified and picked up successfully."}
+                  {isCancelled && "This reservation has been cancelled and is no longer valid."}
+                </p>
+              </div>
+            </div>
+
+            {isConfirmed && reservation.isSupplierView && (
+              <Button
+                onClick={() => router.push("/protected/reservation/pickup")}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center gap-2 shadow-md cursor-pointer shrink-0"
+              >
+                <FaQrcode />
+                <span>Verify Pickup QR</span>
+              </Button>
+            )}
+          </div>
+        </motion.div>
+
+        {/* 2-Column Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          {/* Main Details (Left 2 Columns) */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Food Details Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-6 sm:p-7 border border-gray-200/80 dark:border-slate-800"
+            >
+              <div className="flex items-center justify-between pb-4 mb-5 border-b border-gray-100 dark:border-slate-800">
+                <h3 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+                  <FaUtensils className="text-emerald-500" />
+                  Food Information
+                </h3>
+                <Link
+                  href={`/protected/food/${reservation.food?.id}`}
+                  className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                >
+                  View Food Details →
+                </Link>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 mb-6">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 bg-linear-to-br from-emerald-100 to-teal-50 dark:from-slate-800 dark:to-slate-800/80 rounded-2xl overflow-hidden shrink-0 border border-gray-200/80 dark:border-slate-700 shadow-inner flex items-center justify-center">
+                  {primaryImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={primaryImage}
+                      alt={reservation.food?.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <FaUtensils className="w-8 h-8 text-emerald-500/50" />
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-xl font-black text-gray-900 dark:text-white truncate">
+                    {reservation.food?.name}
+                  </h4>
+                  {reservation.food?.description && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+                      {reservation.food.description}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                      <FaStore className="w-3 h-3" />
+                      <span>{reservation.supplierName}</span>
+                    </span>
+
+                    {reservation.totalPrice === 0 ? (
+                      <span className="px-3 py-1 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 rounded-xl text-xs font-black border border-purple-200 dark:border-purple-800 flex items-center gap-1">
+                        <FaShieldAlt className="w-3 h-3" />
+                        <span>FREE RESCUE</span>
+                      </span>
+                    ) : (
+                      <span className="px-3 py-1 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold">
+                        {formatPrice(reservation.totalPrice)} Total
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Metrics Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-5 border-t border-gray-100 dark:border-slate-800">
+                <div className="bg-gray-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                    Portions
+                  </div>
+                  <div className="text-sm font-black text-gray-900 dark:text-white mt-0.5">
+                    {reservation.quantity} {reservation.food?.quantityUnit}
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                    Total Amount
+                  </div>
+                  <div className="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    {reservation.totalPrice === 0 ? "FREE" : formatPrice(reservation.totalPrice)}
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                    Pickup Time
+                  </div>
+                  <div className="text-xs font-bold text-gray-900 dark:text-white mt-0.5 truncate">
+                    {new Date(reservation.pickupTime).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                    Expiry Deadline
+                  </div>
+                  <div className="text-xs font-bold text-amber-600 dark:text-amber-400 mt-0.5 truncate">
+                    {new Date(reservation.food?.expiresAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Customer Information (When viewed by Supplier) OR Supplier Info */}
+            {reservation.isSupplierView ? (
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-6 sm:p-7 border border-gray-200/80 dark:border-slate-800"
+              >
+                <h3 className="text-base font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <FaUser className="text-blue-500" />
+                  Customer Information
+                </h3>
+
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-linear-to-br from-blue-500 to-indigo-600 text-white font-black text-lg flex items-center justify-center shadow-md">
+                    {reservation.reserver?.name?.charAt(0)?.toUpperCase() ?? "U"}
+                  </div>
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white capitalize">
-                      {reservation.status === "confirmed"
-                        ? "Reservation Confirmed"
-                        : reservation.status === "pending"
-                          ? "Pending Confirmation"
-                          : reservation.status === "picked_up"
-                            ? "Food Picked Up"
-                            : "Reservation Cancelled"}
-                    </h2>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      {reservation.status === "confirmed"
-                        ? "Pickup code generated and ready for the customer"
-                        : reservation.status === "pending"
-                          ? "Review details and confirm or cancel below"
-                          : reservation.status === "picked_up"
-                            ? "This order has been successfully picked up"
-                            : "This reservation has been cancelled"}
+                    <h4 className="text-sm font-black text-gray-900 dark:text-white">
+                      {reservation.reserver?.name ?? "Customer"}
+                    </h4>
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                      {reservation.totalOrders ?? 0} completed rescues on AnnoSetu
                     </p>
                   </div>
                 </div>
-                {reservation.status === "pending" && (
-                  <span className="px-3 py-1 bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-100 text-sm font-medium rounded-full animate-pulse">
-                    Action Required
-                  </span>
-                )}
-              </div>
-            </motion.div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Food Details Card */}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-gray-100 dark:border-slate-800 text-xs">
+                  {reservation.reserver?.phone && (
+                    <a
+                      href={`tel:${reservation.reserver.phone}`}
+                      className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600"
+                    >
+                      <FaPhone className="text-blue-500" />
+                      <span>{reservation.reserver.phone}</span>
+                    </a>
+                  )}
+
+                  {reservation.reserver?.email && (
+                    <a
+                      href={`mailto:${reservation.reserver.email}`}
+                      className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600"
+                    >
+                      <FaEnvelope className="text-blue-500" />
+                      <span className="truncate">{reservation.reserver.email}</span>
+                    </a>
+                  )}
+
+                  {reservation.reserver?.address && (
+                    <div className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl flex items-center gap-2 text-gray-700 dark:text-gray-300 sm:col-span-2">
+                      <FaMapMarkerAlt className="text-rose-500 shrink-0" />
+                      <span className="truncate">{reservation.reserver.address}</span>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ) : (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="card p-6 flex flex-col"
+                className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-6 sm:p-7 border border-gray-200/80 dark:border-slate-800"
               >
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <FaUtensils className="text-green-600 dark:text-green-300" />
-                  Food Details
+                <h3 className="text-base font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <FaStore className="text-emerald-500" />
+                  Supplier Contact
                 </h3>
 
-                <div className="flex-1 space-y-4">
-                  <div className="flex flex-col xl:flex-row items-start gap-4">
-                    <div className="w-20 h-20 bg-gradient-to-br from-green-100 dark:from-slate-800 to-amber-100 dark:to-gray-800 rounded-xl flex items-center justify-center overflow-hidden shrink-0">
-                      {reservation.food?.images?.[0] ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={reservation.food.images[0].url}
-                          alt={reservation.food.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <FaUtensils className="w-8 h-8 text-green-600" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 dark:text-white text-lg leading-tight">
-                        {reservation.food?.name}
-                      </h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">
-                        {reservation.food?.description}
-                      </p>
-                    </div>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-linear-to-br from-emerald-500 to-teal-600 text-white font-black text-lg flex items-center justify-center shadow-md">
+                    {reservation.supplierName?.charAt(0)?.toUpperCase() ?? "S"}
                   </div>
-
-                  <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-100 dark:border-gray-800 ">
-                    <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium uppercase tracking-wider">Quantity</p>
-                      <p className="font-bold text-gray-900 dark:text-white text-lg">
-                        {reservation.quantity} <span className="text-sm font-semibold">{reservation.food?.quantityUnit}</span>
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium uppercase tracking-wider">Total Price</p>
-                      <p className="font-bold text-green-600 dark:text-green-400 text-lg flex items-center justify-center">
-                        <FaRupeeSign className="w-4 h-4 mr-0.5 opacity-80" />
-                        {reservation.totalPrice}
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium uppercase tracking-wider">Pickup Time</p>
-                      <p className="font-bold text-gray-900 dark:text-white flex items-center justify-center gap-1.5">
-                        <FaClock className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
-                        {new Date(reservation.pickupTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium uppercase tracking-wider">Expires</p>
-                      <p className="font-bold text-orange-600 dark:text-orange-400">
-                        {reservation.food?.expiresAt
-                          ? new Date(reservation.food.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                          : "N/A"}
-                      </p>
-                    </div>
+                  <div>
+                    <h4 className="text-sm font-black text-gray-900 dark:text-white">
+                      {reservation.supplierName}
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Verified AnnoSetu Partner
+                    </p>
                   </div>
                 </div>
-              </motion.div>
 
-              {/* Customer Information */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="card p-6 flex flex-col"
-              >
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <FaUser className="text-blue-600 dark:text-blue-300" />
-                  Customer Info
-                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-gray-100 dark:border-slate-800 text-xs">
+                  {reservation.supplierPhone && (
+                    <a
+                      href={`tel:${reservation.supplierPhone}`}
+                      className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600 font-semibold"
+                    >
+                      <FaPhone className="text-emerald-500" />
+                      <span>{reservation.supplierPhone}</span>
+                    </a>
+                  )}
 
-                <div className="flex-1 space-y-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-100 dark:from-blue-800 to-purple-100 dark:to-purple-800 rounded-full flex items-center justify-center shrink-0">
-                      <span className="text-2xl font-bold text-blue-600 dark:text-blue-300">
-                        {reservation.reserver?.name?.charAt(0)?.toUpperCase() ?? "U"}
-                      </span>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 dark:text-white text-lg leading-tight">
-                        {reservation.reserver?.name ?? "Unknown Customer"}
-                      </h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                        {reservation.totalOrders ?? 0} completed orders
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
-                    {reservation.reserver?.phone && (
-                      <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700">
-                        <FaPhone className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                          {reservation.reserver.phone}
-                        </span>
-                      </div>
-                    )}
-                    {reservation.reserver?.email && (
-                      <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700">
-                        <FaEnvelope className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">
-                          {reservation.reserver.email}
-                        </span>
-                      </div>
-                    )}
-                    {reservation.reserver?.address && (
-                      <div className="flex items-start gap-3 bg-gray-50 dark:bg-gray-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700">
-                        <FaMapMarkerAlt className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                          {reservation.reserver.address}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  {reservation.supplierEmail && (
+                    <a
+                      href={`mailto:${reservation.supplierEmail}`}
+                      className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600 font-semibold"
+                    >
+                      <FaEnvelope className="text-blue-500" />
+                      <span className="truncate">{reservation.supplierEmail}</span>
+                    </a>
+                  )}
                 </div>
               </motion.div>
-            </div>
-          </div>
+            )}
 
-          {/* Right Column — Actions & Pickup Code */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Quick Summary moved to sidebar */}
+            {/* Pickup Location Card */}
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.25 }}
-              className="card rounded-2xl p-6"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-6 sm:p-7 border border-gray-200/80 dark:border-slate-800"
             >
-              <h4 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <FaCalendarAlt className="text-green-600 dark:text-green-300" />
-                Quick Summary
-              </h4>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-gray-500 dark:text-gray-400">Reservation ID:</span>
-                  <span className="font-mono font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                    {reservation.id.slice(-8)}
-                  </span>
+              <h3 className="text-base font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <FaMapMarkerAlt className="text-rose-500" />
+                Pickup Location & Address
+              </h3>
+
+              <div className="p-4 bg-linear-to-br from-gray-50 to-blue-50/30 dark:from-slate-800/60 dark:to-slate-800/30 rounded-2xl border border-gray-200/80 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-gray-900 dark:text-white leading-relaxed">
+                    {reservation.pickupAddress || "Address provided by supplier"}
+                  </p>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    Present the secret pickup code upon handover.
+                  </p>
                 </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-gray-500 dark:text-gray-400">Created:</span>
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {new Date(reservation.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-gray-500 dark:text-gray-400">Status:</span>
-                  <span
-                    className={`font-bold capitalize px-2.5 py-1 rounded-full ${
-                      reservation.status === "confirmed"
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
-                        : reservation.status === "pending"
-                          ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300"
-                          : reservation.status === "picked_up"
-                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
-                            : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
-                    }`}
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleCopyAddress}
+                    className="px-3 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
                   >
-                    {reservation.status}
-                  </span>
+                    {addressCopied ? <FaCheck className="text-emerald-500" /> : <FaCopy />}
+                    <span>{addressCopied ? "Copied" : "Copy"}</span>
+                  </button>
+
+                  {mapsUrl && (
+                    <a
+                      href={mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors"
+                    >
+                      <FaDirections />
+                      <span>Directions</span>
+                    </a>
+                  )}
                 </div>
               </div>
             </motion.div>
-            {/* Actions Card — only while pending */}
-            {reservation.status === "pending" && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="card p-6 sticky top-4"
-              >
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                  Actions
-                </h3>
+          </div>
 
-                <div className="space-y-4">
-                  {reservation.isSupplierView && (
-                    <Button
-                      onClick={handleConfirm}
-                      loading={actionLoading}
-                      disabled={actionLoading}
-                      fullWidth
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <FaCheckCircle className="mr-2" />
-                      Confirm Reservation
-                    </Button>
-                  )}
+          {/* Right Column: Actions & Ticket Status */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* SUPPLIER ACTIONS CARD (WHEN PENDING) */}
+            {isPending && reservation.isSupplierView && (
+              <motion.div
+                initial={{ opacity: 0, x: 15 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-6 sm:p-7 border border-amber-200 dark:border-amber-900/60 sticky top-24 space-y-4"
+              >
+                <div className="text-center pb-2">
+                  <div className="w-14 h-14 bg-amber-50 dark:bg-amber-950/60 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-3 text-xl">
+                    <FaHourglassHalf className="animate-spin" />
+                  </div>
+                  <h3 className="text-base font-black text-gray-900 dark:text-white">
+                    Supplier Confirmation
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Accept this order to generate the customer&apos;s secret pickup pass.
+                  </p>
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  <Button
+                    onClick={handleConfirm}
+                    loading={actionLoading}
+                    disabled={actionLoading}
+                    fullWidth
+                    variant="secondary"
+                    className="bg-linear-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-black py-3 rounded-2xl shadow-lg shadow-emerald-600/20 text-xs cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <FaCheckCircle />
+                    <span>Confirm & Accept Order</span>
+                  </Button>
 
                   {!showCancelPrompt ? (
                     <Button
@@ -406,173 +594,210 @@ export default function ConfirmReservationContent() {
                       disabled={actionLoading}
                       variant="outline"
                       fullWidth
-                      className="border-red-300 dark:bg-gray-800 bg-white dark:border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40"
+                      className="border-rose-300 dark:border-rose-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold py-2.5 rounded-2xl text-xs cursor-pointer flex items-center justify-center gap-2"
                     >
-                      <FaTimesCircle className="mr-2" />
-                      Cancel Reservation
+                      <FaTimesCircle />
+                      <span>Decline Request</span>
                     </Button>
                   ) : (
-                    <div className="space-y-3 bg-red-50 dark:bg-red-900/10 p-4 rounded-xl border border-red-100 dark:border-red-800">
-                      <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                        Are you sure you want to cancel?
-                      </p>
-                      <textarea
-                        value={cancelNote}
-                        onChange={(e) => setCancelNote(e.target.value)}
-                        placeholder="Optional reason..."
-                        className="w-full text-sm p-2 rounded-lg border border-red-200 dark:border-red-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                        rows={2}
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => setShowCancelPrompt(false)}
-                          disabled={actionLoading}
-                          variant="outline"
-                          fullWidth
-                          className="bg-white"
-                        >
-                          Keep
-                        </Button>
-                        <Button
-                          onClick={async () => { await handleCancel(); router.back(); }}
-                          loading={actionLoading}
-                          disabled={actionLoading}
-                          fullWidth
-                          className="bg-red-600 text-white border-0 hover:bg-red-700"
-                        >
-                          Confirm
-                        </Button>
-                      </div>
-                    </div>
+                    <AnimatePresence>
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="space-y-3 bg-rose-50 dark:bg-rose-950/30 p-4 rounded-2xl border border-rose-200 dark:border-rose-800"
+                      >
+                        <p className="text-xs font-bold text-rose-800 dark:text-rose-300">
+                          Provide reason for cancellation:
+                        </p>
+                        <textarea
+                          value={cancelNote}
+                          onChange={(e) => setCancelNote(e.target.value)}
+                          placeholder="e.g. Out of stock, kitchen closed..."
+                          className="w-full text-xs p-2.5 rounded-xl border border-rose-200 dark:border-rose-800 bg-white dark:bg-slate-900 text-gray-900 dark:text-white resize-none"
+                          rows={2}
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowCancelPrompt(false)}
+                            className="flex-1 py-2 rounded-xl bg-white dark:bg-slate-800 text-xs font-bold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-700 cursor-pointer"
+                          >
+                            Keep
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCancel}
+                            disabled={actionLoading}
+                            className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs font-bold text-white shadow-xs cursor-pointer"
+                          >
+                            {isCancelling ? "Cancelling..." : "Confirm Decline"}
+                          </button>
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
                   )}
                 </div>
 
-                <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/40 rounded-xl">
-                  <p className="text-xs text-yellow-800 dark:text-yellow-100">
-                    ⏰ Customer will be notified immediately after confirmation.
-                    A unique pickup code will be generated upon confirmation.
-                  </p>
+                <div className="p-3.5 bg-amber-50/80 dark:bg-amber-950/40 rounded-2xl border border-amber-200/60 dark:border-amber-800/40 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                  <FaClock className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  <span>The customer will receive immediate push notifications with the pickup code.</span>
                 </div>
               </motion.div>
             )}
 
-            {/* Pickup Code Card — shown after confirmation */}
-            {reservation.status === "confirmed" && pickupCode && (
+            {/* CONSUMER WAITING NOTICE (WHEN PENDING) */}
+            {isPending && !reservation.isSupplierView && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="card p-6 sticky top-4"
+                initial={{ opacity: 0, x: 15 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-6 sm:p-7 border border-amber-200 dark:border-amber-900/60 sticky top-24 text-center space-y-4"
               >
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <FaQrcode className="text-green-600 dark:text-green-300" />
-                  Pickup Code
+                <div className="w-14 h-14 bg-amber-50 dark:bg-amber-950/60 text-amber-500 rounded-2xl flex items-center justify-center mx-auto text-xl">
+                  <FaHourglassHalf className="animate-spin" />
+                </div>
+                <h3 className="text-base font-black text-gray-900 dark:text-white">
+                  Awaiting Confirmation
                 </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                  Your reservation request is being reviewed by <b>{reservation.supplierName}</b>. Once approved, your QR pass will appear here.
+                </p>
 
-                {/* QR Code (Reserver Only) */}
-                {!reservation.isSupplierView ? (
-                  <div ref={qrRef} className="flex justify-center mb-4">
-                    <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+                <div className="pt-2">
+                  <Button
+                    onClick={handleCancel}
+                    loading={actionLoading}
+                    variant="outline"
+                    fullWidth
+                    className="border-rose-300 dark:border-rose-800 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold py-2.5 rounded-2xl text-xs cursor-pointer"
+                  >
+                    Cancel Request
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* DIGITAL PASS TICKET (WHEN CONFIRMED) */}
+            {isConfirmed && pickupCode && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-emerald-300 dark:border-emerald-800/80 sticky top-24"
+              >
+                <div className="h-2.5 w-full bg-linear-to-r from-emerald-500 via-teal-500 to-green-500" />
+
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                      <FaQrcode />
+                      <span>Pickup Pass</span>
+                    </h3>
+                    <span className="px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-[10px] font-black uppercase rounded-full">
+                      Ready For Pickup
+                    </span>
+                  </div>
+
+                  {/* QR Code Container */}
+                  <div ref={qrRef} className="flex justify-center mb-5">
+                    <div className="p-3 bg-white rounded-2xl shadow-md border border-gray-100">
                       <QRCodeCanvas
                         value={JSON.stringify({
-                          reservationId: reservation.id,
-                          pickupCode,
-                          foodName: reservation.food?.name,
+                          id: reservation.id,
+                          code: pickupCode,
+                          food: reservation.food?.name,
                         })}
-                        size={180}
+                        size={170}
                         level="H"
                         includeMargin
                       />
                     </div>
                   </div>
-                ) : (
-                  <div className="mb-4 text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-100 dark:border-green-800/50">
-                    <p className="text-green-800 dark:text-green-200 text-sm mb-3">
-                      Ask the customer for their Pickup Code, or scan their QR code to verify pickup.
-                    </p>
-                    <Button
-                      onClick={() => router.push("/protected/reservation/pickup")}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                      fullWidth
-                    >
-                      Scan QR / Verify Pickup
-                    </Button>
-                  </div>
-                )}
 
-                {/* Code Display */}
-                <div className="text-center mb-4">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                    Pickup Code
-                  </p>
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-2xl font-mono font-bold text-green-600 dark:text-green-300 bg-green-100 dark:bg-green-900/40 px-4 py-2 rounded-lg tracking-widest">
-                      {pickupCode}
-                    </span>
-                    <button
-                      onClick={handleCopyCode}
-                      className="p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg transition-colors"
-                      aria-label="Copy pickup code"
-                    >
-                      {copied ? (
-                        <FaCheckCircle className="w-5 h-5 text-green-600 dark:text-green-300" />
-                      ) : (
-                        <FaCopy className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                      )}
-                    </button>
-                  </div>
-                </div>
+                  {/* Perforated Divider */}
+                  <div className="relative py-4 border-y border-dashed border-gray-200 dark:border-slate-800 text-center">
+                    <div className="absolute -left-9 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-50 dark:bg-slate-950 border-r border-gray-200 dark:border-slate-800" />
+                    <div className="absolute -right-9 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-50 dark:bg-slate-950 border-l border-gray-200 dark:border-slate-800" />
 
-                {/* QR Actions (Reserver Only) */}
-                {!reservation.isSupplierView && (
-                  <div className="flex justify-center gap-3 mb-4">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">
+                      Secret Pickup Code
+                    </div>
+
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-2xl sm:text-3xl font-mono font-black tracking-[0.2em] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-4 py-1.5 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 shadow-inner">
+                        {pickupCode}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleCopyCode}
+                        className="p-3 rounded-2xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 transition-colors shadow-xs cursor-pointer"
+                        aria-label="Copy pickup code"
+                      >
+                        {copied ? <FaCheck className="text-emerald-500" /> : <FaCopy />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2.5 mt-5">
                     <button
+                      type="button"
                       onClick={handleDownloadQR}
-                      className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-900 transition-colors"
+                      className="flex-1 py-2.5 px-3 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                     >
-                      <FaDownload className="w-4 h-4" />
-                      <span className="text-sm">Download QR</span>
+                      <FaDownload className="text-emerald-500" />
+                      <span>Save QR</span>
                     </button>
                     <button
+                      type="button"
                       onClick={handleShare}
-                      className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-900 transition-colors"
+                      className="flex-1 py-2.5 px-3 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                     >
-                      <FaShare className="w-4 h-4" />
-                      <span className="text-sm">Share</span>
+                      <FaShare className="text-teal-500" />
+                      <span>Share Pass</span>
                     </button>
                   </div>
-                )}
 
-                <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                    Customer has been notified
-                  </p>
-                  {reservation.food?.expiresAt && (
-                    <p className="text-xs text-green-600 dark:text-green-300 text-center mt-2">
-                      ✓ Valid until{" "}
-                      {new Date(reservation.food.expiresAt).toLocaleString()}
-                    </p>
+                  {reservation.isSupplierView && (
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-800">
+                      <Button
+                        onClick={() => router.push("/protected/reservation/pickup")}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                      >
+                        <FaQrcode />
+                        <span>Verify Pickup at Handover</span>
+                      </Button>
+                    </div>
                   )}
                 </div>
               </motion.div>
             )}
 
-            {/* Pending pickup code notice */}
-            {reservation.status === "pending" && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="card p-6 text-center border-dashed border-2 border-gray-200 dark:border-gray-700"
-              >
-                <FaQrcode className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Pickup code not yet generated
-                </p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                  A unique code will be created once you confirm the reservation
-                </p>
-              </motion.div>
-            )}
+            {/* Quick Summary Card */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl p-4 border border-gray-200/60 dark:border-slate-800 text-xs space-y-2 text-gray-600 dark:text-gray-300"
+            >
+              <div className="flex justify-between">
+                <span>Reservation Ref:</span>
+                <span className="font-mono font-bold text-gray-900 dark:text-white">
+                  #{reservation.id.slice(-8).toUpperCase()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Created Date:</span>
+                <span className="font-bold text-gray-900 dark:text-white">
+                  {new Date(reservation.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Status:</span>
+                <span className="font-black capitalize text-emerald-600 dark:text-emerald-400">
+                  {reservation.status}
+                </span>
+              </div>
+            </motion.div>
           </div>
         </div>
       </div>

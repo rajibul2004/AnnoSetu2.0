@@ -20,38 +20,53 @@ export interface FoodImageDTO {
   displayOrder: number;
 }
  
+export interface SharedFoodReservationSummary {
+  id: string;
+  quantity: number;
+  status: "pending" | "confirmed" | "picked_up" | "cancelled" | "expired";
+  paymentStatus: "pending" | "paid" | "refunded" | "failed";
+  pickupTime: string;
+  createdAt: string;
+  reserverName?: string;
+}
+
 export interface SharedFoodDTO {
   id: string;
   name: string;
   description: string | null;
- 
+
   supplierId: string;
   supplierName: string;
- 
+
   quantity: number;
   availableQty: number;
+  confirmedQty?: number;
+  pendingQty?: number;
+  pendingCount?: number;
+  confirmedCount?: number;
   quantityUnit: QuantityUnit;
- 
+
   isDonation: boolean;
   price: number;
   originalPrice: number | null;
   discountPct: number;
- 
+
   isHomeCooked: boolean;
   isActive: boolean;
   deletedAt: string | null;
- 
+
   expiresAt: string;
- 
+
   images: FoodImageDTO[];
   averageRating: number;
   reviewCount: number;
+  reservations?: SharedFoodReservationSummary[];
 }
- 
+
 export function isFoodExpired(food: Pick<SharedFoodDTO, "expiresAt">): boolean {
   return new Date(food.expiresAt).getTime() <= Date.now();
 }
- 
+
 export function isFoodReserved(availableQty: number): boolean {
   return availableQty <= 0;
 }

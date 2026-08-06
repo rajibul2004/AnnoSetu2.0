@@ -1,7 +1,8 @@
 "use client";
- 
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   FaUtensils,
   FaClock,
@@ -19,6 +20,12 @@ import {
   FaShare,
   FaLeaf,
   FaInfoCircle,
+  FaRegHeart,
+  FaDirections,
+  FaArrowLeft,
+  FaBuilding,
+  FaHandHoldingHeart,
+  FaLock,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
@@ -30,63 +37,65 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFoodDetails } from "@/hooks/useFoodQueries";
 import { useCreateReservation } from "@/hooks/useReservationQueries";
 import { isFoodExpired, isFoodReserved } from "@/types/food";
- 
+
 export default function ReserveFoodForm() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
- 
+
   const [quantity, setQuantity] = useState(1);
   const [pickupTime, setPickupTime] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [showSafetyInfo, setShowSafetyInfo] = useState(false);
- 
+
   const { food, isLoading } = useFoodDetails(params.id);
   const { createReservation, isCreating } = useCreateReservation();
- 
+
+  // Dynamic Pickup time slots capped before expiration
   const pickupOptions = (() => {
     if (!food) return [];
     const options: { value: string; label: string }[] = [];
     const now = new Date();
     const expiry = new Date(food.expiresAt);
-    
-    // Always add an ASAP option that is 15 minutes from now
+
+    // ASAP option (15 mins from now)
     const asapTime = new Date(now.getTime() + 15 * 60000);
     if (asapTime < expiry) {
       options.push({
         value: asapTime.toISOString(),
-        label: `ASAP (${asapTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`,
+        label: `⚡ ASAP (~15 mins - ${asapTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`,
       });
     }
 
-    for (let i = 30; i <= 120; i += 30) {
-      const time = new Date(now.getTime() + i * 60000);
+    // 30m, 45m, 60m, 90m, 120m options
+    [30, 45, 60, 90, 120].forEach((minutes) => {
+      const time = new Date(now.getTime() + minutes * 60000);
       if (time < expiry) {
         options.push({
           value: time.toISOString(),
-          label: time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          label: `🕒 In ${minutes} mins (${time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`,
         });
       }
-    }
-    
-    // Fallback if everything is past expiry but it hasn't technically expired yet
+    });
+
+    // Fallback if near expiry
     if (options.length === 0 && now < expiry) {
-       options.push({
-         value: now.toISOString(),
-         label: "Immediately (Expiring Soon)",
-       });
+      options.push({
+        value: now.toISOString(),
+        label: "⚡ Immediately (Expiring Very Soon)",
+      });
     }
-    
+
     return options;
   })();
- 
+
   useEffect(() => {
     if (food && !pickupTime && pickupOptions.length > 0) {
       setPickupTime(pickupOptions[0].value);
     }
   }, [food, pickupTime, pickupOptions]);
- 
+
   const handleQuantityChange = (delta: number) => {
     if (!food) return;
     const newQuantity = quantity + delta;
@@ -94,7 +103,13 @@ export default function ReserveFoodForm() {
       setQuantity(newQuantity);
     }
   };
- 
+
+  const handleSetQuantity = (val: number) => {
+    if (!food) return;
+    const clamped = Math.min(Math.max(1, val), food.availableQty);
+    setQuantity(clamped);
+  };
+
   const handleReserve = async () => {
     if (!isAuthenticated) {
       toast.error("Please login to reserve food");
@@ -102,17 +117,17 @@ export default function ReserveFoodForm() {
       return;
     }
     if (!acceptedTerms) {
-      toast.error("Please accept the terms and conditions");
+      toast.error("Please confirm acceptance of pickup terms");
       return;
     }
     if (!pickupTime) {
-      toast.error("Please select a pickup time");
+      toast.error("Please select a valid pickup time");
       return;
     }
     if (!food) return;
-    
+
     const finalQuantity = Math.min(Math.max(1, quantity), food.availableQty);
- 
+
     try {
       const result = await createReservation({
         foodId: food.id,
@@ -123,271 +138,382 @@ export default function ReserveFoodForm() {
       toast.success("🎉 Food reservation request created successfully!");
       router.push(`/protected/reservation/${result.id}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to reserve food");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to reserve food",
+      );
     }
   };
- 
+
+  const handleHeartClick = () => {
+    setIsLiked(!isLiked);
+    if (!isLiked && food) {
+      toast.success(`Saved "${food.name}" to favorites!`);
+    } else {
+      toast("Removed from favorites");
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-gray-50 dark:from-gray-900 to-gray-100 dark:to-gray-800 flex items-center justify-center">
-        <LoadingSpinner text="Loading delicious details..." />
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
+        <LoadingSpinner text="Loading food reservation details..." />
       </div>
     );
   }
- 
+
   if (!food) {
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="min-h-screen bg-linear-to-br from-gray-50 dark:from-gray-900 to-gray-100 dark:to-gray-800 flex items-center justify-center p-4"
-      >
-        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-12 max-w-md w-full text-center">
-          <div className="w-24 h-24 bg-linear-to-br from-red-100 dark:from-red-900 to-orange-100 dark:to-orange-900 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <FaExclamationTriangle className="w-12 h-12 text-red-500 dark:text-red-400" />
+      <div className="min-h-screen bg-transparent flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-10 max-w-md w-full text-center border border-gray-200/80 dark:border-slate-800"
+        >
+          <div className="w-20 h-20 bg-rose-50 dark:bg-rose-950/60 rounded-3xl flex items-center justify-center mx-auto mb-5 text-rose-500 text-3xl">
+            <FaExclamationTriangle />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-50 mb-3">Food Not Found</h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-8">
-            This food item may have expired or been removed by the supplier.
+          <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">
+            Food Listing Not Found
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+            This food item may have expired, been claimed, or removed by the supplier.
           </p>
-          <Button onClick={() => router.push("/food")} className="bg-linear-to-r from-green-500 to-amber-500">
-            Browse Other Food
+          <Button
+            onClick={() => router.push("/public/food")}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg cursor-pointer"
+          >
+            Explore Available Food
           </Button>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     );
   }
- 
+
   const expired = isFoodExpired(food);
   const reserved = isFoodReserved(food.availableQty);
   const isOwnListing = user?.id === food.supplierId;
+  const isRestaurantUser = user?.role === "restaurant";
   const hasNoPickupAddress = !food.pickupAddress;
-  const canReserve = !expired && !reserved && food.availableQty > 0 && !isOwnListing && !hasNoPickupAddress;
- 
+  const canReserve =
+    !expired &&
+    !reserved &&
+    food.availableQty > 0 &&
+    !isOwnListing &&
+    !hasNoPickupAddress;
+
+  const primaryImage =
+    food.images && food.images.length > 0
+      ? (food.images.find((img) => img.isPrimary) ?? food.images[0]).url
+      : null;
+
+  const supplierIcon =
+    food.supplierType === "restaurant"
+      ? FaStore
+      : food.supplierType === "ngo"
+        ? FaBuilding
+        : FaUser;
+
+  const availablePct =
+    food.quantity > 0
+      ? Math.max(0, Math.min(100, (food.availableQty / food.quantity) * 100))
+      : 0;
+
+  const totalPrice = food.isDonation ? 0 : food.price * quantity;
+  const savings =
+    food.originalPrice && food.originalPrice > food.price
+      ? (food.originalPrice - food.price) * quantity
+      : 0;
+
+  const mapsUrl = food.pickupAddress
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(food.pickupAddress)}`
+    : null;
+
   return (
-    <div className="min-h-screen bg-transparent py-8">
+    <div className="min-h-screen bg-transparent py-6 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-6">
-          <button onClick={() => router.push("/")} className="hover:text-green-600 cursor-pointer transition-colors">
-            Home
+        {/* Navigation Breadcrumb */}
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <nav className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400">
+            <button
+              onClick={() => router.push("/")}
+              className="hover:text-emerald-600 transition-colors cursor-pointer"
+            >
+              Home
+            </button>
+            <span>/</span>
+            <button
+              onClick={() => router.push("/public/food")}
+              className="hover:text-emerald-600 transition-colors cursor-pointer"
+            >
+              Explore Surplus
+            </button>
+            <span>/</span>
+            <button
+              onClick={() => router.push(`/protected/food/${food.id}`)}
+              className="hover:text-emerald-600 transition-colors cursor-pointer truncate max-w-[120px] sm:max-w-xs"
+            >
+              {food.name}
+            </button>
+            <span>/</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+              Reserve
+            </span>
+          </nav>
+
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-gray-200 dark:border-slate-800 text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-emerald-600 transition-colors shadow-xs cursor-pointer"
+          >
+            <FaArrowLeft className="w-3 h-3" />
+            <span>Back</span>
           </button>
-          <span>/</span>
-          <button onClick={() => router.push("/food")} className="hover:text-green-600 cursor-pointer transition-colors">
-            Browse
-          </button>
-          <span>/</span>
-          <span className="text-gray-900 dark:text-gray-50 font-medium">{food.name}</span>
-        </nav>
- 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column */}
+        </div>
+
+        {/* Main 2-Column Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          {/* Left 2 Columns: Food Overview Details */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-900">
-              <div className="relative h-96 bg-linear-to-br from-green-100 dark:from-green-900 via-amber-100 dark:via-amber-900 to-pink-100 dark:to-pink-900 group">
-                {food.images.length > 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl overflow-hidden border border-gray-200/80 dark:border-slate-800"
+            >
+              {/* Image Banner */}
+              <div className="relative h-72 sm:h-96 w-full bg-linear-to-br from-emerald-100 via-teal-50 to-amber-50 dark:from-slate-800 dark:to-slate-900 overflow-hidden group">
+                {primaryImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={food.images[0].url}
+                    src={primaryImage}
                     alt={food.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                   />
                 ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <FaUtensils className="w-20 h-20 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-500">No image available</p>
-                    </div>
+                  <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                    <FaUtensils className="w-16 h-16 text-emerald-500/50 mb-2" />
+                    <span className="text-sm font-semibold">AnnoSetu Food</span>
                   </div>
                 )}
- 
-                <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-                  {food.isDonation && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="px-4 py-2 bg-linear-to-r from-purple-500 to-pink-500 text-white text-sm font-bold rounded-full shadow-lg flex items-center gap-1"
-                    >
-                      <FaHeart className="w-4 h-4" />
+
+                {/* Dark Gradient Overlay */}
+                <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-black/30 pointer-events-none" />
+
+                {/* Top Badges */}
+                <div className="absolute top-4 left-4 flex flex-wrap gap-2 z-10">
+                  {food.isDonation ? (
+                    <span className="px-3.5 py-1.5 bg-linear-to-r from-purple-600 to-pink-600 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg flex items-center gap-1.5 border border-white/20">
+                      <FaHandHoldingHeart className="w-3.5 h-3.5" />
                       FREE DONATION
-                    </motion.span>
-                  )}
-                  {food.discountPct > 0 && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="px-4 py-2 bg-linear-to-r from-amber-500 to-orange-500 text-white text-sm font-bold rounded-full shadow-lg"
-                    >
+                    </span>
+                  ) : food.discountPct > 0 ? (
+                    <span className="px-3.5 py-1.5 bg-linear-to-r from-amber-500 to-orange-500 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg border border-white/20">
                       {food.discountPct}% OFF
-                    </motion.span>
+                    </span>
+                  ) : null}
+
+                  {food.isHomeCooked && (
+                    <span className="px-3.5 py-1.5 bg-pink-500/90 backdrop-blur-md text-white text-xs font-bold rounded-xl shadow-lg flex items-center gap-1.5 border border-white/20">
+                      <FaUser className="w-3 h-3" />
+                      Home Cooked
+                    </span>
                   )}
                 </div>
- 
-                {food.isHomeCooked && (
-                  <div className="absolute top-4 right-4">
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="px-4 py-2 bg-linear-to-r from-pink-500 to-purple-500 text-white text-sm font-medium rounded-full shadow-lg flex items-center gap-2"
-                    >
-                      <FaUser className="w-4 h-4" />
-                      Home Cooked
-                    </motion.span>
-                  </div>
-                )}
- 
-                <div className="absolute bottom-4 right-4 flex gap-2">
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setIsLiked((v) => !v)}
-                    className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all"
+
+                {/* Top Right Action Buttons */}
+                <div className="absolute top-4 right-4 flex gap-2 z-10">
+                  <button
+                    type="button"
+                    onClick={handleHeartClick}
+                    className="w-10 h-10 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg text-gray-400 hover:text-rose-500 transition-colors cursor-pointer"
+                    aria-label="Favorite"
                   >
-                    <FaHeart className={`w-5 h-5 ${isLiked ? "text-red-500" : "text-gray-400"}`} />
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                    {isLiked ? (
+                      <FaHeart className="w-4 h-4 text-rose-500" />
+                    ) : (
+                      <FaRegHeart className="w-4 h-4" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => {
                       navigator.clipboard.writeText(window.location.href);
-                      toast.success("Link copied!");
+                      toast.success("Link copied to clipboard!");
                     }}
-                    className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all"
+                    className="w-10 h-10 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg text-gray-700 dark:text-gray-200 hover:text-emerald-600 transition-colors cursor-pointer"
+                    aria-label="Share"
                   >
-                    <FaShare className="w-5 h-5 text-gray-600" />
-                  </motion.button>
+                    <FaShare className="w-4 h-4" />
+                  </button>
                 </div>
- 
-                <div className="absolute bottom-4 left-4">
-                  <div className="bg-black/60 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm flex items-center gap-2">
-                    <FaClock className="w-4 h-4" />
-                    <span className="font-medium">{formatTimeRemaining(food.expiresAt)}</span>
+
+                {/* Bottom Overlay Pills */}
+                <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between z-10">
+                  <div className="bg-black/60 backdrop-blur-md text-white px-3.5 py-1.5 rounded-xl text-xs font-bold border border-white/15 shadow-lg flex items-center gap-2">
+                    <FaClock className="text-emerald-400" />
+                    <span>Expires in {formatTimeRemaining(food.expiresAt)}</span>
+                  </div>
+
+                  <div className="bg-black/60 backdrop-blur-md text-white px-3.5 py-1.5 rounded-xl text-xs font-bold border border-white/15 shadow-lg">
+                    <span className="text-emerald-400 font-black">
+                      {food.availableQty}
+                    </span>{" "}
+                    / {food.quantity} {food.quantityUnit} left
                   </div>
                 </div>
               </div>
- 
-              <div className="p-8">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+
+              {/* Body Details */}
+              <div className="p-6 sm:p-8">
+                {/* Title & Pricing Header */}
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 pb-6 border-b border-gray-100 dark:border-slate-800">
                   <div>
-                    <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-50 mb-2">{food.name}</h1>
-                    <div className="flex items-center gap-4 flex-wrap">
-                      <div className="flex items-center text-gray-600 dark:text-gray-300">
-                        {food.supplierType === "restaurant" ? (
-                          <FaStore className="mr-2 text-blue-500" />
-                        ) : (
-                          <FaUser className="mr-2 text-pink-500" />
-                        )}
-                        <span className="font-medium">{food.supplierName}</span>
-                      </div>
- 
-                      {food.averageRating > 0 && (
-                        <div className="flex items-center gap-1">
-                          <div className="flex">
-                            {[...Array(5)].map((_, i) => (
-                              <FaStar
-                                key={i}
-                                className={`w-4 h-4 ${
-                                  i < Math.floor(food.averageRating) ? "text-yellow-400" : "text-gray-200"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <span className="text-sm text-gray-600">({food.reviewCount} reviews)</span>
-                        </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
+                        {supplierIcon({ className: "w-3 h-3" })}
+                        <span>{food.supplierName}</span>
+                      </span>
+
+                      {food.cuisineType && (
+                        <span className="px-3 py-1 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 text-xs font-bold">
+                          {food.cuisineType}
+                        </span>
                       )}
                     </div>
+
+                    <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">
+                      {food.name}
+                    </h1>
+
+                    {food.averageRating > 0 && (
+                      <div className="flex items-center gap-1 mt-2 text-amber-500 font-bold text-xs">
+                        <FaStar className="w-3.5 h-3.5" />
+                        <span>{food.averageRating.toFixed(1)}</span>
+                        <span className="text-gray-400 font-normal">
+                          ({food.reviewCount} customer reviews)
+                        </span>
+                      </div>
+                    )}
                   </div>
- 
-                  <div className="text-right">
-                    <div className="text-4xl font-bold text-green-600 dark:text-green-300">
-                      {formatPrice(food.price)}
+
+                  <div className="text-left sm:text-right shrink-0">
+                    <div className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white">
+                      {food.isDonation ? (
+                        <span className="text-transparent bg-clip-text bg-linear-to-r from-purple-600 to-pink-600">
+                          FREE
+                        </span>
+                      ) : (
+                        formatPrice(food.price)
+                      )}
                     </div>
-                    {food.originalPrice !== null && food.originalPrice > food.price && (
-                      <div className="text-lg text-gray-400 dark:text-gray-500 line-through">
-                        {formatPrice(food.originalPrice)}
+                    {food.originalPrice !== null && !food.isDonation && food.originalPrice > food.price && (
+                      <div className="text-sm text-gray-400 line-through mt-0.5">
+                        Original: {formatPrice(food.originalPrice)}
                       </div>
                     )}
                   </div>
                 </div>
- 
+
+                {/* Description */}
                 {food.description && (
-                  <p className="text-gray-700 dark:text-gray-200 text-lg leading-relaxed mb-8">
-                    {food.description}
-                  </p>
+                  <div className="mb-6">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">
+                      About This Food
+                    </h3>
+                    <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
+                      {food.description}
+                    </p>
+                  </div>
                 )}
- 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                  <div className="bg-gradient-to-br from-gray-50 dark:from-gray-950 to-gray-100 dark:to-gray-900 p-4 rounded-xl">
-                    <FaClock className="w-5 h-5 text-green-600 dark:text-green-300 mb-2" />
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Available Until</div>
-                    <div className="font-semibold text-gray-900 dark:text-gray-50">
-                      {new Date(food.expiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+
+                {/* Key Metrics Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                  <div className="bg-gray-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
+                    <FaClock className="w-4 h-4 text-emerald-500 mb-1.5" />
+                    <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                      Pickup Window
                     </div>
-                    <div
-                      className={`text-xs mt-1 ${
-                        new Date(food.expiresAt).getTime() - Date.now() < 3600000
-                          ? "text-red-600 font-medium"
-                          : "text-orange-600"
-                      }`}
-                    >
-                      {formatTimeRemaining(food.expiresAt)}
+                    <div className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white truncate">
+                      Before{" "}
+                      {new Date(food.expiresAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </div>
                   </div>
- 
-                  <div className="bg-linear-to-br from-gray-50 dark:from-gray-950 to-gray-100 dark:to-gray-900 p-4 rounded-xl">
-                    <FaTag className="w-5 h-5 text-green-600 dark:text-green-300 mb-2" />
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Quantity Left</div>
-                    <div className="font-semibold text-gray-900 dark:text-gray-50">
+
+                  <div className="bg-gray-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
+                    <FaTag className="w-4 h-4 text-teal-500 mb-1.5" />
+                    <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                      Portions Left
+                    </div>
+                    <div className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white">
                       {food.availableQty} {food.quantityUnit}
                     </div>
                   </div>
- 
-                  <div className="bg-linear-to-br from-gray-50 dark:from-gray-950 to-gray-100 dark:to-gray-900 p-4 rounded-xl">
-                    <FaMapMarkerAlt className="w-5 h-5 text-green-600 dark:text-green-300 mb-2" />
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Distance</div>
-                    <div className="font-semibold text-gray-900 dark:text-gray-50">
-                      {food.distance !== null ? `${food.distance.toFixed(1)}km` : "Nearby"}
+
+                  <div className="bg-gray-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
+                    <FaMapMarkerAlt className="w-4 h-4 text-rose-500 mb-1.5" />
+                    <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                      Distance
+                    </div>
+                    <div className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white">
+                      {food.distance !== null
+                        ? `${food.distance.toFixed(1)} km away`
+                        : "Verified Area"}
                     </div>
                   </div>
- 
-                  <div className="bg-linear-to-br from-gray-50 dark:from-gray-950 to-gray-100 dark:to-gray-900 p-4 rounded-xl">
-                    <FaShieldAlt className="w-5 h-5 text-green-600 dark:text-green-300 mb-2" />
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Safety</div>
-                    <div className="font-semibold text-green-600 flex items-center gap-1">
-                      <FaCheckCircle className="w-4 h-4" />
-                      {food.isRaw ? "Raw" : "Cooked"}
+
+                  <div className="bg-gray-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
+                    <FaShieldAlt className="w-4 h-4 text-indigo-500 mb-1.5" />
+                    <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                      Food State
+                    </div>
+                    <div className="font-bold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <FaCheckCircle className="w-3 h-3" />
+                      {food.isRaw ? "Raw Ingredients" : "Freshly Cooked"}
                     </div>
                   </div>
                 </div>
- 
-                {food.allergens.length > 0 && (
-                  <div className="mb-6">
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-50 mb-3">Allergen Information</h3>
+
+                {/* Allergens Notice if any */}
+                {food.allergens && food.allergens.length > 0 && (
+                  <div className="mb-6 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60">
+                    <h4 className="text-xs font-bold text-rose-800 dark:text-rose-300 mb-2 flex items-center gap-1.5">
+                      <FaExclamationTriangle />
+                      Allergen Notice
+                    </h4>
                     <div className="flex flex-wrap gap-2">
                       {food.allergens.map((allergen) => (
                         <span
                           key={allergen}
-                          className="px-3 py-1.5 bg-red-50 dark:bg-gray-900 text-red-700 dark:text-red-200 text-sm font-medium rounded-full border border-red-200 dark:border-red-700"
+                          className="px-2.5 py-1 bg-white dark:bg-slate-900 text-rose-700 dark:text-rose-300 text-xs font-bold rounded-lg border border-rose-300 dark:border-rose-800 shadow-xs"
                         >
-                          ⚠️ {allergen}
+                          {allergen}
                         </span>
                       ))}
                     </div>
                   </div>
                 )}
- 
-                <div className="bg-linear-to-br from-blue-50 dark:from-blue-900 to-indigo-50 dark:to-indigo-900 border border-blue-200 dark:border-blue-700 rounded-xl p-6">
-                  <button onClick={() => setShowSafetyInfo((v) => !v)} className="w-full flex items-center justify-between">
-                    <h3 className="font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
-                      <FaShieldAlt className="w-5 h-5" />
-                      Food Safety Guidelines
-                    </h3>
+
+                {/* Food Safety Collapsible Box */}
+                <div className="p-4 rounded-2xl bg-linear-to-r from-blue-50 to-teal-50 dark:from-slate-800 dark:to-slate-800/60 border border-blue-200/80 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setShowSafetyInfo((v) => !v)}
+                    className="w-full flex items-center justify-between text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FaShieldAlt className="text-blue-600 dark:text-blue-400 w-4 h-4" />
+                      <span className="text-xs sm:text-sm font-bold text-blue-950 dark:text-blue-100">
+                        AnnoSetu Food Safety & Pickup Standards
+                      </span>
+                    </div>
                     <FaInfoCircle
-                      className={`w-5 h-5 text-blue-600 dark:text-blue-300 transition-transform duration-300 ${
+                      className={`text-blue-500 transition-transform duration-300 ${
                         showSafetyInfo ? "rotate-180" : ""
                       }`}
                     />
                   </button>
- 
+
                   <AnimatePresence>
                     {showSafetyInfo && (
                       <motion.div
@@ -396,242 +522,328 @@ export default function ReserveFoodForm() {
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden"
                       >
-                        <p className="text-blue-800 dark:text-blue-100 mt-4 leading-relaxed">
-                          {food.safetyGuidelines}
+                        <p className="text-xs text-blue-900 dark:text-blue-200 mt-3 leading-relaxed">
+                          {food.safetyGuidelines ||
+                            "All food listed on AnnoSetu must meet strict hygiene requirements. Please inspect food upon pickup and consume within 2 hours of collection for optimal safety and taste."}
                         </p>
-                        <div className="mt-4 flex items-center gap-2 text-sm text-blue-700 dark:text-blue-200">
-                          <FaLeaf className="w-4 h-4" />
-                          <span>Consume within 2 hours of pickup for best quality</span>
+                        <div className="mt-2.5 flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                          <FaLeaf className="w-3.5 h-3.5" />
+                          <span>100% Zero-Waste Verified Safety Protocol</span>
                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
- 
-          {/* Right Column */}
+
+          {/* Right Column: Reservation Form Sticky Card */}
           <div className="lg:col-span-1">
             <motion.div
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 15 }}
               animate={{ opacity: 1, x: 0 }}
-              className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl p-6 sticky top-4 border border-gray-100 dark:border-gray-800"
+              className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-6 sm:p-7 sticky top-24 border border-gray-200/80 dark:border-slate-800"
             >
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                <FaCheckCircle className="text-green-500" />
-                Complete Reservation
+              <h2 className="text-lg font-black text-gray-900 dark:text-white mb-5 flex items-center gap-2">
+                <FaCheckCircle className="text-emerald-500" />
+                Reserve Food Request
               </h2>
- 
+
+              {/* Status alerts if user cannot reserve */}
               {!canReserve ? (
-                <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="text-center py-8">
-                  <div className="w-20 h-20 bg-linear-to-br from-red-100 dark:from-red-800 to-orange-100 dark:to-orange-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <FaExclamationTriangle className="w-10 h-10 text-red-500 dark:text-red-400" />
+                <div className="text-center py-6">
+                  <div className="w-16 h-16 bg-rose-50 dark:bg-rose-950/60 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl">
+                    <FaExclamationTriangle />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    {expired 
-                      ? "Food Expired" 
-                      : reserved 
-                        ? "Already Reserved" 
+                  <h3 className="text-base font-black text-gray-900 dark:text-white mb-1">
+                    {expired
+                      ? "Listing Expired"
+                      : reserved
+                        ? "Fully Claimed"
                         : isOwnListing
-                          ? "Own Listing"
+                          ? "Your Own Food Listing"
                           : hasNoPickupAddress
                             ? "Pickup Unavailable"
-                            : "Not Available"}
+                            : "Reservation Unavailable"}
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
                     {expired
-                      ? "This delicious meal is no longer available."
+                      ? "This food listing has passed its expiry deadline."
                       : reserved
-                        ? "Someone else has already reserved this food."
+                        ? "All available portions of this food have already been reserved."
                         : isOwnListing
-                          ? "You cannot reserve a food listing that you created."
-                          : hasNoPickupAddress
-                            ? "This listing has no pickup address set. You cannot reserve it."
-                            : "This food item is not available for reservation."}
+                          ? "You are the creator of this food listing. You cannot reserve your own surplus food."
+                          : "This listing cannot be reserved right now."}
                   </p>
-                  <Button onClick={() => router.push("/food")} className="w-full">
-                    Browse More Food
+
+                  {isOwnListing ? (
+                    <Button
+                      onClick={() =>
+                        router.push(`/protected/food/${food.id}/requests`)
+                      }
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl shadow-md text-xs cursor-pointer"
+                    >
+                      Manage Listing Requests
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => router.push("/public/food")}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl shadow-md text-xs cursor-pointer"
+                    >
+                      Browse Other Surplus Food
+                    </Button>
+                  )}
+                </div>
+              ) : isRestaurantUser ? (
+                <div className="text-center py-5">
+                  <div className="w-14 h-14 bg-amber-50 dark:bg-amber-950/60 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-3 text-xl">
+                    <FaStore />
+                  </div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">
+                    Restaurant Account
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">
+                    You are currently logged in as a Restaurant Supplier. Food reservations are reserved for consumer accounts.
+                  </p>
+                  <Button
+                    onClick={() => router.push("/protected/dashboard")}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl shadow-md text-xs cursor-pointer"
+                  >
+                    Go to Restaurant Dashboard
                   </Button>
-                </motion.div>
+                </div>
               ) : (
-                <>
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
-                      Select Quantity
-                    </label>
-                    <div className="flex items-center justify-between bg-linear-to-r from-gray-50 dark:from-gray-950 to-gray-100 dark:to-gray-950 rounded-xl p-1">
-                      <motion.button
-                        whileTap={{ scale: 0.9 }}
+                <div className="space-y-5">
+                  {/* Quantity Stepper */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                        Select Quantity
+                      </label>
+                      <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                        {food.availableQty} {food.quantityUnit} left
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between bg-gray-100 dark:bg-slate-800/80 rounded-2xl p-1.5 border border-gray-200 dark:border-slate-700">
+                      <button
+                        type="button"
                         onClick={() => handleQuantityChange(-1)}
                         disabled={quantity <= 1}
-                        className="w-12 h-12 bg-white cursor-pointer dark:bg-gray-900 rounded-lg flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                        className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs transition-colors cursor-pointer"
+                        aria-label="Decrease quantity"
                       >
-                        <FaMinus size={16} />
-                      </motion.button>
-                      <span className="text-2xl font-bold text-gray-900 dark:text-gray-50 min-w-12 text-center">
-                        {quantity}
-                      </span>
-                      <motion.button
-                        whileTap={{ scale: 0.9 }}
+                        <FaMinus className="w-3 h-3" />
+                      </button>
+
+                      <div className="text-center">
+                        <span className="text-2xl font-black text-gray-900 dark:text-white">
+                          {quantity}
+                        </span>
+                        <span className="text-xs text-gray-500 font-semibold ml-1">
+                          {food.quantityUnit}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
                         onClick={() => handleQuantityChange(1)}
                         disabled={quantity >= food.availableQty}
-                        className="w-12 h-12 cursor-pointer bg-white dark:bg-gray-900 rounded-lg flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                        className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs transition-colors cursor-pointer"
+                        aria-label="Increase quantity"
                       >
-                        <FaPlus size={16} />
-                      </motion.button>
+                        <FaPlus className="w-3 h-3" />
+                      </button>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center gap-1">
-                      <FaTag className="w-3 h-3" />
-                      {food.availableQty} {food.quantityUnit} available
-                    </p>
+
+                    {/* Quick presets if available quantity is > 1 */}
+                    {food.availableQty > 1 && (
+                      <div className="flex gap-1.5 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => handleSetQuantity(1)}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors cursor-pointer ${
+                            quantity === 1
+                              ? "bg-emerald-600 text-white"
+                              : "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300"
+                          }`}
+                        >
+                          1 portion
+                        </button>
+                        {food.availableQty >= 2 && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetQuantity(2)}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors cursor-pointer ${
+                              quantity === 2
+                                ? "bg-emerald-600 text-white"
+                                : "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300"
+                            }`}
+                          >
+                            2 portions
+                          </button>
+                        )}
+                        {food.availableQty >= 4 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleSetQuantity(
+                                Math.floor(food.availableQty / 2),
+                              )
+                            }
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors cursor-pointer ${
+                              quantity === Math.floor(food.availableQty / 2)
+                                ? "bg-emerald-600 text-white"
+                                : "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300"
+                            }`}
+                          >
+                            Half ({Math.floor(food.availableQty / 2)})
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleSetQuantity(food.availableQty)}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors cursor-pointer ml-auto ${
+                            quantity === food.availableQty
+                              ? "bg-emerald-600 text-white"
+                              : "bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300"
+                          }`}
+                        >
+                          All ({food.availableQty})
+                        </button>
+                      </div>
+                    )}
                   </div>
- 
-                  <div className="mb-6">
+
+                  {/* Pickup Time Slot */}
+                  <div>
                     <Select
-                      label="Choose Pickup Time"
+                      label="Select Pickup Time"
                       value={pickupTime}
                       options={pickupOptions}
-                      onChange={(value) => setPickupTime(String(value))}
+                      onChange={(val) => setPickupTime(String(val))}
                     />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center gap-1">
-                      <FaClock className="w-3 h-3" />
-                      Must pickup before{" "}
-                      {new Date(food.expiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+                      <FaClock className="text-amber-500" />
+                      Must arrive before{" "}
+                      {new Date(food.expiresAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </p>
                   </div>
- 
-                  <div className="bg-linear-to-br from-gray-50 dark:from-gray-950 to-gray-100 dark:to-gray-900 rounded-xl p-5 mb-6">
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-50 mb-4 flex items-center gap-2">
-                      <FaTag className="text-green-500" />
-                      Price Details
-                    </h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600 dark:text-gray-300">
-                          Price per {food.quantityUnit.slice(0, -1)}
+
+                  {/* Price Calculation Box */}
+                  <div className="bg-gray-50 dark:bg-slate-800/80 rounded-2xl p-4 border border-gray-100 dark:border-slate-800">
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between text-gray-600 dark:text-gray-300">
+                        <span>Price per portion:</span>
+                        <span className="font-bold">
+                          {food.isDonation ? "FREE" : formatPrice(food.price)}
                         </span>
-                        <span className="font-medium">{formatPrice(food.price)}</span>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600 dark:text-gray-300">Quantity</span>
-                        <span className="font-medium">x {quantity}</span>
+                      <div className="flex justify-between text-gray-600 dark:text-gray-300">
+                        <span>Selected quantity:</span>
+                        <span className="font-bold">
+                          {quantity} {food.quantityUnit}
+                        </span>
                       </div>
-                      {food.originalPrice !== null && food.originalPrice > food.price && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600 dark:text-gray-300">You Save</span>
-                          <span className="text-green-600 dark:text-green-300 font-medium">
-                            {formatPrice((food.originalPrice - food.price) * quantity)}
-                          </span>
+                      {savings > 0 && (
+                        <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
+                          <span>Total Discount Savings:</span>
+                          <span>- {formatPrice(savings)}</span>
                         </div>
                       )}
-                      <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
-                        <div className="flex justify-between font-semibold">
-                          <span>Total Amount</span>
-                          <span className="text-xl text-green-600 dark:text-green-300">
-                            {food.isDonation ? "Free" : formatPrice(food.price * quantity)}
-                          </span>
-                        </div>
+                      <div className="pt-2 border-t border-gray-200 dark:border-slate-700 flex justify-between items-baseline">
+                        <span className="text-sm font-black text-gray-900 dark:text-white">
+                          Total Amount:
+                        </span>
+                        <span className="text-xl font-black text-gray-900 dark:text-white">
+                          {food.isDonation ? (
+                            <span className="text-transparent bg-clip-text bg-linear-to-r from-purple-600 to-pink-600">
+                              FREE DONATION
+                            </span>
+                          ) : (
+                            formatPrice(totalPrice)
+                          )}
+                        </span>
                       </div>
                     </div>
                   </div>
- 
-                  <div className="space-y-4 mb-6">
-                    <label className="flex items-start gap-3 cursor-pointer group">
+
+                  {/* Pickup Location Details & Maps Link */}
+                  <div className="p-3.5 bg-blue-50/80 dark:bg-blue-950/40 rounded-2xl border border-blue-200/80 dark:border-blue-900/60">
+                    <div className="flex items-start gap-2.5">
+                      <FaMapMarkerAlt className="text-rose-500 mt-0.5 shrink-0 w-3.5 h-3.5" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] font-bold text-blue-900 dark:text-blue-200 uppercase tracking-wider">
+                          Pickup Address
+                        </div>
+                        <p className="text-xs text-gray-700 dark:text-gray-300 mt-0.5 leading-snug">
+                          {food.pickupAddress}
+                        </p>
+                        {mapsUrl && (
+                          <a
+                            href={mapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline mt-1.5"
+                          >
+                            <FaDirections />
+                            <span>View on Google Maps</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Terms & Conditions Checkbox */}
+                  <div>
+                    <label className="flex items-start gap-2.5 cursor-pointer group">
                       <input
                         type="checkbox"
                         checked={acceptedTerms}
                         onChange={(e) => setAcceptedTerms(e.target.checked)}
-                        className="mt-1 w-5 h-5 text-green-600 dark:text-green-300 rounded border-gray-300 focus:ring-green-500"
+                        className="mt-1 w-4 h-4 accent-emerald-600 rounded border-gray-300 cursor-pointer"
                       />
-                      <span className="text-sm text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-50 transition-colors">
-                        I confirm that I will pick up the food on time and follow all safety guidelines. This
-                        food is for personal consumption only, not for resale.
+                      <span className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                        I agree to arrive within the designated pickup window and consume this surplus food for personal consumption.
                       </span>
                     </label>
- 
-                    <div className="bg-linear-to-br from-blue-50 to-indigo-50 dark:from-blue-900 dark:to-indigo-900 rounded-xl p-4">
-                      <div className="flex items-start gap-3">
-                        <FaMapMarkerAlt className="w-5 h-5 text-blue-600 dark:text-blue-300 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-1">Pickup Location</h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">{food.pickupAddress}</p>
-                          {food.distance !== null && (
-                            <p className="text-xs text-blue-600 dark:text-blue-300 mt-2">
-                              {food.distance.toFixed(1)} km from your location
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
                   </div>
- 
-                  <Button
-                    onClick={handleReserve}
-                    loading={isCreating}
-                    disabled={!acceptedTerms || isCreating}
-                    size="lg"
-                    fullWidth
-                    className="font-bold py-4 text-lg"
-                  >
-                    <FaCheckCircle className="mr-2" />
-                    Request Reservation
-                  </Button>
- 
-                  {!isAuthenticated && (
-                    <motion.p
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4 p-3 bg-yellow-50 rounded-xl border border-yellow-200"
-                    >
-                      <FaInfoCircle className="inline mr-1 text-yellow-600 dark:text-yellow-300" />
-                      Please{" "}
-                      <button
-                        onClick={() => router.push(`/auth/login?next=/food/${params.id}/reserve`)}
-                        className="text-green-600 hover:text-green-700 font-medium underline"
+
+                  {/* Submit CTA */}
+                  <div>
+                    {isAuthenticated ? (
+                      <Button
+                        onClick={handleReserve}
+                        loading={isCreating}
+                        disabled={!acceptedTerms || isCreating}
+                        size="lg"
+                        fullWidth
+                        variant="secondary"
+                        className="font-black py-3.5 text-sm rounded-2xl bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl shadow-emerald-600/30 transition-all cursor-pointer"
                       >
-                        login
-                      </button>{" "}
-                      to complete your reservation
-                    </motion.p>
-                  )}
-                </>
+                        <FaCheckCircle className="mr-2" />
+                        <span>Confirm Reservation Request</span>
+                      </Button>
+                    ) : (
+                      <Link
+                        href={`/auth/login?next=/protected/food/${params.id}/reserve`}
+                        className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-colors"
+                      >
+                        <FaLock />
+                        <span>Login to Reserve Food</span>
+                      </Link>
+                    )}
+                  </div>
+                </div>
               )}
             </motion.div>
- 
-            {canReserve && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="mt-4 bg-white dark:bg-gray-900 rounded-xl shadow-lg p-4 border border-gray-100 dark:border-gray-800"
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      food.supplierType === "restaurant"
-                        ? "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300"
-                        : "bg-pink-100 text-pink-600 dark:bg-pink-900 dark:text-pink-300"
-                    }`}
-                  >
-                    {food.supplierType === "restaurant" ? <FaStore /> : <FaUser />}
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Provided by</p>
-                    <p className="font-medium text-gray-900 dark:text-gray-50">{food.supplierName}</p>
-                  </div>
-                  {food.supplierType === "individual" && (
-                    <span className="ml-auto px-2 py-1 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-200 text-xs rounded-full">
-                      Home Cook
-                    </span>
-                  )}
-                </div>
-              </motion.div>
-            )}
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
 }
- 
