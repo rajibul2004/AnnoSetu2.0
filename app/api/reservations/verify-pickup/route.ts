@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
- 
+import { notifyPickupCompleted } from "@/services/notificationService";
+
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user) {
@@ -10,17 +11,17 @@ export async function POST(request: NextRequest) {
       { status: 401 },
     );
   }
- 
+
   const { pickupCode } = (await request.json()) as { pickupCode?: string };
   if (!pickupCode) {
     return NextResponse.json({ success: false, message: "Pickup code is required" }, { status: 400 });
   }
- 
+
   const reservation = await prisma.reservation.findUnique({
     where: { pickupCode: pickupCode.trim().toUpperCase() },
     include: { food: { select: { name: true } } },
   });
- 
+
   if (!reservation) {
     return NextResponse.json({ success: false, message: "Invalid pickup code" }, { status: 404 });
   }
@@ -36,12 +37,20 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   }
- 
+
   const updated = await prisma.reservation.update({
     where: { id: reservation.id },
     data: { status: "picked_up", actualPickupTime: new Date() },
   });
- 
+
+  // Notify the user who reserved the food that pickup is verified
+  void notifyPickupCompleted(
+    reservation.reserverId,
+    reservation.food.name,
+    reservation.quantity,
+    reservation.id,
+  );
+
   return NextResponse.json({
     success: true,
     data: {

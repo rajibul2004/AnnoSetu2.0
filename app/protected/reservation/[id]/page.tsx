@@ -27,11 +27,13 @@ import {
   FaShieldAlt,
   FaHourglassHalf,
   FaCheck,
+  FaCommentDots,
 } from "react-icons/fa";
 import { QRCodeCanvas } from "qrcode.react";
 import toast from "react-hot-toast";
 import Button from "@/components/common/Button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
+import ReservationChatModal from "@/components/chat/ReservationChatModal";
 import {
   useReservationDetails,
   useConfirmReservationRequest,
@@ -45,6 +47,7 @@ export default function ReservationDetailPage() {
 
   const [copied, setCopied] = useState(false);
   const [addressCopied, setAddressCopied] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const qrWrapperRef = useRef<HTMLDivElement>(null);
 
   const { reservation, isLoading } = useReservationDetails(params.id);
@@ -464,11 +467,20 @@ export default function ReservationDetailPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-gray-100 dark:border-slate-800 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-gray-100 dark:border-slate-800 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setIsChatOpen(true)}
+                    className="p-3 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-xl flex items-center justify-center gap-2 font-bold cursor-pointer transition-colors border border-emerald-200 dark:border-emerald-800/80"
+                  >
+                    <FaCommentDots className="text-emerald-600 dark:text-emerald-400" />
+                    <span>Chat with Customer</span>
+                  </button>
+
                   {reservation.reserver.phone && (
                     <a
                       href={`tel:${reservation.reserver.phone}`}
-                      className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600"
+                      className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-center gap-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600"
                     >
                       <FaPhone className="text-emerald-500" />
                       <span>{reservation.reserver.phone}</span>
@@ -477,7 +489,7 @@ export default function ReservationDetailPage() {
 
                   <a
                     href={`mailto:${reservation.reserver.email}`}
-                    className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600"
+                    className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-center gap-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600 truncate"
                   >
                     <FaEnvelope className="text-blue-500" />
                     <span className="truncate">{reservation.reserver.email}</span>
@@ -510,11 +522,20 @@ export default function ReservationDetailPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-gray-100 dark:border-slate-800 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-gray-100 dark:border-slate-800 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setIsChatOpen(true)}
+                    className="p-3 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-xl flex items-center justify-center gap-2 font-bold cursor-pointer transition-colors border border-emerald-200 dark:border-emerald-800/80"
+                  >
+                    <FaCommentDots className="text-emerald-600 dark:text-emerald-400" />
+                    <span>Chat with Supplier</span>
+                  </button>
+
                   {reservation.supplierPhone && (
                     <a
                       href={`tel:${reservation.supplierPhone}`}
-                      className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600 font-semibold"
+                      className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-center gap-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600 font-semibold"
                     >
                       <FaPhone className="text-emerald-500" />
                       <span>Call Supplier</span>
@@ -524,7 +545,7 @@ export default function ReservationDetailPage() {
                   {reservation.supplierEmail && (
                     <a
                       href={`mailto:${reservation.supplierEmail}`}
-                      className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600 font-semibold"
+                      className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-center gap-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600 font-semibold"
                     >
                       <FaEnvelope className="text-blue-500" />
                       <span>Email Supplier</span>
@@ -736,6 +757,13 @@ export default function ReservationDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Slide-over In-Context Pickup Chat Modal */}
+      <ReservationChatModal
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        reservationId={reservation.id}
+      />
     </div>
   );
 }

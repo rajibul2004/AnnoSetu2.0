@@ -6,6 +6,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import NavbarMessagesButton from "@/components/messages/NavbarMessagesButton";
 import { useAuth } from "@/hooks/useAuth";
 import {
   FaBars,
@@ -19,6 +20,7 @@ import {
   FaUserCircle,
   FaBell,
   FaCompass,
+  FaCommentDots,
 } from "react-icons/fa";
 
 export default function Navbar() {
@@ -110,7 +112,12 @@ export default function Navbar() {
 
             <ThemeToggle />
 
-            {user && <NotificationBell />}
+            {user && (
+              <>
+                <NavbarMessagesButton />
+                <NotificationBell />
+              </>
+            )}
 
             {user ? (
               <>
@@ -169,6 +176,14 @@ export default function Navbar() {
                     </div>
 
                     <Link
+                      href="/protected/messages"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                    >
+                      <FaCommentDots className="text-base text-gray-400" />
+                      <span>Pickup Messages</span>
+                    </Link>
+
+                    <Link
                       href="/protected/profile"
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                     >
@@ -217,8 +232,9 @@ export default function Navbar() {
           </div>
 
           {/* Mobile Menu Controls */}
-          <div className="md:hidden flex items-center space-x-2">
+          <div className="md:hidden flex items-center space-x-1 sm:space-x-2">
             <ThemeToggle />
+            {user && <NavbarMessagesButton />}
             {user && <NotificationBell />}
 
             <button
@@ -292,6 +308,15 @@ export default function Navbar() {
                     >
                       <FaUser className="text-emerald-500" />
                       <span>Dashboard</span>
+                    </Link>
+
+                    <Link
+                      href="/protected/messages"
+                      className="flex items-center gap-3 px-4 py-3 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <FaCommentDots className="text-emerald-500" />
+                      <span>Pickup Messages</span>
                     </Link>
 
                     {(isRestaurant || isIndividual) && addFoodLink && (

@@ -110,6 +110,13 @@ export async function markAsRead(id: string, userId: string): Promise<Notificati
   });
   if (n.count === 0) return null;
   const updated = await prisma.notification.findUnique({ where: { id } });
+  
+  // Push updated unread count to SSE
+  const unreadCount = await prisma.notification.count({
+    where: { userId, isRead: false },
+  });
+  pushToUser(userId, "unread_count", { count: unreadCount });
+
   return updated ? toDTO(updated) : null;
 }
 
@@ -120,6 +127,13 @@ export async function markAsClicked(id: string, userId: string): Promise<Notific
   });
   if (n.count === 0) return null;
   const updated = await prisma.notification.findUnique({ where: { id } });
+  
+  // Push updated unread count to SSE
+  const unreadCount = await prisma.notification.count({
+    where: { userId, isRead: false },
+  });
+  pushToUser(userId, "unread_count", { count: unreadCount });
+
   return updated ? toDTO(updated) : null;
 }
 
@@ -134,6 +148,12 @@ export async function markAllAsRead(userId: string): Promise<void> {
 
 export async function deleteNotification(id: string, userId: string): Promise<boolean> {
   const result = await prisma.notification.deleteMany({ where: { id, userId } });
+  if (result.count > 0) {
+    const unreadCount = await prisma.notification.count({
+      where: { userId, isRead: false },
+    });
+    pushToUser(userId, "unread_count", { count: unreadCount });
+  }
   return result.count > 0;
 }
 
@@ -152,6 +172,13 @@ export async function createNotification(input: CreateNotificationInput): Promis
   const dto = toDTO(n);
   // Push real-time event to any open SSE connections for this user
   pushToUser(input.userId, "notification", dto);
+
+  // Push updated unread count
+  const unreadCount = await prisma.notification.count({
+    where: { userId: input.userId, isRead: false },
+  });
+  pushToUser(input.userId, "unread_count", { count: unreadCount });
+
   return dto;
 }
 
@@ -213,3 +240,21 @@ export function notifyReservationCancelled(
     actionUrl: `/protected/reservation/${reservationId}`,
   });
 }
+
+export function notifyPickupCompleted(
+  userId: string,
+  foodName: string,
+  quantity: number,
+  reservationId: string,
+) {
+  return createNotification({
+    userId,
+    type: "system_alert",
+    priority: "high",
+    title: "Food Picked Up Successfully! 🎉",
+    message: `Your pickup for "${foodName}" (${quantity} portions) has been verified. Enjoy your meal!`,
+    data: { reservationId },
+    actionUrl: `/protected/reservation/${reservationId}`,
+  });
+}
+

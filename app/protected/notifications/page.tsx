@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
 import {
   FaBell,
   FaCheck,
@@ -16,8 +17,10 @@ import {
   FaSyncAlt,
   FaCompass,
   FaUtensils,
+  FaVolumeUp,
 } from "react-icons/fa";
 import { formatDistanceToNow, format } from "date-fns";
+import { playNotificationSound } from "@/lib/notificationAudio";
 import {
   useNotifications,
   useMarkAsRead,
@@ -298,6 +301,18 @@ export default function NotificationsPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                onClick={() => {
+                  playNotificationSound();
+                  toast.success("Playing notification chime!");
+                }}
+                title="Test notification sound"
+                className="w-10 h-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl flex items-center justify-center border border-gray-200/80 dark:border-gray-700/80 hover:bg-emerald-50 dark:hover:bg-gray-700 shadow-sm transition-all text-emerald-600 dark:text-emerald-400 cursor-pointer"
+              >
+                <FaVolumeUp className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                type="button"
                 onClick={() => refetch()}
                 title="Refresh notifications"
                 className="w-10 h-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl flex items-center justify-center border border-gray-200/80 dark:border-gray-700/80 hover:bg-white dark:hover:bg-gray-700 shadow-sm transition-all text-gray-600 dark:text-gray-300 cursor-pointer"
@@ -323,13 +338,13 @@ export default function NotificationsPage() {
           <div className="flex items-center gap-2 mt-2">
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-xs font-bold text-emerald-700 dark:text-emerald-300">
               <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
-              <span>Real-time SSE Stream Active</span>
+              <span>Real-time SSE Stream &amp; Audio Active</span>
             </span>
           </div>
         </motion.div>
 
         {/* Filter Pills Bar */}
-        <div className="flex gap-2 overflow-x-auto pb-3 mb-6 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-3 mb-6">
           {filterTabs.map((tab) => {
             const count =
               tab.id === "all"

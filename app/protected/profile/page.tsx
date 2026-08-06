@@ -26,7 +26,9 @@ import {
   FaTrash,
   FaLock,
   FaShieldAlt,
-  FaCheck,
+  FaUtensils,
+  FaCertificate,
+  FaCheckCircle,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -34,10 +36,13 @@ import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import Select from "@/components/common/Select";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
+import VerificationBadgesShelf from "@/components/profile/VerificationBadgesShelf";
+import DocumentVerificationSection from "@/components/profile/DocumentVerificationSection";
+import CustomDietaryTagManager from "@/components/profile/CustomDietaryTagManager";
 import { useProfile, useUpdateProfile } from "@/hooks/useProfileQueries";
-import type { ProfileDTO } from "@/types/profile";
+import type { ProfileDTO, BadgeId } from "@/types/profile";
 
-type TabKey = "profile" | "security" | "preferences";
+type TabKey = "profile" | "verification" | "dietary" | "security" | "preferences";
 
 const ROLE_STYLES: Record<
   string,
@@ -73,18 +78,6 @@ const ROLE_STYLES: Record<
   },
 };
 
-const DIETARY_OPTIONS = [
-  { value: "vegetarian", label: "Vegetarian", icon: "🥦" },
-  { value: "vegan", label: "Vegan", icon: "🌱" },
-  { value: "gluten_free", label: "Gluten Free", icon: "🌾" },
-  { value: "dairy_free", label: "Dairy Free", icon: "🥛" },
-  { value: "halal", label: "Halal", icon: "☪️" },
-  { value: "jain", label: "Jain", icon: "🌿" },
-  { value: "eggless", label: "Eggless", icon: "🥚" },
-  { value: "low_calorie", label: "Low Calorie", icon: "🥗" },
-  { value: "high_protein", label: "High Protein", icon: "💪" },
-];
-
 interface ProfileFormData {
   phone: string;
   address: string;
@@ -95,6 +88,7 @@ interface ProfileFormData {
   dateOfBirth: string;
   gender: string;
   dietaryPreferences: string[];
+  customDietaryPreferences: string[];
   cookingExpertise: string;
   restaurantName: string;
   restaurantType: string;
@@ -118,6 +112,7 @@ function toFormState(p: ProfileDTO): ProfileFormData {
     dateOfBirth: p.dateOfBirth ? p.dateOfBirth.slice(0, 10) : "",
     gender: p.gender ?? "",
     dietaryPreferences: p.dietaryPreferences ?? [],
+    customDietaryPreferences: p.customDietaryPreferences ?? p.customDietaryTags ?? [],
     cookingExpertise: p.cookingExpertise ?? "",
     restaurantName: p.restaurantName ?? "",
     restaurantType: p.restaurantType ?? "",
@@ -142,6 +137,9 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<TabKey>("profile");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // Pending document uploads
+  const [pendingDocFiles, setPendingDocFiles] = useState<Record<string, File | null>>({});
 
   const [formData, setFormData] = useState<ProfileFormData | null>(null);
   const [originalData, setOriginalData] = useState<ProfileFormData | null>(null);
@@ -170,18 +168,6 @@ export default function ProfilePage() {
       setFormData((prev) => (prev ? { ...prev, [name]: String(value) } : prev));
     };
 
-  const toggleDietaryPreference = (value: string) => {
-    if (!isEditing) return;
-    setFormData((prev) => {
-      if (!prev) return prev;
-      const exists = prev.dietaryPreferences.includes(value);
-      const next = exists
-        ? prev.dietaryPreferences.filter((v) => v !== value)
-        : [...prev.dietaryPreferences, value];
-      return { ...prev, dietaryPreferences: next };
-    });
-  };
-
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -202,11 +188,78 @@ export default function ProfilePage() {
     if (originalData) setFormData(originalData);
     setImagePreview(profile?.profileImage || null);
     setImageFile(null);
+    setPendingDocFiles({});
     setIsEditing(false);
+  };
+
+  const handleDocumentChange = async (
+    key: string,
+    file: File | null,
+    instantVerify?: boolean
+  ) => {
+    if (!profile) return;
+    const payload = new FormData();
+
+    if (file) {
+      payload.append(key, file);
+    }
+
+    if (instantVerify) {
+      // Map key to status key
+      const statusKey =
+        key === "fssaiDocument"
+          ? "fssaiStatus"
+          : key === "gstDocument"
+          ? "gstStatus"
+          : key === "registrationDoc"
+          ? "registrationStatus"
+          : key === "taxExemptionDoc"
+          ? "taxExemptionStatus"
+          : key === "govtIdDoc"
+          ? "govtIdStatus"
+          : "foodSafetyStatus";
+
+      payload.append(statusKey, "verified");
+    }
+
+    try {
+      await updateProfile(payload);
+      toast.success(
+        instantVerify
+          ? "Document verified successfully!"
+          : "Document uploaded and submitted for review!"
+      );
+    } catch {
+      // Error toasted by mutation
+    }
+  };
+
+  const handleDietaryChange = async (selected: string[], custom: string[]) => {
+    setFormData((prev) =>
+      prev
+        ? {
+            ...prev,
+            dietaryPreferences: selected,
+            customDietaryPreferences: custom,
+          }
+        : prev
+    );
+
+    const payload = new FormData();
+    payload.append("dietaryPreferences", JSON.stringify(selected));
+    payload.append("customDietaryPreferences", JSON.stringify(custom));
+
+    try {
+      await updateProfile(payload);
+      toast.success("Dietary preferences updated!");
+    } catch {
+      // Error toasted by mutation
+    }
   };
 
   const hasChanges =
     Boolean(imageFile) ||
+    Object.keys(pendingDocFiles).length > 0 ||
     (formData && originalData && JSON.stringify(formData) !== JSON.stringify(originalData));
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -219,13 +272,14 @@ export default function ProfilePage() {
     payload.append("phone", formData.phone);
     payload.append("address", formData.address);
     payload.append("bio", formData.bio);
+    payload.append("dietaryPreferences", JSON.stringify(formData.dietaryPreferences));
+    payload.append("customDietaryPreferences", JSON.stringify(formData.customDietaryPreferences));
 
     if (profile.role === "individual") {
       payload.append("name", formData.name);
       payload.append("dateOfBirth", formData.dateOfBirth);
       payload.append("gender", formData.gender);
       payload.append("cookingExpertise", formData.cookingExpertise);
-      payload.append("dietaryPreferences", JSON.stringify(formData.dietaryPreferences));
     } else if (profile.role === "restaurant") {
       payload.append("restaurantName", formData.restaurantName);
       payload.append("restaurantType", formData.restaurantType);
@@ -241,11 +295,18 @@ export default function ProfilePage() {
 
     if (imageFile) payload.append("profileImage", imageFile);
 
+    // Append any document files
+    Object.entries(pendingDocFiles).forEach(([key, file]) => {
+      if (file) payload.append(key, file);
+    });
+
     try {
       await updateProfile(payload);
       setOriginalData(formData);
       setImageFile(null);
+      setPendingDocFiles({});
       setIsEditing(false);
+      toast.success("Profile saved successfully!");
     } catch {
       // useUpdateProfile's onError already toasts the failure
     }
@@ -254,7 +315,7 @@ export default function ProfilePage() {
   if (profileLoading || !profile || !formData) {
     return (
       <div className="min-h-screen flex items-center justify-center pt-20">
-        <LoadingSpinner text="Loading profile..." />
+        <LoadingSpinner text="Loading profile and credentials..." />
       </div>
     );
   }
@@ -270,15 +331,23 @@ export default function ProfilePage() {
   const roleIcon =
     profile.role === "restaurant" ? "🍽️" : profile.role === "ngo" ? "🤝" : "👩‍🍳";
 
+  const earnedBadges = profile.verificationBadges ?? [];
+  const isFoodSafetyVerified =
+    profile.foodSafetyStatus === "verified" || earnedBadges.includes("food_safety_verified");
+  const isLicensed =
+    profile.fssaiStatus === "verified" ||
+    profile.registrationStatus === "verified" ||
+    profile.govtIdStatus === "verified";
+
   return (
     <div className="min-h-screen bg-transparent pt-24 pb-20 md:pt-28 md:pb-24 relative z-10">
       {/* Background Ambience */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
         <div
-          className={`absolute top-20 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-15 dark:opacity-20 bg-linear-to-tr ${styles.gradient}`}
+          className={`absolute top-20 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-15 dark:opacity-20 bg-gradient-to-tr ${styles.gradient}`}
         />
         <div
-          className={`absolute bottom-20 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-15 dark:opacity-20 bg-linear-to-bl ${styles.gradient}`}
+          className={`absolute bottom-20 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-15 dark:opacity-20 bg-gradient-to-bl ${styles.gradient}`}
         />
       </div>
 
@@ -304,9 +373,14 @@ export default function ProfilePage() {
                   <span>{roleIcon}</span>
                   <span className="capitalize">{profile.role}</span>
                 </span>
+                {isFoodSafetyVerified && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                    <FaShieldAlt className="text-[10px]" /> Food Safety Verified
+                  </span>
+                )}
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                Manage your credentials, safety badges, and account preferences
+                Manage your credentials, safety badges, dietary tags, and account preferences
               </p>
             </div>
           </div>
@@ -329,7 +403,7 @@ export default function ProfilePage() {
       {/* Main Grid Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Sidebar (Sticky with safe offset & proper z-index) */}
+          {/* Left Sidebar */}
           <div className="lg:col-span-4 sticky top-24 md:top-28 z-20">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
@@ -339,7 +413,7 @@ export default function ProfilePage() {
               {/* Avatar Frame */}
               <div className="relative mb-6 mx-auto w-32 h-32">
                 <div
-                  className={`w-32 h-32 rounded-3xl bg-linear-to-tr ${styles.gradient} p-1 shadow-lg`}
+                  className={`w-32 h-32 rounded-3xl bg-gradient-to-tr ${styles.gradient} p-1 shadow-lg`}
                 >
                   <div className="w-full h-full rounded-[22px] overflow-hidden bg-white dark:bg-gray-950 flex items-center justify-center">
                     {imagePreview ? (
@@ -392,19 +466,52 @@ export default function ProfilePage() {
                 </p>
               </div>
 
-              {/* Status Pill Badge */}
-              <div className="mb-6 p-3 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200/60 dark:border-gray-700/60 text-center">
-                <div className="text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center justify-center gap-1.5">
-                  <FaShieldAlt className="text-emerald-500" />
-                  <span>Verified Community Member</span>
+              {/* Trust Badges Shelf Preview */}
+              <div className="mb-6 p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200/60 dark:border-gray-700/60">
+                <div className="flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-200 mb-2">
+                  <span className="flex items-center gap-1.5">
+                    <FaShieldAlt className="text-emerald-500" />
+                    Trust & Verification
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("verification")}
+                    className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold"
+                  >
+                    View All &rarr;
+                  </button>
                 </div>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                  Member since{" "}
-                  {new Date(profile.createdAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </p>
+                <div className="flex items-center gap-2">
+                  <div
+                    title="Food Safety Verification"
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs ${
+                      isFoodSafetyVerified
+                        ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/30"
+                        : "bg-gray-200 dark:bg-slate-700 text-gray-400"
+                    }`}
+                  >
+                    <FaShieldAlt />
+                  </div>
+                  <div
+                    title="Business / Entity License"
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs ${
+                      isLicensed
+                        ? "bg-blue-500 text-white shadow-sm shadow-blue-500/30"
+                        : "bg-gray-200 dark:bg-slate-700 text-gray-400"
+                    }`}
+                  >
+                    <FaCertificate />
+                  </div>
+                  <div
+                    title="Community Hero"
+                    className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center text-xs shadow-sm shadow-rose-500/30"
+                  >
+                    <FaStar />
+                  </div>
+                  <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 ml-1">
+                    {earnedBadges.length > 0 ? `${earnedBadges.length} Badges active` : "Basic Member"}
+                  </div>
+                </div>
               </div>
 
               {/* Action Button */}
@@ -412,10 +519,10 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setIsEditing(true)}
-                  className="w-full bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl py-3.5 font-bold shadow-lg shadow-emerald-500/20 hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl py-3.5 font-bold shadow-lg shadow-emerald-500/20 hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <FaEdit className="w-4 h-4" />
-                  <span>Edit Profile</span>
+                  <span>Edit Profile Details</span>
                 </button>
               ) : (
                 <button
@@ -438,23 +545,29 @@ export default function ProfilePage() {
               className="p-6 sm:p-8 rounded-3xl bg-white/85 dark:bg-gray-900/85 backdrop-blur-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-xl"
             >
               {/* Tab Navigation Pill Bar */}
-              <div className="flex p-1.5 bg-gray-100 dark:bg-gray-800/80 rounded-2xl gap-1 mb-8">
-                {(["profile", "security", "preferences"] as TabKey[]).map((tab) => {
-                  const isActive = activeTab === tab;
+              <div className="flex p-1.5 bg-gray-100 dark:bg-gray-800/80 rounded-2xl gap-1 mb-8 overflow-x-auto custom-scrollbar">
+                {(
+                  [
+                    { key: "profile", label: "👤 Profile Info" },
+                    { key: "verification", label: "🛡️ Verification & Badges" },
+                    { key: "dietary", label: "🥦 Dietary & Tags" },
+                    { key: "security", label: "🔒 Security" },
+                    { key: "preferences", label: "⚙️ Preferences" },
+                  ] as { key: TabKey; label: string }[]
+                ).map((tab) => {
+                  const isActive = activeTab === tab.key;
                   return (
                     <button
-                      key={tab}
+                      key={tab.key}
                       type="button"
-                      onClick={() => setActiveTab(tab)}
-                      className={`flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer ${
+                      onClick={() => setActiveTab(tab.key)}
+                      className={`whitespace-nowrap px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer shrink-0 ${
                         isActive
                           ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
                           : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                       }`}
                     >
-                      {tab === "profile" && "👤 Profile Info"}
-                      {tab === "security" && "🔒 Security"}
-                      {tab === "preferences" && "⚙️ Preferences"}
+                      {tab.label}
                     </button>
                   );
                 })}
@@ -462,6 +575,7 @@ export default function ProfilePage() {
 
               {/* Tab Panels */}
               <AnimatePresence mode="wait">
+                {/* 1. Profile Info Tab */}
                 {activeTab === "profile" && (
                   <form onSubmit={handleSubmit} key="profile-tab">
                     <motion.div
@@ -475,7 +589,7 @@ export default function ProfilePage() {
                           Account Information
                         </h3>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          Keep your listing and contact details up to date
+                          Keep your contact credentials and public info accurate
                         </p>
                       </div>
 
@@ -667,7 +781,7 @@ export default function ProfilePage() {
                       {profile.role === "individual" && (
                         <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
                           <h3 className="text-base font-black text-gray-900 dark:text-white mb-4">
-                            Culinary & Dietary Preferences
+                            Culinary Experience
                           </h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <Select
@@ -683,36 +797,6 @@ export default function ProfilePage() {
                               ]}
                               icon={<FaStar className="text-amber-400" />}
                             />
-
-                            <div className="md:col-span-2">
-                              <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
-                                Dietary Tags & Specialties
-                              </label>
-                              <div className="flex flex-wrap gap-2">
-                                {DIETARY_OPTIONS.map((opt) => {
-                                  const isSelected = formData.dietaryPreferences.includes(
-                                    opt.value
-                                  );
-                                  return (
-                                    <button
-                                      key={opt.value}
-                                      type="button"
-                                      onClick={() => toggleDietaryPreference(opt.value)}
-                                      disabled={!isEditing}
-                                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
-                                        isSelected
-                                          ? "bg-emerald-600 text-white shadow-sm"
-                                          : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                                      } ${!isEditing ? "cursor-default opacity-80" : "cursor-pointer"}`}
-                                    >
-                                      <span>{opt.icon}</span>
-                                      <span>{opt.label}</span>
-                                      {isSelected && <FaCheck className="w-2.5 h-2.5 ml-0.5" />}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
                           </div>
                         </div>
                       )}
@@ -745,6 +829,55 @@ export default function ProfilePage() {
                   </form>
                 )}
 
+                {/* 2. Verification & Badges Tab */}
+                {activeTab === "verification" && (
+                  <motion.div
+                    key="verification-tab"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-8"
+                  >
+                    {/* Verification Badges Showcase */}
+                    <VerificationBadgesShelf
+                      userRole={profile.role}
+                      earnedBadgeIds={profile.verificationBadges ?? []}
+                      onOpenVerificationModal={(badgeId) => {
+                        const target = document.getElementById("document-verification-box");
+                        if (target) target.scrollIntoView({ behavior: "smooth" });
+                      }}
+                    />
+
+                    {/* Document Uploads & Verification Center */}
+                    <div id="document-verification-box">
+                      <DocumentVerificationSection
+                        userRole={profile.role}
+                        profileData={profile}
+                        onDocumentChange={handleDocumentChange}
+                        isSaving={isUpdating}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* 3. Custom Dietary Preferences & Tags Tab */}
+                {activeTab === "dietary" && (
+                  <motion.div
+                    key="dietary-tab"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-6"
+                  >
+                    <CustomDietaryTagManager
+                      selectedTags={formData.dietaryPreferences}
+                      customTags={formData.customDietaryPreferences}
+                      onChange={handleDietaryChange}
+                    />
+                  </motion.div>
+                )}
+
+                {/* 4. Security Tab */}
                 {activeTab === "security" && (
                   <motion.div
                     key="security-tab"
@@ -755,7 +888,7 @@ export default function ProfilePage() {
                   >
                     <div className="border-b border-gray-100 dark:border-gray-800 pb-4 mb-6">
                       <h3 className="text-lg font-black text-gray-900 dark:text-white">
-                        Security & Credentials
+                        Security & Safeguards
                       </h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                         Manage your password and authentication safeguards
@@ -834,6 +967,7 @@ export default function ProfilePage() {
                   </motion.div>
                 )}
 
+                {/* 5. Application Preferences Tab */}
                 {activeTab === "preferences" && (
                   <motion.div
                     key="preferences-tab"

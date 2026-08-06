@@ -62,8 +62,10 @@ model User {
   language Language @default(english)
   timezone String   @default("Asia/Kolkata")
 
-  dietaryPreferences FoodTag[]
-  notifications      Boolean   @default(true)
+  dietaryPreferences       FoodTag[]
+  customDietaryPreferences String[]  @default([])
+  verificationBadges       String[]  @default([])
+  notifications            Boolean   @default(true)
 
   isActive  Boolean   @default(true)
   deletedAt DateTime?
@@ -103,7 +105,13 @@ model IndividualProfile {
   dateOfBirth      DateTime?
   cookingExpertise String?
 
-  allergenAlerts Allergen[]
+  allergenAlerts    Allergen[]
+  customDietaryTags String[]   @default([])
+
+  foodSafetyDoc    String?
+  foodSafetyStatus String  @default("unverified")
+  govtIdDoc        String?
+  govtIdStatus     String  @default("unverified")
 
   latitude  Float?
   longitude Float?
@@ -128,8 +136,17 @@ model RestaurantProfile {
   bio            String  @default("")
   profileImage   String  @default("")
   website        String?
-  fssaiLicense   String?
-  gstNumber      String?
+
+  fssaiLicense  String?
+  fssaiDocument String?
+  fssaiStatus   String  @default("unverified")
+
+  gstNumber   String?
+  gstDocument String?
+  gstStatus   String  @default("unverified")
+
+  foodSafetyDoc    String?
+  foodSafetyStatus String  @default("unverified")
 
   latitude  Float?
   longitude Float?
@@ -156,6 +173,15 @@ model NgoProfile {
   bio             String  @default("")
   profileImage    String  @default("")
   website         String?
+
+  registrationDoc    String?
+  registrationStatus String  @default("unverified")
+
+  taxExemptionDoc    String?
+  taxExemptionStatus String  @default("unverified")
+
+  foodSafetyDoc    String?
+  foodSafetyStatus String  @default("unverified")
 
   latitude  Float?
   longitude Float?
@@ -282,6 +308,7 @@ model Reservation {
   reserver User    @relation("reserver", fields: [reserverId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   supplier User    @relation("supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   review   Review?
+  conversation Conversation?
 
   @@index([foodId])
   @@index([reserverId, status])
@@ -499,6 +526,7 @@ enum NotificationType {
   review_received
   report_received
   system_alert
+  new_message
 }
 
 enum Priority {
@@ -521,4 +549,43 @@ enum ReportStatus {
   reviewed
   actioned
   dismissed
+}
+
+model Conversation {
+  id            String    @id @default(cuid())
+  reservationId String?   @unique
+  foodId        String?
+  
+  participantIds String[]
+  lastMessageAt DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  reservation   Reservation? @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  messages      Message[]
+
+  @@index([reservationId])
+  @@index([participantIds])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  
+  content        String       @db.Text
+  messageType    String       @default("text") // text, system, quick_chip, eta_share
+  metadata       Json?
+  
+  isRead         Boolean      @default(false)
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt(sort: Asc)])
+  @@index([senderId])
+  @@index([isRead])
+  @@map("messages")
 }

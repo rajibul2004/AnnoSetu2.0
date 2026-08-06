@@ -149,18 +149,19 @@ export default function NotificationBell() {
       <button
         id="notification-bell-btn"
         onClick={() => setOpen((o) => !o)}
-        className="relative p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-[#1a2639] transition-all duration-200"
+        className="relative p-2.5 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-slate-800 transition-all duration-200 cursor-pointer"
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
       >
-        <FaBell className="w-5 h-5" />
+        <FaBell className={`w-5 h-5 ${unreadCount > 0 ? "text-emerald-600 dark:text-emerald-400" : ""}`} />
         {unreadCount > 0 && (
           <motion.span
             key={unreadCount}
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none"
+            className="absolute -top-0.5 -right-0.5 min-w-[19px] h-[19px] px-1 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center leading-none shadow-md shadow-rose-500/30"
           >
-            {unreadCount > 99 ? "99+" : unreadCount}
+            <span className="absolute inset-0 rounded-full bg-rose-500 animate-ping opacity-60 pointer-events-none" />
+            <span className="relative z-10">{unreadCount > 99 ? "99+" : unreadCount}</span>
           </motion.span>
         )}
       </button>
@@ -200,7 +201,7 @@ export default function NotificationBell() {
             </div>
 
             {/* List */}
-            <div className="max-h-80 overflow-y-auto p-2 space-y-1">
+            <div className="max-h-80 overflow-y-auto custom-scrollbar p-2 space-y-1">
               {isLoading ? (
                 <div className="py-8 text-center text-sm text-gray-400">Loading…</div>
               ) : notifications.length === 0 ? (

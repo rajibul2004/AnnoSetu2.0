@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { playNotificationSound } from "@/lib/notificationAudio";
 import type { NotificationDTO, NotificationListResponse } from "@/types/notification";
 
 // ---------------------------------------------------------------------------
@@ -10,14 +11,18 @@ import type { NotificationDTO, NotificationListResponse } from "@/types/notifica
 // ---------------------------------------------------------------------------
 
 async function fetchNotifications(limit = 30, offset = 0): Promise<NotificationListResponse> {
-  const res = await fetch(`/api/notifications?limit=${limit}&offset=${offset}`);
+  const res = await fetch(`/api/notifications?limit=${limit}&offset=${offset}`, {
+    cache: "no-store",
+  });
   const json = await res.json();
   if (!res.ok || !json.success) throw new Error(json.message || "Failed to load notifications");
   return json.data;
 }
 
 async function fetchUnreadCount(): Promise<number> {
-  const res = await fetch("/api/notifications/unread-count");
+  const res = await fetch("/api/notifications/unread-count", {
+    cache: "no-store",
+  });
   const json = await res.json();
   if (!res.ok || !json.success) return 0;
   return json.data.count;
@@ -55,13 +60,15 @@ async function deleteNotificationRequest(id: string): Promise<void> {
 // Hooks
 // ---------------------------------------------------------------------------
 
-/** Full notification list with pagination. */
+/** Full notification list with pagination and real-time live sync. */
 export function useNotifications(limit = 30, offset = 0) {
   const query = useQuery({
     queryKey: ["notifications", limit, offset],
     queryFn: () => fetchNotifications(limit, offset),
     retry: false,
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchInterval: 4_000, // fast background sync so it updates without page reload
+    refetchOnWindowFocus: true,
   });
 
   return {
@@ -73,17 +80,40 @@ export function useNotifications(limit = 30, offset = 0) {
   };
 }
 
-/** Lightweight unread count for the navbar bell badge. */
+/** Lightweight unread count for navbar bell with chime on new notifications. */
 export function useUnreadCount() {
+  const prevCountRef = useRef<number | null>(null);
+  const isFirstLoadRef = useRef<boolean>(true);
+
   const query = useQuery({
     queryKey: ["notifications", "unread-count"],
     queryFn: fetchUnreadCount,
-    refetchInterval: 60_000, // poll every minute as a fallback
-    staleTime: 30_000,
+    refetchInterval: 4_000,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
     retry: false,
   });
 
-  return query.data ?? 0;
+  const count = query.data ?? 0;
+
+  useEffect(() => {
+    if (!query.isSuccess) return;
+
+    if (isFirstLoadRef.current) {
+      // Initialize without playing sound on first load
+      prevCountRef.current = count;
+      isFirstLoadRef.current = false;
+      return;
+    }
+
+    // Only play sound if new unread notifications arrive while user is active
+    if (prevCountRef.current !== null && count > prevCountRef.current) {
+      playNotificationSound();
+    }
+    prevCountRef.current = count;
+  }, [count, query.isSuccess]);
+
+  return count;
 }
 
 /** Mark a single notification as read. */
@@ -93,6 +123,7 @@ export function useMarkAsRead() {
     mutationFn: markReadRequest,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
     },
   });
 }
@@ -104,6 +135,7 @@ export function useMarkAsClicked() {
     mutationFn: markClickedRequest,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
     },
   });
 }
@@ -114,6 +146,7 @@ export function useMarkAllAsRead() {
   return useMutation({
     mutationFn: markAllReadRequest,
     onSuccess: () => {
+      queryClient.setQueryData(["notifications", "unread-count"], 0);
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
       toast.success("All notifications marked as read");
     },
@@ -128,6 +161,7 @@ export function useDeleteNotification() {
     mutationFn: deleteNotificationRequest,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -139,9 +173,10 @@ export function useDeleteNotification() {
 
 /**
  * Opens a persistent SSE connection to /api/notifications/stream.
- * When a new notification arrives the React Query cache is invalidated,
- * triggering an automatic re-fetch of the notification list and count.
- * Falls back gracefully if the connection drops.
+ * When a new notification arrives:
+ * 1. Plays a notification sound chime
+ * 2. Invalidates and refetches React Query cache instantly
+ * 3. Shows a toast for quick awareness
  */
 export function useNotificationStream(enabled: boolean) {
   const queryClient = useQueryClient();
@@ -157,22 +192,37 @@ export function useNotificationStream(enabled: boolean) {
     es.addEventListener("notification", (e: MessageEvent) => {
       try {
         const notification: NotificationDTO = JSON.parse(e.data);
-        // Invalidate so the bell count and list re-fetch
+        
+        // Play notification audio chime
+        playNotificationSound();
+
+        // Invalidate and refetch immediately
         queryClient.invalidateQueries({ queryKey: ["notifications"] });
+        queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
         
         if (notification.type === "reservation_request") {
           queryClient.invalidateQueries({ queryKey: ["incoming-reservations"] });
+          queryClient.invalidateQueries({ queryKey: ["my-reservations"] });
+        } else if (
+          notification.type === "reservation_confirmed" ||
+          notification.type === "system_alert"
+        ) {
+          queryClient.invalidateQueries({ queryKey: ["my-reservations"] });
+          queryClient.invalidateQueries({ queryKey: ["food"] });
         }
 
-        // Show a toast for high-priority notifications
-        if (notification.priority === "high" || notification.priority === "urgent") {
-          toast(notification.message, {
-            icon: notification.priority === "urgent" ? "🚨" : "🔔",
-            duration: 5000,
-          });
-        }
+        // Show a visual toast notification
+        toast(notification.message, {
+          icon:
+            notification.priority === "urgent"
+              ? "🚨"
+              : notification.priority === "high"
+              ? "🔔"
+              : "✨",
+          duration: 5000,
+        });
       } catch {
-        // malformed event — ignore
+        // Ignore parse error
       }
     });
 
@@ -180,16 +230,17 @@ export function useNotificationStream(enabled: boolean) {
       try {
         const { count } = JSON.parse(e.data) as { count: number };
         queryClient.setQueryData(["notifications", "unread-count"], count);
+        queryClient.invalidateQueries({ queryKey: ["notifications"] });
       } catch {
-        // ignore
+        // Ignore parse error
       }
     });
 
     es.onerror = () => {
       es.close();
       esRef.current = null;
-      // Reconnect after 5 s
-      setTimeout(connect, 5_000);
+      // Reconnect after 3 s
+      setTimeout(connect, 3_000);
     };
   }, [enabled, queryClient]);
 

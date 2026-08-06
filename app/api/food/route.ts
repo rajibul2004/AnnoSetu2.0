@@ -218,8 +218,11 @@ export async function POST(request: NextRequest) {
     const discountPct = discountPctRaw ? parseInt(String(discountPctRaw), 10) : 0;
     const isRaw = formData.get("isRaw") === "true";
     const expiresAtRaw = String(formData.get("expiresAt") ?? "");
-    const safetyGuidelines = formData.get("safetyGuidelines")
-      ? String(formData.get("safetyGuidelines"))
+    const cuisineTypeRaw = formData.get("cuisineType");
+    const cuisineType = cuisineTypeRaw ? String(cuisineTypeRaw) : undefined;
+    const safetyGuidelinesRaw = formData.get("safetyGuidelines");
+    const safetyGuidelines = safetyGuidelinesRaw
+      ? String(safetyGuidelinesRaw).trim()
       : undefined;
 
     let allergens: string[] = [];
@@ -271,9 +274,18 @@ export async function POST(request: NextRequest) {
 
     if (!pickupAddress) {
       const [individual, restaurant, ngo] = await Promise.all([
-        prisma.individualProfile.findUnique({ where: { userId: session.user.id } }),
-        prisma.restaurantProfile.findUnique({ where: { userId: session.user.id } }),
-        prisma.ngoProfile.findUnique({ where: { userId: session.user.id } }),
+        prisma.individualProfile.findUnique({
+          where: { userId: session.user.id },
+          select: { address: true, latitude: true, longitude: true },
+        }),
+        prisma.restaurantProfile.findUnique({
+          where: { userId: session.user.id },
+          select: { address: true, latitude: true, longitude: true },
+        }),
+        prisma.ngoProfile.findUnique({
+          where: { userId: session.user.id },
+          select: { address: true, latitude: true, longitude: true },
+        }),
       ]);
       const profile = individual ?? restaurant ?? ngo;
       pickupAddress = profile?.address ?? null;
@@ -324,7 +336,10 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error("Error uploading images:", error);
       return NextResponse.json(
-        { success: false, message: "Failed to upload images" },
+        {
+          success: false,
+          message: error instanceof Error ? error.message : "Failed to process images",
+        },
         { status: 500 },
       );
     }
@@ -333,7 +348,7 @@ export async function POST(request: NextRequest) {
       data: {
         supplierId: session.user.id,
         name,
-        description,
+        description: description || null,
         quantity,
         availableQty: quantity,
         quantityUnit: quantityUnit as any,
@@ -343,8 +358,11 @@ export async function POST(request: NextRequest) {
         discountPct,
         isRaw,
         isHomeCooked: session.user.role === "individual",
+        cuisineType: (cuisineType as any) || undefined,
         allergens: allergens as any,
-        safetyGuidelines,
+        safetyGuidelines:
+          safetyGuidelines ||
+          "Consume within 2 hours of pickup. Store in refrigerator if not consuming immediately.",
         expiresAt: new Date(expiresAtRaw),
         pickupAddress,
         latitude,
@@ -362,10 +380,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: food }, { status: 201 });
   } catch (error) {
-    console.error("Error in POST /api/foods:", error);
+    console.error("Error in POST /api/food:", error);
     return NextResponse.json(
-      { success: false, message: "Internal server error" },
-      { status: 500 }
+      {
+        success: false,
+        message: error instanceof Error ? error.message : "Internal server error",
+      },
+      { status: 500 },
     );
   }
 }
