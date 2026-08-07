@@ -8,7 +8,8 @@ export type NotificationType =
   | "payment_failed"
   | "review_received"
   | "report_received"
-  | "system_alert";
+  | "system_alert"
+  | "new_message";
 
 export type NotificationPriority = "low" | "medium" | "high" | "urgent";
 

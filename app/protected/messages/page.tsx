@@ -17,11 +17,13 @@ import {
 } from "react-icons/fa";
 import { formatDistanceToNow } from "date-fns";
 import { useConversations } from "@/hooks/useMessaging";
+import { useAuth } from "@/hooks/useAuth";
 import ChatWindow from "@/components/chat/ChatWindow";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import type { ConversationDTO } from "@/types/message";
 
 function MessagesInboxContent() {
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const initialConvId = searchParams.get("conversationId");
 
@@ -29,7 +31,7 @@ function MessagesInboxContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(!!initialConvId);
 
-  const { data: conversations = [], isLoading } = useConversations();
+  const { data: conversations = [], isLoading, typingMap = {} } = useConversations(user?.id);
 
   useEffect(() => {
     if (initialConvId) {
@@ -126,7 +128,7 @@ function MessagesInboxContent() {
                         : "hover:bg-gray-100/80 dark:hover:bg-slate-800/60 text-gray-700 dark:text-gray-300"
                     }`}
                   >
-                    {/* User Avatar */}
+                    {/* User Avatar & Online Indicator */}
                     <div className="relative shrink-0 mt-0.5">
                       <div
                         className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm shadow-xs ${
@@ -137,6 +139,14 @@ function MessagesInboxContent() {
                       >
                         {conv.otherParticipant.name.charAt(0).toUpperCase()}
                       </div>
+                      {conv.otherParticipant.isOnline && (
+                        <span
+                          className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 border-2 ${
+                            isSelected ? "border-emerald-600" : "border-white dark:border-slate-900"
+                          } bg-emerald-500 rounded-full shadow-[0_0_6px_rgba(16,185,129,0.8)]`}
+                          title="Online now"
+                        />
+                      )}
                       {hasUnread && !isSelected && (
                         <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 border-2 border-white dark:border-slate-900 rounded-full" />
                       )}
@@ -183,25 +193,38 @@ function MessagesInboxContent() {
                         </div>
                       )}
 
-                      {/* Last Message Preview */}
-                      <p
-                        className={`text-xs truncate ${
-                          isSelected
-                            ? "text-white/80"
-                            : hasUnread
-                            ? "font-bold text-gray-900 dark:text-white"
-                            : "text-gray-500 dark:text-gray-400"
-                        }`}
-                      >
-                        {conv.lastMessage
-                          ? conv.lastMessage.content
-                          : "Start the pickup conversation..."}
-                      </p>
+                      {/* Last Message or Live Typing Preview */}
+                      {typingMap[conv.id] ? (
+                        <p
+                          className={`text-xs font-bold truncate flex items-center gap-1.5 animate-pulse ${
+                            isSelected
+                              ? "text-emerald-100"
+                              : "text-emerald-600 dark:text-emerald-400"
+                          }`}
+                        >
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                          <span>typing...</span>
+                        </p>
+                      ) : (
+                        <p
+                          className={`text-xs truncate ${
+                            isSelected
+                              ? "text-white/80"
+                              : hasUnread
+                              ? "font-bold text-gray-900 dark:text-white"
+                              : "text-gray-500 dark:text-gray-400"
+                          }`}
+                        >
+                          {conv.lastMessage
+                            ? conv.lastMessage.content
+                            : "Start the pickup conversation..."}
+                        </p>
+                      )}
                     </div>
 
                     {/* Unread Counter Pill */}
                     {hasUnread && !isSelected && (
-                      <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-emerald-600 text-white shrink-0 mt-1 shadow-xs">
+                      <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-rose-500 text-white shrink-0 mt-1 shadow-xs animate-pulse">
                         {conv.unreadCount}
                       </span>
                     )}

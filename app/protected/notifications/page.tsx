@@ -47,6 +47,7 @@ const TYPE_ICONS: Record<NotificationType, string> = {
   review_received: "⭐",
   report_received: "🚩",
   system_alert: "📢",
+  new_message: "💬",
 };
 
 const TYPE_LABELS: Record<NotificationType, string> = {
@@ -60,6 +61,7 @@ const TYPE_LABELS: Record<NotificationType, string> = {
   review_received: "Review Received",
   report_received: "Community Report",
   system_alert: "System Notification",
+  new_message: "New Message",
 };
 
 const PRIORITY_STYLES: Record<

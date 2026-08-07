@@ -33,6 +33,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { RESIDUAL_QUICK_CHIPS, QuickChip, MessageDTO } from "@/types/message";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
+import { setActiveConversationId } from "@/lib/activeChatTracker";
 import toast from "react-hot-toast";
 
 interface ChatWindowProps {
@@ -68,8 +69,19 @@ export default function ChatWindow({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Register active conversation ID to suppress redundant popup toasts & double sounds
+  useEffect(() => {
+    setActiveConversationId(conversationId);
+    return () => {
+      setActiveConversationId(null);
+    };
+  }, [conversationId]);
+
   const { soundOn, toggleSound } = useChatSoundSetting();
-  const { data: conversation, isLoading, isError } = useConversation(conversationId);
+  const { data: conversation, isLoading, isError, connectionStatus } = useConversation(
+    conversationId,
+    user?.id
+  );
   const { mutate: sendMessage, isPending: isSending } = useSendMessage(
     conversationId,
     user?.id
@@ -80,11 +92,22 @@ export default function ChatWindow({
     typingText,
     handleUserTyping,
     handleUserStopTyping,
-  } = useTypingIndicator(conversationId);
+  } = useTypingIndicator(conversationId, user?.id);
 
-  // Smooth scroll to bottom
+  const prevMessagesCountRef = useRef(0);
+
+  // Smooth scroll ONLY inside the message container, never touching window/page scroll
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+    if (!messagesContainerRef.current) return;
+    const container = messagesContainerRef.current;
+    if (behavior === "smooth") {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth",
+      });
+    } else {
+      container.scrollTop = container.scrollHeight;
+    }
   }, []);
 
   // Detect scroll position to show/hide "Scroll to bottom" button
@@ -95,18 +118,40 @@ export default function ChatWindow({
     setShowScrollBottom(distanceToBottom > 150);
   };
 
-  // Scroll to bottom on initial message load
+  // Scroll only chat window on initial message load or new message arrivals
   useEffect(() => {
-    if (conversation?.messages?.length) {
-      scrollToBottom("auto");
+    const currentCount = conversation?.messages?.length || 0;
+    if (currentCount > 0) {
+      if (prevMessagesCountRef.current === 0) {
+        // Initial load: instant jump inside the chat container
+        scrollToBottom("auto");
+      } else if (currentCount > prevMessagesCountRef.current) {
+        // New message: smooth scroll inside the chat container
+        scrollToBottom("smooth");
+      }
+      prevMessagesCountRef.current = currentCount;
     }
   }, [conversation?.messages?.length, scrollToBottom]);
 
-  // Mark as read when conversation is opened or new messages arrive
+  // Mark as read when conversation is opened, new messages arrive, or window gains focus
   useEffect(() => {
-    if (conversationId) {
-      markAsRead(conversationId);
-    }
+    if (!conversationId) return;
+
+    markAsRead(conversationId);
+
+    const handleFocus = () => {
+      if (document.visibilityState === "visible") {
+        markAsRead(conversationId);
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleFocus);
+    };
   }, [conversationId, conversation?.messages?.length, markAsRead]);
 
   // Handle message sending
@@ -124,7 +169,7 @@ export default function ChatWindow({
     setShowEmojiPicker(false);
     setTimeout(() => {
       scrollToBottom("smooth");
-      inputRef.current?.focus();
+      inputRef.current?.focus({ preventScroll: true });
     }, 50);
   };
 
@@ -161,7 +206,7 @@ export default function ChatWindow({
   const handleInsertEmoji = (emoji: string) => {
     setInputMessage((prev) => prev + emoji);
     handleUserTyping();
-    inputRef.current?.focus();
+    inputRef.current?.focus({ preventScroll: true });
   };
 
   const handleCopyText = (text: string) => {
@@ -237,20 +282,40 @@ export default function ChatWindow({
                 {conversation.otherParticipant.name.charAt(0).toUpperCase()}
               </div>
               <span
-                className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 border-2 border-white dark:border-slate-900 rounded-full ${
-                  isOtherTyping ? "bg-emerald-400 animate-ping" : "bg-emerald-500"
+                className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 border-2 border-white dark:border-slate-900 rounded-full transition-all duration-300 ${
+                  isOtherTyping
+                    ? "bg-emerald-400 animate-ping"
+                    : conversation.otherParticipant.isOnline
+                    ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.9)]"
+                    : "bg-gray-300 dark:bg-slate-600"
                 }`}
+                title={
+                  conversation.otherParticipant.isOnline
+                    ? "Online now"
+                    : conversation.otherParticipant.lastSeen
+                    ? `Last active ${format(new Date(conversation.otherParticipant.lastSeen), "h:mm a")}`
+                    : "Offline"
+                }
               />
             </div>
 
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="font-black text-sm sm:text-base text-gray-900 dark:text-white truncate">
+                <h3 className="font-extrabold text-gray-900 dark:text-white text-sm sm:text-base leading-tight truncate">
                   {conversation.otherParticipant.name}
                 </h3>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80 shrink-0">
-                  {conversation.otherParticipant.role}
-                </span>
+                {/* Real-Time Stream Status Badge */}
+                {connectionStatus === "connected" ? (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-800/60">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Live
+                  </span>
+                ) : connectionStatus === "reconnecting" || connectionStatus === "connecting" ? (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-200/60 dark:border-amber-800/60">
+                    <FaSpinner className="animate-spin text-[8px]" />
+                    Connecting
+                  </span>
+                ) : null}
               </div>
 
               {/* Status / Typing Indicator Text */}
@@ -259,6 +324,16 @@ export default function ChatWindow({
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce" />
                   <span>{typingText}</span>
                 </div>
+              ) : conversation.otherParticipant.isOnline ? (
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span>Online</span>
+                  {conversation.foodInfo && (
+                    <span className="text-gray-400 dark:text-gray-500 truncate ml-1">
+                      • {conversation.foodInfo.name}
+                    </span>
+                  )}
+                </p>
               ) : conversation.foodInfo ? (
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate flex items-center gap-1.5 mt-0.5">
                   <FaUtensils className="text-[10px] text-emerald-500 shrink-0" />
@@ -271,8 +346,10 @@ export default function ChatWindow({
                   </span>
                 </p>
               ) : (
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                  Active Direct Chat
+                <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+                  {conversation.otherParticipant.lastSeen
+                    ? `Active ${format(new Date(conversation.otherParticipant.lastSeen), "h:mm a")}`
+                    : "Direct Chat"}
                 </p>
               )}
             </div>
@@ -388,7 +465,7 @@ export default function ChatWindow({
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 custom-scrollbar relative"
+        className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 custom-scrollbar relative overscroll-contain"
       >
         {groupedMessages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center p-6 text-gray-400 dark:text-gray-500">
@@ -426,7 +503,11 @@ export default function ChatWindow({
                   );
                 }
 
-                const isSelf = msg.isSelf;
+                const isSelf = Boolean(
+                  msg.isSelf ||
+                  (user?.id && msg.senderId === user.id) ||
+                  msg.id.startsWith("temp-")
+                );
                 const isTemp = msg.id.startsWith("temp-");
 
                 return (

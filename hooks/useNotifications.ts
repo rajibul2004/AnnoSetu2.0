@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import toast from "react-hot-toast";
-import { playNotificationSound } from "@/lib/notificationAudio";
+import toast, { showModernToast, showMessageToast } from "@/lib/toast";
+import { playNotificationSound, playMessageReceivedSound } from "@/lib/notificationAudio";
+import { isConversationActive } from "@/lib/activeChatTracker";
 import type { NotificationDTO, NotificationListResponse } from "@/types/notification";
 
 // ---------------------------------------------------------------------------
@@ -56,18 +58,95 @@ async function deleteNotificationRequest(id: string): Promise<void> {
   if (!res.ok || !json.success) throw new Error(json.message || "Failed to delete notification");
 }
 
+import { subscribeToStreamEvent } from "@/lib/clientStreamManager";
+
 // ---------------------------------------------------------------------------
 // Hooks
 // ---------------------------------------------------------------------------
 
-/** Full notification list with pagination and real-time live sync. */
+/** ⚡ Real-Time Notification SSE Stream Hook */
+export function useNotificationStream(enabled: boolean = true) {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!enabled || typeof window === "undefined") return;
+
+    const streamUrl = "/api/notifications/stream";
+    const channelKey = "user_notifications_stream";
+
+    const cleanup = subscribeToStreamEvent(
+      channelKey,
+      streamUrl,
+      "notification:new",
+      (notif: NotificationDTO) => {
+        if (!notif?.id) return;
+
+        // 1. Message notification logic
+        if (notif.type === "new_message") {
+          const convId = (notif.data as Record<string, any>)?.conversationId as string | undefined;
+
+          // Always refresh unread messages badge and conversations list
+          queryClient.invalidateQueries({ queryKey: ["unreadMessageCount"] });
+          queryClient.invalidateQueries({ queryKey: ["conversations"] });
+
+          // If the user is currently chatting in this exact conversation, suppress popup & audio chime
+          if (isConversationActive(convId)) {
+            return;
+          }
+
+          // Otherwise, play chat chime and display rich interactive reply toast
+          playMessageReceivedSound();
+          const senderName = ((notif.data as Record<string, any>)?.senderName as string) || "Someone";
+
+          showMessageToast({
+            senderName,
+            senderRole: ((notif.data as Record<string, any>)?.senderRole as string) || undefined,
+            message: notif.message,
+            conversationId: convId || "",
+            onOpen: () => {
+              if (convId) router.push(`/protected/messages?conversationId=${convId}`);
+            },
+          });
+          return;
+        }
+
+        // 2. Standard system & reservation notifications
+        playNotificationSound();
+
+        // Increment unread count in cache immediately
+        queryClient.setQueryData<number>(
+          ["notifications", "unread-count"],
+          (old = 0) => old + 1
+        );
+
+        // Invalidate notification lists so fresh item is displayed
+        queryClient.invalidateQueries({ queryKey: ["notifications"] });
+
+        showModernToast({
+          title: notif.title,
+          description: notif.message,
+          action: notif.actionUrl
+            ? {
+                label: "View",
+                onClick: () => router.push(notif.actionUrl!),
+              }
+            : undefined,
+        });
+      }
+    );
+
+    return cleanup;
+  }, [enabled, queryClient, router]);
+}
+
+/** Full notification list with real-time SSE push & query sync */
 export function useNotifications(limit = 30, offset = 0) {
   const query = useQuery({
     queryKey: ["notifications", limit, offset],
     queryFn: () => fetchNotifications(limit, offset),
     retry: false,
-    staleTime: 0,
-    refetchInterval: 4_000, // fast background sync so it updates without page reload
+    staleTime: 5000,
     refetchOnWindowFocus: true,
   });
 
@@ -80,7 +159,7 @@ export function useNotifications(limit = 30, offset = 0) {
   };
 }
 
-/** Lightweight unread count for navbar bell with chime on new notifications. */
+/** Lightweight unread count for navbar bell with real-time SSE stream push */
 export function useUnreadCount() {
   const prevCountRef = useRef<number | null>(null);
   const isFirstLoadRef = useRef<boolean>(true);
@@ -88,25 +167,24 @@ export function useUnreadCount() {
   const query = useQuery({
     queryKey: ["notifications", "unread-count"],
     queryFn: fetchUnreadCount,
-    refetchInterval: 4_000,
-    staleTime: 0,
+    staleTime: 10000,
+    refetchInterval: 12000, // Background fallback sync
     refetchOnWindowFocus: true,
     retry: false,
   });
 
   const count = query.data ?? 0;
 
+  // Track initial load without false chime triggers
   useEffect(() => {
     if (!query.isSuccess) return;
 
     if (isFirstLoadRef.current) {
-      // Initialize without playing sound on first load
       prevCountRef.current = count;
       isFirstLoadRef.current = false;
       return;
     }
 
-    // Only play sound if new unread notifications arrive while user is active
     if (prevCountRef.current !== null && count > prevCountRef.current) {
       playNotificationSound();
     }
@@ -140,17 +218,15 @@ export function useMarkAsClicked() {
   });
 }
 
-/** Mark all notifications as read. */
+/** Mark all notifications as read at once. */
 export function useMarkAllAsRead() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: markAllReadRequest,
     onSuccess: () => {
-      queryClient.setQueryData(["notifications", "unread-count"], 0);
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      toast.success("All notifications marked as read");
+      queryClient.setQueryData(["notifications", "unread-count"], 0);
     },
-    onError: (e: Error) => toast.error(e.message),
   });
 }
 
@@ -163,92 +239,5 @@ export function useDeleteNotification() {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
       queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
     },
-    onError: (e: Error) => toast.error(e.message),
   });
-}
-
-// ---------------------------------------------------------------------------
-// Real-time SSE subscription
-// ---------------------------------------------------------------------------
-
-/**
- * Opens a persistent SSE connection to /api/notifications/stream.
- * When a new notification arrives:
- * 1. Plays a notification sound chime
- * 2. Invalidates and refetches React Query cache instantly
- * 3. Shows a toast for quick awareness
- */
-export function useNotificationStream(enabled: boolean) {
-  const queryClient = useQueryClient();
-  const esRef = useRef<EventSource | null>(null);
-
-  const connect = useCallback(() => {
-    if (!enabled || typeof window === "undefined") return;
-    if (esRef.current) esRef.current.close();
-
-    const es = new EventSource("/api/notifications/stream");
-    esRef.current = es;
-
-    es.addEventListener("notification", (e: MessageEvent) => {
-      try {
-        const notification: NotificationDTO = JSON.parse(e.data);
-        
-        // Play notification audio chime
-        playNotificationSound();
-
-        // Invalidate and refetch immediately
-        queryClient.invalidateQueries({ queryKey: ["notifications"] });
-        queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
-        
-        if (notification.type === "reservation_request") {
-          queryClient.invalidateQueries({ queryKey: ["incoming-reservations"] });
-          queryClient.invalidateQueries({ queryKey: ["my-reservations"] });
-        } else if (
-          notification.type === "reservation_confirmed" ||
-          notification.type === "system_alert"
-        ) {
-          queryClient.invalidateQueries({ queryKey: ["my-reservations"] });
-          queryClient.invalidateQueries({ queryKey: ["food"] });
-        }
-
-        // Show a visual toast notification
-        toast(notification.message, {
-          icon:
-            notification.priority === "urgent"
-              ? "🚨"
-              : notification.priority === "high"
-              ? "🔔"
-              : "✨",
-          duration: 5000,
-        });
-      } catch {
-        // Ignore parse error
-      }
-    });
-
-    es.addEventListener("unread_count", (e: MessageEvent) => {
-      try {
-        const { count } = JSON.parse(e.data) as { count: number };
-        queryClient.setQueryData(["notifications", "unread-count"], count);
-        queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      } catch {
-        // Ignore parse error
-      }
-    });
-
-    es.onerror = () => {
-      es.close();
-      esRef.current = null;
-      // Reconnect after 3 s
-      setTimeout(connect, 3_000);
-    };
-  }, [enabled, queryClient]);
-
-  useEffect(() => {
-    connect();
-    return () => {
-      esRef.current?.close();
-      esRef.current = null;
-    };
-  }, [connect]);
 }

@@ -26,6 +26,8 @@ export interface ConversationParticipantDTO {
   email: string;
   role: string;
   profileImage?: string | null;
+  isOnline?: boolean;
+  lastSeen?: string | null;
 }
 
 export interface ConversationDTO {

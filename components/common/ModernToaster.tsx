@@ -22,11 +22,19 @@ export default function ModernToaster() {
       }}
     >
       {(t) => {
-        // Determine theme & styling based on toast type
+        // If it's a custom toast with its own container (like showModernToast or showMessageToast)
+        if (t.type === "custom") {
+          return (
+            <div key={t.id} className="contents">
+              {typeof t.message === "function" ? t.message(t) : t.message}
+            </div>
+          );
+        }
+
+        // Standard toast types (success, error, loading, blank)
         const isSuccess = t.type === "success";
         const isError = t.type === "error";
         const isLoading = t.type === "loading";
-        const isCustom = !isSuccess && !isError && !isLoading;
 
         let borderColor = "border-indigo-500/30 dark:border-indigo-500/20";
         let shadowColor = "shadow-indigo-500/10";

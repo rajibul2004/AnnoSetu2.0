@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { isUserOnline, getUserLastSeen } from "@/lib/presenceTracker";
 import type { ConversationDetailDTO, MessageDTO } from "@/types/message";
 
 export async function GET(
@@ -134,6 +135,10 @@ export async function GET(
         email: otherUser?.email || "",
         role: otherRole,
         profileImage: otherProfileImg,
+        isOnline: isUserOnline(otherId),
+        lastSeen: getUserLastSeen(otherId)
+          ? new Date(getUserLastSeen(otherId)!).toISOString()
+          : null,
       },
       lastMessage: messagesDTO[messagesDTO.length - 1] || null,
       unreadCount: 0,

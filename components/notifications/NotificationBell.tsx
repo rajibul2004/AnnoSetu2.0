@@ -29,6 +29,7 @@ const TYPE_ICONS: Record<string, string> = {
   review_received: "⭐",
   report_received: "🚩",
   system_alert: "📢",
+  new_message: "💬",
 };
 
 const PRIORITY_DOT: Record<string, string> = {

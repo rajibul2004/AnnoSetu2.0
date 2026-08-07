@@ -7,6 +7,11 @@ import {
   isSoundEnabled,
   toggleSoundEnabled,
 } from "@/lib/notificationAudio";
+import {
+  subscribeToStreamEvent,
+  subscribeToStreamStatus,
+  ConnectionState,
+} from "@/lib/clientStreamManager";
 import type {
   ConversationDTO,
   ConversationDetailDTO,
@@ -14,8 +19,12 @@ import type {
   MessageDTO,
 } from "@/types/message";
 
-export function useConversations() {
-  return useQuery<ConversationDTO[]>({
+export function useConversations(currentUserId?: string) {
+  const queryClient = useQueryClient();
+  const [typingMap, setTypingMap] = useState<Record<string, string>>({});
+  const typingTimeoutsRef = useRef<Record<string, NodeJS.Timeout>>({});
+
+  const query = useQuery<ConversationDTO[]>({
     queryKey: ["conversations"],
     queryFn: async () => {
       const res = await fetch("/api/conversations", { cache: "no-store" });
@@ -23,18 +32,149 @@ export function useConversations() {
       const json = await res.json();
       return json.data || [];
     },
-    refetchInterval: 5000, // Background polling every 5 seconds
-    staleTime: 2000,
+    staleTime: 5000,
+    refetchInterval: 5000,
   });
+
+  // ⚡ REAL-TIME INBOX STREAM: Instant reorder, live typing in inbox list, presence, and read sync
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const streamUrl = "/api/notifications/stream";
+    const channelKey = "user_notifications_stream";
+
+    // 1. New Message: Move conversation to top & update preview
+    const unsubNewMsg = subscribeToStreamEvent(
+      channelKey,
+      streamUrl,
+      "conversation:new_message",
+      (payload: { conversationId: string; lastMessage: MessageDTO; lastMessageAt: string }) => {
+        if (!payload?.conversationId) return;
+
+        queryClient.setQueryData<ConversationDTO[]>(["conversations"], (oldList) => {
+          if (!oldList) return oldList;
+
+          const targetIndex = oldList.findIndex((c) => c.id === payload.conversationId);
+          if (targetIndex === -1) {
+            queryClient.invalidateQueries({ queryKey: ["conversations"] });
+            return oldList;
+          }
+
+          const target = oldList[targetIndex];
+          const isSender = payload.lastMessage.senderId === currentUserId;
+          const updatedTarget: ConversationDTO = {
+            ...target,
+            lastMessage: payload.lastMessage,
+            lastMessageAt: payload.lastMessageAt,
+            unreadCount: isSender ? target.unreadCount : target.unreadCount + 1,
+          };
+
+          const remaining = oldList.filter((c) => c.id !== payload.conversationId);
+          return [updatedTarget, ...remaining];
+        });
+      }
+    );
+
+    // 2. Real-time Typing in Inbox list
+    const unsubTyping = subscribeToStreamEvent(
+      channelKey,
+      streamUrl,
+      "conversation:typing",
+      (payload: { conversationId: string; userId: string; userName: string; isTyping: boolean }) => {
+        if (!payload?.conversationId || payload.userId === currentUserId) return;
+
+        const convId = payload.conversationId;
+        if (payload.isTyping) {
+          setTypingMap((prev) => ({ ...prev, [convId]: payload.userName }));
+
+          if (typingTimeoutsRef.current[convId]) {
+            clearTimeout(typingTimeoutsRef.current[convId]);
+          }
+          typingTimeoutsRef.current[convId] = setTimeout(() => {
+            setTypingMap((prev) => {
+              const copy = { ...prev };
+              delete copy[convId];
+              return copy;
+            });
+          }, 3500);
+        } else {
+          setTypingMap((prev) => {
+            const copy = { ...prev };
+            delete copy[convId];
+            return copy;
+          });
+        }
+      }
+    );
+
+    // 3. Real-time Read receipts sync for inbox badges
+    const unsubRead = subscribeToStreamEvent(
+      channelKey,
+      streamUrl,
+      "conversation:read",
+      (payload: { conversationId: string; readBy: string }) => {
+        if (!payload?.conversationId) return;
+
+        queryClient.setQueryData<ConversationDTO[]>(["conversations"], (oldList) => {
+          if (!oldList) return oldList;
+          return oldList.map((c) =>
+            c.id === payload.conversationId && payload.readBy === currentUserId
+              ? { ...c, unreadCount: 0 }
+              : c
+          );
+        });
+      }
+    );
+
+    // 4. Live Presence across all contacts in inbox
+    const unsubPresence = subscribeToStreamEvent(
+      channelKey,
+      streamUrl,
+      "user:presence",
+      (payload: { userId: string; isOnline: boolean; lastSeen?: string }) => {
+        if (!payload?.userId || payload.userId === currentUserId) return;
+
+        queryClient.setQueryData<ConversationDTO[]>(["conversations"], (oldList) => {
+          if (!oldList) return oldList;
+          return oldList.map((c) =>
+            c.otherParticipant.id === payload.userId
+              ? {
+                  ...c,
+                  otherParticipant: {
+                    ...c.otherParticipant,
+                    isOnline: payload.isOnline,
+                    lastSeen: payload.lastSeen || c.otherParticipant.lastSeen,
+                  },
+                }
+              : c
+          );
+        });
+      }
+    );
+
+    return () => {
+      unsubNewMsg();
+      unsubTyping();
+      unsubRead();
+      unsubPresence();
+      Object.values(typingTimeoutsRef.current).forEach(clearTimeout);
+    };
+  }, [currentUserId, queryClient]);
+
+  return {
+    ...query,
+    typingMap,
+  };
 }
 
-export function useConversation(conversationId: string | null) {
+export function useConversation(conversationId: string | null, currentUserId?: string) {
   const queryClient = useQueryClient();
   const seenMsgIdsRef = useRef<Set<string>>(new Set());
   const isInitialLoadRef = useRef(true);
   const currentConvIdRef = useRef<string | null>(conversationId);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionState>("connecting");
 
-  // Reset tracking when conversation ID changes
+  // Reset tracking on conversation switch
   useEffect(() => {
     if (currentConvIdRef.current !== conversationId) {
       currentConvIdRef.current = conversationId;
@@ -43,6 +183,7 @@ export function useConversation(conversationId: string | null) {
     }
   }, [conversationId]);
 
+  // Initial fetch and baseline cache
   const query = useQuery<ConversationDetailDTO>({
     queryKey: ["conversation", conversationId],
     queryFn: async () => {
@@ -50,71 +191,190 @@ export function useConversation(conversationId: string | null) {
       const res = await fetch(`/api/conversations/${conversationId}`, { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch conversation");
       const json = await res.json();
-      return json.data;
+      const rawData = json.data;
+      if (!rawData) return rawData;
+
+      // Normalize isSelf and sender display name
+      const normalizedMessages = (rawData.messages || []).map((m: MessageDTO) => {
+        const isMsgSelf = Boolean(
+          m.isSelf || (currentUserId && m.senderId === currentUserId) || m.id.startsWith("temp-")
+        );
+        return {
+          ...m,
+          isSelf: isMsgSelf,
+          senderName: isMsgSelf ? "You" : m.senderName,
+        };
+      });
+
+      return {
+        ...rawData,
+        messages: normalizedMessages,
+      };
     },
     enabled: !!conversationId,
-    refetchInterval: 1800, // Fast 1.8s polling for near-instant message delivery
-    staleTime: 1000,
+    staleTime: 3000,
+    refetchInterval: connectionStatus === "connected" ? 8000 : 2500,
   });
 
-  // Accurate incoming message detection — only play sound on genuinely new incoming messages after initial load
+  // Track initial message IDs quietly
   useEffect(() => {
     const messages = query.data?.messages;
     if (!messages || messages.length === 0) return;
 
     if (isInitialLoadRef.current) {
-      // First load: Record all existing message IDs without playing any sound
       messages.forEach((m) => {
         if (m.id) seenMsgIdsRef.current.add(m.id);
       });
       isInitialLoadRef.current = false;
-      return;
-    }
-
-    // Subsequent updates: Check for newly arrived messages from the other user
-    let hasNewIncoming = false;
-    for (const msg of messages) {
-      if (msg.id && !seenMsgIdsRef.current.has(msg.id)) {
-        seenMsgIdsRef.current.add(msg.id);
-        if (!msg.isSelf && msg.messageType !== "system") {
-          hasNewIncoming = true;
-        }
-      }
-    }
-
-    if (hasNewIncoming) {
-      playMessageReceivedSound();
     }
   }, [query.data?.messages]);
 
-  return query;
-}
+  // ⚡ REAL-TIME MULTIPLEXED SSE STREAM: Instant push for messages, read receipts & presence
+  useEffect(() => {
+    if (!conversationId || typeof window === "undefined") return;
 
-export function useCreateOrGetConversation() {
-  const queryClient = useQueryClient();
+    const streamUrl = `/api/conversations/${conversationId}/stream`;
+    const channelKey = `conversation_${conversationId}`;
 
-  return useMutation({
-    mutationFn: async (payload: {
-      reservationId?: string;
-      recipientId?: string;
-      foodId?: string;
-    }) => {
-      const res = await fetch("/api/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Failed to open conversation");
+    const unsubStatus = subscribeToStreamStatus(channelKey, streamUrl, (status) => {
+      setConnectionStatus(status);
+    });
+
+    // 1. New incoming message
+    const unsubMsg = subscribeToStreamEvent(
+      channelKey,
+      streamUrl,
+      "message:new",
+      (incomingMsg: MessageDTO) => {
+        if (!incomingMsg?.id) return;
+
+        const isMsgSelf = Boolean(
+          incomingMsg.isSelf ||
+          (currentUserId && incomingMsg.senderId === currentUserId) ||
+          incomingMsg.id.startsWith("temp-")
+        );
+
+        const normalizedMsg: MessageDTO = {
+          ...incomingMsg,
+          isSelf: isMsgSelf,
+          senderName: isMsgSelf ? "You" : incomingMsg.senderName,
+        };
+
+        queryClient.setQueryData<ConversationDetailDTO>(
+          ["conversation", conversationId],
+          (old) => {
+            if (!old) return old;
+
+            const existingIndex = old.messages.findIndex(
+              (m) =>
+                m.id === normalizedMsg.id ||
+                (m.id.startsWith("temp-") &&
+                  m.content === normalizedMsg.content &&
+                  (m.senderId === normalizedMsg.senderId || isMsgSelf))
+            );
+
+            let newMessages: MessageDTO[];
+            if (existingIndex !== -1) {
+              newMessages = [...old.messages];
+              newMessages[existingIndex] = normalizedMsg;
+            } else {
+              newMessages = [...old.messages, normalizedMsg];
+            }
+
+            return {
+              ...old,
+              messages: newMessages,
+              lastMessage: normalizedMsg,
+              lastMessageAt: normalizedMsg.createdAt,
+            };
+          }
+        );
+
+        // Sound logic: ONLY play incoming chime if it is genuinely from the other participant
+        if (!seenMsgIdsRef.current.has(normalizedMsg.id)) {
+          seenMsgIdsRef.current.add(normalizedMsg.id);
+          if (!isMsgSelf && normalizedMsg.messageType !== "system") {
+            playMessageReceivedSound();
+          }
+        }
+
+        // Fast update conversation inbox list
+        queryClient.setQueryData<ConversationDTO[]>(["conversations"], (oldList) => {
+          if (!oldList) return oldList;
+          return oldList.map((c) =>
+            c.id === conversationId
+              ? { ...c, lastMessage: normalizedMsg, lastMessageAt: normalizedMsg.createdAt }
+              : c
+          );
+        });
       }
-      const json = await res.json();
-      return json.data as { id: string };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conversations"] });
-    },
-  });
+    );
+
+    // 2. Read receipts (Double Cyan Checks ✓✓)
+    const unsubRead = subscribeToStreamEvent(
+      channelKey,
+      streamUrl,
+      "message:read",
+      (payload: { readAt?: string }) => {
+        const readAt = payload?.readAt || new Date().toISOString();
+
+        queryClient.setQueryData<ConversationDetailDTO>(
+          ["conversation", conversationId],
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              messages: old.messages.map((m) => {
+                if (m.isSelf || (currentUserId && m.senderId === currentUserId)) {
+                  return { ...m, isRead: true, readAt };
+                }
+                return m;
+              }),
+            };
+          }
+        );
+      }
+    );
+
+    // 3. Live Presence & Online Indicator
+    const unsubPresence = subscribeToStreamEvent(
+      channelKey,
+      streamUrl,
+      "user:presence",
+      (payload: { userId: string; isOnline: boolean; lastSeen?: string }) => {
+        if (!payload?.userId || payload.userId === currentUserId) return;
+
+        queryClient.setQueryData<ConversationDetailDTO>(
+          ["conversation", conversationId],
+          (old) => {
+            if (!old || !old.otherParticipant || old.otherParticipant.id !== payload.userId) {
+              return old;
+            }
+            return {
+              ...old,
+              otherParticipant: {
+                ...old.otherParticipant,
+                isOnline: payload.isOnline,
+                lastSeen: payload.lastSeen || old.otherParticipant.lastSeen,
+              },
+            };
+          }
+        );
+      }
+    );
+
+    return () => {
+      unsubStatus();
+      unsubMsg();
+      unsubRead();
+      unsubPresence();
+    };
+  }, [conversationId, currentUserId, queryClient]);
+
+  return {
+    ...query,
+    connectionStatus,
+  };
 }
 
 export function useSendMessage(conversationId: string | null, currentUserId?: string) {
@@ -138,10 +398,9 @@ export function useSendMessage(conversationId: string | null, currentUserId?: st
     onMutate: async (newPayload) => {
       if (!conversationId) return;
 
-      // Optimistic sound feedback
+      // Optimistic 0ms sound feedback
       playMessageSentSound();
 
-      // Cancel outgoing refetches so they don't overwrite our optimistic update
       await queryClient.cancelQueries({ queryKey: ["conversation", conversationId] });
 
       const previousConversation = queryClient.getQueryData<ConversationDetailDTO>([
@@ -155,6 +414,7 @@ export function useSendMessage(conversationId: string | null, currentUserId?: st
           id: tempId,
           conversationId,
           senderId: currentUserId || "me",
+          senderName: "You",
           content: newPayload.content,
           messageType: newPayload.messageType || "text",
           metadata: newPayload.metadata || null,
@@ -189,53 +449,90 @@ export function useSendMessage(conversationId: string | null, currentUserId?: st
     onSuccess: (savedMessage) => {
       if (!conversationId || !savedMessage) return;
 
-      // Replace optimistic message with actual saved server message
+      const confirmedMsg: MessageDTO = {
+        ...savedMessage,
+        isSelf: true,
+        senderName: "You",
+      };
+
       queryClient.setQueryData<ConversationDetailDTO>(
         ["conversation", conversationId],
         (old) => {
           if (!old) return old;
-          const filtered = old.messages.filter((m) => !m.id.startsWith("temp-"));
+
+          const existingIndex = old.messages.findIndex(
+            (m) =>
+              m.id === confirmedMsg.id ||
+              (m.id.startsWith("temp-") && m.content === confirmedMsg.content)
+          );
+
+          let newMessages: MessageDTO[];
+          if (existingIndex !== -1) {
+            newMessages = [...old.messages];
+            newMessages[existingIndex] = confirmedMsg;
+          } else {
+            newMessages = [...old.messages.filter((m) => !m.id.startsWith("temp-")), confirmedMsg];
+          }
+
           return {
             ...old,
-            messages: [...filtered, savedMessage],
-            lastMessage: savedMessage,
-            lastMessageAt: savedMessage.createdAt,
+            messages: newMessages,
+            lastMessage: confirmedMsg,
+            lastMessageAt: confirmedMsg.createdAt,
           };
         }
       );
 
-      // Fast invalidate conversation list
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
     },
   });
 }
 
-export function useTypingIndicator(conversationId: string | null) {
+export function useTypingIndicator(conversationId: string | null, currentUserId?: string) {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const isTypingActiveRef = useRef(false);
   const stopTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const clearRemoteTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Poll typing status from server
-  const { data } = useQuery<{ typingUsers: string[] }>({
-    queryKey: ["typing", conversationId],
-    queryFn: async () => {
-      if (!conversationId) return { typingUsers: [] };
-      const res = await fetch(`/api/conversations/${conversationId}/typing`);
-      if (!res.ok) return { typingUsers: [] };
-      return res.json();
-    },
-    enabled: !!conversationId,
-    refetchInterval: 2000,
-    staleTime: 1500,
-  });
-
+  // ⚡ REAL-TIME TYPING PUSH VIA MULTIPLEXED SSE
   useEffect(() => {
-    if (data?.typingUsers) {
-      setTypingUsers(data.typingUsers);
-    }
-  }, [data?.typingUsers]);
+    if (!conversationId || typeof window === "undefined") return;
 
-  // Send typing signal to server with debouncing
+    const streamUrl = `/api/conversations/${conversationId}/stream`;
+    const channelKey = `conversation_${conversationId}`;
+
+    const unsubTyping = subscribeToStreamEvent(
+      channelKey,
+      streamUrl,
+      "user:typing",
+      (payload: { userId: string; userName: string; isTyping: boolean }) => {
+        if (!payload?.userId || payload.userId === currentUserId) return;
+
+        if (payload.isTyping) {
+          setTypingUsers((prev) =>
+            prev.includes(payload.userName) ? prev : [...prev, payload.userName]
+          );
+
+          if (clearRemoteTypingTimeoutRef.current) {
+            clearTimeout(clearRemoteTypingTimeoutRef.current);
+          }
+          clearRemoteTypingTimeoutRef.current = setTimeout(() => {
+            setTypingUsers((prev) => prev.filter((name) => name !== payload.userName));
+          }, 3500);
+        } else {
+          setTypingUsers((prev) => prev.filter((name) => name !== payload.userName));
+        }
+      }
+    );
+
+    return () => {
+      unsubTyping();
+      if (clearRemoteTypingTimeoutRef.current) {
+        clearTimeout(clearRemoteTypingTimeoutRef.current);
+      }
+    };
+  }, [conversationId, currentUserId]);
+
   const sendTypingPing = useCallback(
     async (isTyping: boolean) => {
       if (!conversationId) return;
@@ -246,7 +543,7 @@ export function useTypingIndicator(conversationId: string | null) {
           body: JSON.stringify({ isTyping }),
         });
       } catch {
-        // Silently catch network drops for typing indicators
+        // Silently catch
       }
     },
     [conversationId]
@@ -267,7 +564,7 @@ export function useTypingIndicator(conversationId: string | null) {
     stopTypingTimeoutRef.current = setTimeout(() => {
       isTypingActiveRef.current = false;
       void sendTypingPing(false);
-    }, 2800);
+    }, 2500);
   }, [conversationId, sendTypingPing]);
 
   const handleUserStopTyping = useCallback(() => {
@@ -312,6 +609,39 @@ export function useMarkConversationAsRead() {
 }
 
 export function useUnreadMessageCount() {
+  const queryClient = useQueryClient();
+
+  // Listen to live stream events to zero or increment count
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const streamUrl = "/api/notifications/stream";
+    const channelKey = "user_notifications_stream";
+
+    const unsubNewMsg = subscribeToStreamEvent(
+      channelKey,
+      streamUrl,
+      "conversation:new_message",
+      () => {
+        queryClient.invalidateQueries({ queryKey: ["unreadMessageCount"] });
+      }
+    );
+
+    const unsubRead = subscribeToStreamEvent(
+      channelKey,
+      streamUrl,
+      "conversation:read",
+      () => {
+        queryClient.invalidateQueries({ queryKey: ["unreadMessageCount"] });
+      }
+    );
+
+    return () => {
+      unsubNewMsg();
+      unsubRead();
+    };
+  }, [queryClient]);
+
   return useQuery<{ unreadCount: number }>({
     queryKey: ["unreadMessageCount"],
     queryFn: async () => {
@@ -320,8 +650,34 @@ export function useUnreadMessageCount() {
       const json = await res.json();
       return { unreadCount: json.unreadCount || 0 };
     },
-    refetchInterval: 6000,
-    staleTime: 3000,
+    staleTime: 30000,
+  });
+}
+
+export function useCreateOrGetConversation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: {
+      reservationId?: string;
+      recipientId?: string;
+      foodId?: string;
+    }) => {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to open conversation");
+      }
+      const json = await res.json();
+      return json.data as { id: string };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
   });
 }
 
