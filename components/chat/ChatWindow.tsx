@@ -240,6 +240,38 @@ export default function ChatWindow({
     return groups;
   }, [conversation?.messages, filterSearch]);
 
+  // Accurately determine if the current user is the Food Supplier or the Customer/Reserver
+  const isUserSupplier = useMemo(() => {
+    if (!conversation) return false;
+    // 1. Direct check against reservation IDs
+    if (conversation.foodInfo?.supplierId) {
+      return conversation.foodInfo.supplierId === user?.id;
+    }
+    if (conversation.foodInfo?.reserverId) {
+      return conversation.foodInfo.reserverId !== user?.id;
+    }
+    // 2. Role-based check
+    if (
+      conversation.otherParticipant?.role === "restaurant" ||
+      conversation.otherParticipant?.role === "ngo"
+    ) {
+      return false; // Customer / Reserver
+    }
+    if (user?.role === "restaurant" || user?.role === "ngo") {
+      return true; // Supplier
+    }
+    // Default fallback for individual consumers
+    return false;
+  }, [conversation, user?.id, user?.role]);
+
+  const userRoleType = isUserSupplier ? "supplier" : "reserver";
+
+  const relevantQuickChips = useMemo(() => {
+    return RESIDUAL_QUICK_CHIPS.filter(
+      (c) => c.type === "both" || c.type === userRoleType
+    );
+  }, [userRoleType]);
+
   if (isLoading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50/50 dark:bg-slate-950/50">
@@ -261,14 +293,6 @@ export default function ChatWindow({
       </div>
     );
   }
-
-  const isUserSupplier =
-    user?.role === "restaurant" || conversation.otherParticipant.role === "individual";
-  const userRoleType = isUserSupplier ? "supplier" : "reserver";
-
-  const relevantQuickChips = RESIDUAL_QUICK_CHIPS.filter(
-    (c) => c.type === "both" || c.type === userRoleType
-  );
 
   return (
     <div className="flex flex-col h-full bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-2xl overflow-hidden relative select-text">
@@ -625,15 +649,17 @@ export default function ChatWindow({
       {/* 3. Quick Action Chips Bar */}
       <div className="px-3.5 py-2 bg-white/80 dark:bg-slate-900/80 border-t border-gray-200/60 dark:border-slate-800/60 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
-          {/* Share ETA Button */}
-          <button
-            type="button"
-            onClick={() => setShowEtaModal(true)}
-            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
-          >
-            <FaCar className="text-xs" />
-            <span>Share ETA 🚗</span>
-          </button>
+          {/* Share ETA Button - only relevant for Reserver/Customer picking up the food */}
+          {!isUserSupplier && (
+            <button
+              type="button"
+              onClick={() => setShowEtaModal(true)}
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+            >
+              <FaCar className="text-xs" />
+              <span>Share ETA 🚗</span>
+            </button>
+          )}
 
           {/* Canned Quick Chips */}
           {relevantQuickChips.map((chip) => (

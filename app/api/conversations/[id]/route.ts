@@ -121,6 +121,8 @@ export async function GET(
         pickupTime: conversation.reservation.pickupTime.toISOString(),
         pickupAddress: conversation.reservation.pickupAddress,
         status: conversation.reservation.status,
+        supplierId: conversation.reservation.supplierId,
+        reserverId: conversation.reservation.reserverId,
       };
     }
 

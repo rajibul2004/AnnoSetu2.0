@@ -35,6 +35,8 @@ import LocationPicker from "@/components/common/LocationPicker";
 import toast from "react-hot-toast";
 import { useAddFood } from "@/hooks/useFoodQueries";
 import type { Allergen, QuantityUnit } from "@/types/food";
+import VoiceListingButton from "@/components/food/VoiceListingButton";
+import type { ParsedFoodListing } from "@/lib/ai/foodParser";
 
 interface AddFoodFormProps {
   userType: "individual" | "restaurant";
@@ -103,6 +105,7 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [images, setImages] = useState<ImagePreview[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [aiPopulated, setAiPopulated] = useState(false);
 
   const [locationMode, setLocationMode] = useState<LocationMode>("none");
   const [locationLoading, setLocationLoading] = useState(false);
@@ -124,6 +127,25 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
   });
 
   const isRestaurant = userType === "restaurant";
+
+  const handleApplyVoiceParsedData = (parsed: ParsedFoodListing) => {
+    setFormData((prev) => ({
+      ...prev,
+      name: parsed.name || prev.name,
+      description: parsed.description || prev.description,
+      quantity: String(parsed.quantity || prev.quantity || "1"),
+      quantityUnit: parsed.quantityUnit || prev.quantityUnit,
+      isDonation: parsed.isDonation,
+      price: parsed.isDonation ? "" : (parsed.price ? String(parsed.price) : prev.price),
+      originalPrice: parsed.originalPrice ? String(parsed.originalPrice) : prev.originalPrice,
+      isRaw: parsed.isRaw,
+      allergens: parsed.allergens || prev.allergens,
+      expiresAt: parsed.expiresAt || prev.expiresAt,
+    }));
+    setAiPopulated(true);
+    setErrors({});
+    setCurrentStep(1);
+  };
 
   const accentGradient = isRestaurant
     ? "from-blue-600 via-indigo-600 to-cyan-500"
@@ -458,6 +480,35 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
             </Link>
           </div>
         </div>
+
+        {/* AI Voice-to-Listing Action Banner */}
+        <div className="mb-8">
+          <VoiceListingButton
+            onApplyParsedData={handleApplyVoiceParsedData}
+            userType={userType}
+            variant="banner"
+          />
+        </div>
+
+        {aiPopulated && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 flex items-center justify-between shadow-xs"
+          >
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-900 dark:text-amber-300">
+              <FaMagic className="text-amber-500 animate-spin" />
+              <span>✨ Fields auto-filled from your voice input! Feel free to review or adjust before posting.</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAiPopulated(false)}
+              className="text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline"
+            >
+              Dismiss
+            </button>
+          </motion.div>
+        )}
 
         {/* Step Progress Tracker */}
         <div className="mb-10">

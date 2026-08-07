@@ -19,6 +19,7 @@ import {
   FaHeart,
   FaArrowLeft,
   FaExclamationCircle,
+  FaLeaf,
 } from "react-icons/fa";
 import Input from "@/components/common/Input";
 import Button from "@/components/common/Button";
@@ -443,7 +444,13 @@ const RegisterContent = () => {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen py-12 relative overflow-hidden">
+    <div
+      className="min-h-screen py-12 relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed"
+      style={{ backgroundImage: "url('/donate_image.png')" }}
+    >
+      {/* Subtle Cinematic Scrim to ensure the image is vivid while keeping text readable */}
+      <div className="absolute inset-0 bg-black/45 dark:bg-slate-950/65" />
+
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -452,19 +459,23 @@ const RegisterContent = () => {
         >
           {/* Header */}
           <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/90 dark:bg-slate-900/90 text-emerald-700 dark:text-emerald-300 font-bold text-xs shadow-md border border-emerald-500/30 mb-3 backdrop-blur-md">
+              <FaLeaf className="text-emerald-500" />
+              <span>AnnoSetu · Surplus Food Rescue</span>
+            </div>
             <motion.h1
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className={`text-3xl font-bold bg-gradient-to-r ${roleGradientMap[formData.role]} bg-clip-text text-transparent`}
+              className="text-3xl sm:text-4xl font-black text-white drop-shadow-lg"
             >
-              Join Annosetu
+              Join AnnoSetu
             </motion.h1>
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="mt-2 text-gray-600 dark:text-gray-300"
+              className="mt-1.5 text-sm sm:text-base text-white/90 font-medium drop-shadow-sm"
             >
               Create an account and start your food-saving journey today
             </motion.p>
@@ -487,15 +498,15 @@ const RegisterContent = () => {
                   }));
                   setCurrentStep(1);
                 }}
-                className={`p-4 rounded-xl border-2 transition-all cursor-pointer duration-300 ${
+                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer duration-300 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md ${
                   formData.role === option.value
-                    ? `${option.activeClass} shadow-lg scale-105`
-                    : "border-gray-500 dark:border-gray-300 dark:hover:border-gray-200 hover:border-gray-700 hover:scale-102"
+                    ? `${option.activeClass} shadow-xl scale-105 ring-2 ring-emerald-500/20`
+                    : "border-gray-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-500 hover:scale-102"
                 }`}
               >
-                <div className="text-2xl mb-2">{option.icon}</div>
+                <div className="text-2xl mb-1.5">{option.icon}</div>
                 <div
-                  className={`text-sm font-medium ${formData.role === option.value ? option.activeClass : "text-gray-600 dark:text-gray-300"}`}
+                  className={`text-sm font-bold ${formData.role === option.value ? option.activeClass : "text-gray-700 dark:text-gray-200"}`}
                 >
                   {option.label}
                 </div>
@@ -504,16 +515,16 @@ const RegisterContent = () => {
           </motion.div>
 
           {/* Progress Bar */}
-          <div className="mb-8">
+          <div className="mb-8 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-white/40 dark:border-slate-800/80 shadow-md">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">
                 Registration Progress
               </span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
                 Step {currentStep} of 3
               </span>
             </div>
-            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div className="w-full h-2.5 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
               <motion.div
                 className={`h-full bg-gradient-to-r ${roleGradientMap[formData.role]}`}
                 initial={{ width: "33%" }}
@@ -535,7 +546,7 @@ const RegisterContent = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="card backdrop-blur-lg rounded-2xl shadow-2xl p-8"
+            className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl shadow-2xl p-6 sm:p-10 border border-white/50 dark:border-slate-800/80"
           >
             <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
               <AnimatePresence mode="wait">

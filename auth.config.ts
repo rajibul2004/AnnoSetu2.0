@@ -158,6 +158,17 @@ export const authConfig: NextAuthConfig = {
       }
       return session
     },
+    authorized({ auth, request: { nextUrl } }) {
+      const isLoggedIn = !!auth?.user;
+      const isOnProtected = nextUrl.pathname.startsWith("/protected");
+
+      if (isOnProtected) {
+        if (isLoggedIn) return true;
+        return false; // Automatically redirects unauthenticated users to signIn page
+      }
+
+      return true;
+    },
   },
   pages: {
     signIn: "/auth/login",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -52,49 +52,47 @@ export default function ReserveFoodForm() {
   const { food, isLoading } = useFoodDetails(params.id);
   const { createReservation, isCreating } = useCreateReservation();
 
-  // Dynamic Pickup time slots capped before expiration
-  const pickupOptions = (() => {
+  // Stable Dynamic Pickup time slots capped before expiration
+  const pickupOptions = useMemo(() => {
     if (!food) return [];
-    const options: { value: string; label: string }[] = [];
+    const options: { value: string; label: string; shortLabel: string }[] = [];
     const now = new Date();
     const expiry = new Date(food.expiresAt);
 
-    // ASAP option (15 mins from now)
-    const asapTime = new Date(now.getTime() + 15 * 60000);
-    if (asapTime < expiry) {
-      options.push({
-        value: asapTime.toISOString(),
-        label: `⚡ ASAP (~15 mins - ${asapTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`,
-      });
-    }
-
-    // 30m, 45m, 60m, 90m, 120m options
-    [30, 45, 60, 90, 120].forEach((minutes) => {
+    // Calculate slots based on standard minutes from now
+    const offsets = [15, 30, 45, 60, 90, 120, 180];
+    for (const minutes of offsets) {
       const time = new Date(now.getTime() + minutes * 60000);
       if (time < expiry) {
         options.push({
           value: time.toISOString(),
-          label: `🕒 In ${minutes} mins (${time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`,
+          shortLabel: minutes <= 15 ? "⚡ ASAP (15m)" : `+${minutes >= 60 ? `${minutes / 60}h` : `${minutes}m`}`,
+          label:
+            minutes <= 15
+              ? `⚡ ASAP (~15 mins · ${time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`
+              : `🕒 In ${minutes >= 60 ? `${minutes / 60} hour${minutes > 60 ? "s" : ""}` : `${minutes} mins`} (${time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`,
         });
       }
-    });
+    }
 
-    // Fallback if near expiry
+    // Fallback if very near expiry (< 15 mins left)
     if (options.length === 0 && now < expiry) {
+      const safeTime = new Date(now.getTime() + 5 * 60000);
       options.push({
-        value: now.toISOString(),
-        label: "⚡ Immediately (Expiring Very Soon)",
+        value: safeTime.toISOString(),
+        shortLabel: "⚡ Now",
+        label: `⚡ Immediately (${expiry.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`,
       });
     }
 
     return options;
-  })();
+  }, [food?.id, food?.expiresAt]);
 
   useEffect(() => {
-    if (food && !pickupTime && pickupOptions.length > 0) {
+    if (pickupOptions.length > 0 && !pickupTime) {
       setPickupTime(pickupOptions[0].value);
     }
-  }, [food, pickupTime, pickupOptions]);
+  }, [pickupOptions, pickupTime]);
 
   const handleQuantityChange = (delta: number) => {
     if (!food) return;
@@ -718,19 +716,54 @@ export default function ReserveFoodForm() {
 
                   {/* Pickup Time Slot */}
                   <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 flex items-center gap-1.5">
+                        <FaClock className="text-emerald-500" />
+                        Select Estimated Pickup Time
+                      </label>
+                    </div>
+
+                    {/* Quick Preset Buttons */}
+                    {pickupOptions.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2.5">
+                        {pickupOptions.slice(0, 5).map((opt) => {
+                          const isSelected = pickupTime === opt.value;
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => setPickupTime(opt.value)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs ${
+                                isSelected
+                                  ? "bg-emerald-600 text-white scale-[1.03] shadow-emerald-500/20"
+                                  : "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-600 border border-gray-200/60 dark:border-slate-700/60"
+                              }`}
+                            >
+                              {opt.shortLabel}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
                     <Select
-                      label="Select Pickup Time"
-                      value={pickupTime}
                       options={pickupOptions}
+                      value={pickupTime}
                       onChange={(val) => setPickupTime(String(val))}
+                      placeholder="Choose pickup time slot..."
                     />
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
-                      <FaClock className="text-amber-500" />
-                      Must arrive before{" "}
-                      {new Date(food.expiresAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
+                      <FaClock className="text-amber-500 shrink-0" />
+                      <span>
+                        Deadline: Must arrive before{" "}
+                        <strong>
+                          {new Date(food.expiresAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </strong>
+                      </span>
                     </p>
                   </div>
 

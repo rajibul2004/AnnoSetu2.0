@@ -2,13 +2,15 @@
 import { Suspense } from "react";
 
 import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 import IndividualDashboard from "@/components/dashboard/IndividualDashboard";
 import RestaurantDashboard from "@/components/dashboard/RestaurantDashboard";
 import NgoDashboard from "@/components/dashboard/NgoDashboard";
 
 function DashboardContent() {
+  const { user } = useAuth();
   const searchParams = useSearchParams();
-  const role = searchParams.get("role")?.toLowerCase();
+  const role = searchParams.get("role")?.toLowerCase() || user?.role?.toLowerCase();
 
   switch (role) {
     case "restaurant":

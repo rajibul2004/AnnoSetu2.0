@@ -89,7 +89,13 @@ const Login = () => {
   };
  
   return (
-    <div className="min-h-screen  flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div
+      className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('/donate_image.png')" }}
+    >
+      {/* Subtle Cinematic Overlay to ensure image is vivid & clear */}
+      <div className="absolute inset-0 bg-black/40 dark:bg-slate-950/60" />
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -97,12 +103,16 @@ const Login = () => {
         className="sm:mx-auto sm:w-full sm:max-w-md relative z-10"
       >
         {/* Logo and Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 dark:bg-slate-900/90 text-emerald-700 dark:text-emerald-300 font-bold text-xs shadow-md border border-emerald-500/30 mb-3 backdrop-blur-md">
+            <FaLeaf className="text-emerald-500" />
+            <span>AnnoSetu · Food Rescue Bridge</span>
+          </div>
           <motion.h2
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="text-3xl logotext font-bold"
+            className="text-3xl font-extrabold text-white drop-shadow-lg"
           >
             Welcome Back
           </motion.h2>
@@ -110,18 +120,18 @@ const Login = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="mt-2 text-sm dark:text-gray-300 text-gray-600"
+            className="mt-1 text-sm text-white/90 font-medium drop-shadow-sm"
           >
             Sign in to continue your food-saving journey
           </motion.p>
         </div>
- 
+
         {/* Login Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="card backdrop-blur-lg py-8 px-4 shadow-2xl sm:rounded-2xl sm:px-10 "
+          className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl py-8 px-5 sm:px-10 shadow-2xl rounded-3xl border border-white/50 dark:border-slate-800/80"
         >
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}

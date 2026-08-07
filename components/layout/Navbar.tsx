@@ -21,6 +21,7 @@ import {
   FaBell,
   FaCompass,
   FaCommentDots,
+  FaMagic,
 } from "react-icons/fa";
 
 export default function Navbar() {
@@ -296,7 +297,7 @@ export default function Navbar() {
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <FaCompass className="text-emerald-500" />
-                  <span>Explore Food Marketplace</span>
+                  <span>Explore Food & AI Matcher</span>
                 </Link>
 
                 {user ? (

@@ -50,6 +50,8 @@ export interface ConversationDTO {
     pickupTime?: string;
     pickupAddress?: string;
     status?: string;
+    supplierId?: string;
+    reserverId?: string;
   } | null;
 }
 

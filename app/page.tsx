@@ -11,9 +11,12 @@ import {
   FaArrowRight,
   FaUtensils,
   FaLeaf,
+  FaMagic,
+  FaChevronLeft,
+  FaChevronRight,
 } from "react-icons/fa";
 import { useTheme } from "next-themes";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Select from "@/components/common/Select";
 import Button from "@/components/common/Button";
@@ -96,8 +99,37 @@ export default function HomePage() {
     appliedFilters,
     "",
     1,
-    6,
+    10,
   );
+
+  const foodScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScrollButtons = () => {
+    if (foodScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = foodScrollRef.current;
+      setCanScrollLeft(scrollLeft > 10);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    checkScrollButtons();
+    window.addEventListener("resize", checkScrollButtons);
+    return () => window.removeEventListener("resize", checkScrollButtons);
+  }, [previewFoods]);
+
+  const scrollFoods = (direction: "left" | "right") => {
+    if (foodScrollRef.current) {
+      const scrollAmount = foodScrollRef.current.clientWidth * 0.75;
+      foodScrollRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+      setTimeout(checkScrollButtons, 350);
+    }
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -236,8 +268,15 @@ export default function HomePage() {
               className="flex flex-wrap items-center justify-center gap-4 text-sm sm:text-base font-semibold"
             >
               <Link
-                href="/public/food"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white shadow-xl hover:shadow-emerald-500/30 hover:scale-105 transition-all duration-200"
+                href="/public/food?tab=smart-match"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white shadow-xl hover:shadow-purple-500/30 hover:scale-105 transition-all duration-200"
+              >
+                <FaMagic className="w-4 h-4 text-amber-300" />
+                AI Smart Matcher ✨
+              </Link>
+              <Link
+                href="/public/food?tab=browse"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-linear-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white shadow-xl hover:shadow-emerald-500/30 hover:scale-105 transition-all duration-200"
               >
                 <FaUtensils className="w-4 h-4" />
                 Browse Available Food
@@ -460,20 +499,56 @@ export default function HomePage() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
         >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-50">
-              Available Food{" "}
-              <span className="text-emerald-600 dark:text-emerald-400">
-                ({statsLoading ? "…" : stats.activeListings})
-              </span>
-            </h2>
-            <Link
-              href="/public/food"
-              className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-semibold flex items-center gap-2 group transition-colors"
-            >
-              View All
-              <FaArrowRight className="group-hover:translate-x-1 transition-transform duration-200" />
-            </Link>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-50 flex items-center gap-2">
+                <span>Available Surplus Food</span>
+                <span className="text-sm font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  {statsLoading ? "…" : stats.activeListings} live
+                </span>
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Scroll horizontally to discover fresh meals & donations near you
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 self-end sm:self-auto">
+              {/* Header Left/Right Scroll Controls */}
+              <div className="flex items-center gap-1.5 bg-white/70 dark:bg-slate-900/70 p-1 rounded-xl border border-gray-200 dark:border-slate-800 shadow-xs">
+                <button
+                  onClick={() => scrollFoods("left")}
+                  disabled={!canScrollLeft}
+                  aria-label="Scroll left"
+                  className={`p-2 rounded-lg transition-all duration-200 ${
+                    canScrollLeft
+                      ? "text-gray-700 dark:text-gray-200 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400 cursor-pointer shadow-xs active:scale-95"
+                      : "text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-40"
+                  }`}
+                >
+                  <FaChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => scrollFoods("right")}
+                  disabled={!canScrollRight}
+                  aria-label="Scroll right"
+                  className={`p-2 rounded-lg transition-all duration-200 ${
+                    canScrollRight
+                      ? "text-gray-700 dark:text-gray-200 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400 cursor-pointer shadow-xs active:scale-95"
+                      : "text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-40"
+                  }`}
+                >
+                  <FaChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              <Link
+                href="/public/food"
+                className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/50 transition-colors"
+              >
+                <span>View All</span>
+                <FaArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
           </div>
 
           {foodsLoading || loading ? (
@@ -492,30 +567,65 @@ export default function HomePage() {
               </p>
             </motion.div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {previewFoods.map((food, index) => (
-                <motion.div
-                  key={food.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.05 }}
-                  whileHover={{ y: -4 }}
-                >
-                  <FoodCard
-                    food={food}
-                    isAuthenticated={isAuthenticated}
-                    userRole={user?.role}
-                    onReserve={(f) =>
-                      router.push(
-                        isAuthenticated
-                          ? `/protected/food/${f.id}/reserve`
-                          : "/auth/login",
-                      )
-                    }
-                  />
-                </motion.div>
-              ))}
+            <div className="relative group">
+              {/* Floating Left Button on larger screens */}
+              <button
+                onClick={() => scrollFoods("left")}
+                disabled={!canScrollLeft}
+                aria-label="Scroll left"
+                className={`hidden md:flex absolute -left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full items-center justify-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 shadow-xl text-gray-700 dark:text-gray-200 transition-all duration-300 ${
+                  canScrollLeft
+                    ? "opacity-90 hover:opacity-100 hover:scale-110 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400 cursor-pointer"
+                    : "opacity-0 pointer-events-none"
+                }`}
+              >
+                <FaChevronLeft className="w-4 h-4" />
+              </button>
+
+              {/* Floating Right Button on larger screens */}
+              <button
+                onClick={() => scrollFoods("right")}
+                disabled={!canScrollRight}
+                aria-label="Scroll right"
+                className={`hidden md:flex absolute -right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full items-center justify-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-gray-200 dark:border-slate-700 shadow-xl text-gray-700 dark:text-gray-200 transition-all duration-300 ${
+                  canScrollRight
+                    ? "opacity-90 hover:opacity-100 hover:scale-110 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-800 dark:hover:text-emerald-400 cursor-pointer"
+                    : "opacity-0 pointer-events-none"
+                }`}
+              >
+                <FaChevronRight className="w-4 h-4" />
+              </button>
+
+              {/* Horizontal Scroll Container */}
+              <div
+                ref={foodScrollRef}
+                onScroll={checkScrollButtons}
+                className="flex gap-6 overflow-x-auto scroll-smooth py-3 px-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {previewFoods.map((food, index) => (
+                  <motion.div
+                    key={food.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: Math.min(index * 0.05, 0.3) }}
+                    className="w-[290px] sm:w-[330px] md:w-[350px] shrink-0 snap-start"
+                  >
+                    <FoodCard
+                      food={food}
+                      isAuthenticated={isAuthenticated}
+                      userRole={user?.role}
+                      onReserve={(f) =>
+                        router.push(
+                          isAuthenticated
+                            ? `/protected/food/${f.id}/reserve`
+                            : "/auth/login",
+                        )
+                      }
+                    />
+                  </motion.div>
+                ))}
+              </div>
             </div>
           )}
         </motion.div>
