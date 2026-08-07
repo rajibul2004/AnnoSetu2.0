@@ -4,12 +4,32 @@ interface SendSmsOptions {
 }
 
 interface Fast2SmsResponse {
-  return: boolean;
+  return?: boolean;
+  status_code?: number;
   request_id?: string;
-  message?: string[];
+  message?: string | string[];
 }
 
-export async function sendOtpSms({ phone, otp }: SendSmsOptions): Promise<{ success: boolean; message?: string }> {
+function parseFast2SmsMessage(data: Fast2SmsResponse): string {
+  if (data.status_code === 996) {
+    return "Fast2SMS requires website verification in your Fast2SMS dashboard (OTP Message menu) to activate this route.";
+  }
+  if (data.status_code === 999) {
+    return "Fast2SMS requires a minimum wallet recharge of ₹100 on your account to activate API delivery.";
+  }
+  if (typeof data.message === "string") {
+    return data.message;
+  }
+  if (Array.isArray(data.message) && data.message.length > 0 && typeof data.message[0] === "string") {
+    return data.message[0];
+  }
+  return "Failed to deliver SMS OTP. Please check your Fast2SMS account.";
+}
+
+export async function sendOtpSms({
+  phone,
+  otp,
+}: SendSmsOptions): Promise<{ success: boolean; message?: string }> {
   const apiKey = process.env.FAST2SMS_API_KEY;
 
   if (!apiKey) {
@@ -25,11 +45,11 @@ export async function sendOtpSms({ phone, otp }: SendSmsOptions): Promise<{ succ
       : cleanPhone;
 
   if (normalizedPhone.length !== 10) {
-    return { success: false, message: "Invalid 10-digit Indian phone number." };
+    return { success: false, message: "Please enter a valid 10-digit Indian mobile number." };
   }
 
   try {
-    // Fast2SMS Quick OTP route
+    // Attempt 1: Fast2SMS Quick OTP route
     const response = await fetch("https://www.fast2sms.com/dev/bulkV2", {
       method: "POST",
       headers: {
@@ -49,7 +69,7 @@ export async function sendOtpSms({ phone, otp }: SendSmsOptions): Promise<{ succ
       return { success: true };
     }
 
-    // Fallback to quick SMS route if OTP route has issues
+    // Attempt 2: Fast2SMS Quick SMS route fallback
     const fallbackResponse = await fetch("https://www.fast2sms.com/dev/bulkV2", {
       method: "POST",
       headers: {
@@ -71,10 +91,17 @@ export async function sendOtpSms({ phone, otp }: SendSmsOptions): Promise<{ succ
       return { success: true };
     }
 
-    console.error("Fast2SMS error:", data.message || fallbackData.message);
+    const humanReadableError = parseFast2SmsMessage(data.status_code ? data : fallbackData);
+    console.error(`[Fast2SMS Error] (${data.status_code || fallbackData.status_code}):`, humanReadableError);
+
+    // In local development, log the OTP so you are never blocked during testing
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`\n📱 [DEV SMS OTP FALLBACK] Phone: +91-${normalizedPhone} | Code: ${otp}\n`);
+    }
+
     return {
       success: false,
-      message: fallbackData.message?.[0] || data.message?.[0] || "Failed to deliver SMS.",
+      message: humanReadableError,
     };
   } catch (error) {
     console.error("Fast2SMS network error:", error);
