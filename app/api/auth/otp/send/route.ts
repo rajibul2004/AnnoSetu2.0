@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendOtpEmail } from "@/lib/email/mailer";
+import { sendOtpSms } from "@/lib/sms/fast2sms";
 import crypto from "crypto";
 import { z } from "zod";
 
@@ -46,8 +47,17 @@ export async function POST(req: NextRequest) {
         name,
       });
     } else {
-      // SMS: placeholder — integrate Twilio/Fast2SMS here if needed
-      console.warn(`[SMS] Would send OTP ${otp} to ${normalizedIdentifier}`);
+      const smsResult = await sendOtpSms({
+        phone: normalizedIdentifier,
+        otp,
+      });
+
+      if (!smsResult.success) {
+        return NextResponse.json(
+          { error: smsResult.message || "Failed to send SMS OTP. Please try again." },
+          { status: 502 }
+        );
+      }
     }
 
     return NextResponse.json({
