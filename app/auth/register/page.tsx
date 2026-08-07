@@ -673,12 +673,14 @@ const RegisterContent = () => {
                           placeholder="98765 43210"
                           helperText="10-digit Indian mobile number"
                         />
+                        {/* Later improved version: Phone SMS OTP Verification
                         {isPhoneVerified && (
                           <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-1">
                             <FaCheckCircle className="text-emerald-500" />
                             <span>Phone Verified</span>
                           </div>
                         )}
+                        */}
                       </div>
                       <div className="flex flex-col gap-0.5">
                         <Input
@@ -1032,6 +1034,7 @@ const RegisterContent = () => {
                           return;
                         }
                         setErrors({});
+                        /* Later improved version: Phone SMS OTP Verification
                         if (!isPhoneVerified) {
                           setOtpModal({
                             isOpen: true,
@@ -1040,6 +1043,7 @@ const RegisterContent = () => {
                           });
                           return;
                         }
+                        */
                         setCurrentStep(3);
                       }
                     }}
@@ -1047,9 +1051,11 @@ const RegisterContent = () => {
                   >
                     {currentStep === 1 && !isEmailVerified
                       ? "Verify Email & Next"
+                      /* Later improved version: Phone SMS OTP Verification
                       : currentStep === 2 && !isPhoneVerified
                         ? "Verify Phone & Next"
-                        : "Next Step"}{" "}
+                      */
+                      : "Next Step"}{" "}
                     <FaArrowRight className="ml-2" />
                   </Button>
                 ) : (

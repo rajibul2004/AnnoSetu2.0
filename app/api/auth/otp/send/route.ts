@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
         name,
       });
     } else {
+      /* Later improved version: Phone SMS OTP Verification
       const smsResult = await sendOtpSms({
         phone: normalizedIdentifier,
         otp,
@@ -58,6 +59,8 @@ export async function POST(req: NextRequest) {
           { status: 502 }
         );
       }
+      */
+      console.log(`[SMS OTP] (${normalizedIdentifier}): ${otp}`);
     }
 
     return NextResponse.json({
