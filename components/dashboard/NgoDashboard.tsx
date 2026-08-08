@@ -304,23 +304,23 @@ export default function NGODashboard() {
               </div>
             </div>
 
-            <div className="flex flex-wrap sm:flex-nowrap gap-3 shrink-0">
+            <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full md:w-auto shrink-0">
               <button
                 onClick={() => router.push("/public/food")}
-                className="flex items-center gap-2 px-5 py-3.5 bg-white hover:bg-white/90 text-purple-800 font-extrabold text-sm rounded-2xl shadow-xl hover:scale-103 transition-all cursor-pointer"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3.5 bg-white hover:bg-white/90 text-purple-800 font-extrabold text-sm rounded-2xl shadow-xl hover:scale-103 transition-all cursor-pointer"
               >
                 <FaBoxOpen className="text-purple-600" />
                 <span>Rescue Food Now</span>
               </button>
-              <Link href="/protected/reservation/pickup">
-                <button className="flex items-center gap-2 px-5 py-3.5 bg-white/15 hover:bg-white/25 border border-white/30 text-white font-bold text-sm rounded-2xl backdrop-blur-md transition-all cursor-pointer">
+              <Link href="/protected/reservation/pickup" className="w-full sm:w-auto">
+                <button className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-white/15 hover:bg-white/25 border border-white/30 text-white font-bold text-sm rounded-2xl backdrop-blur-md transition-all cursor-pointer">
                   <FaQrcode />
                   <span>Pickup Scanner</span>
                 </button>
               </Link>
               <button
                 onClick={generateReport}
-                className="flex items-center gap-2 px-5 py-3.5 bg-white/15 hover:bg-white/25 border border-white/30 text-white font-bold text-sm rounded-2xl backdrop-blur-md transition-all cursor-pointer"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3.5 bg-white/15 hover:bg-white/25 border border-white/30 text-white font-bold text-sm rounded-2xl backdrop-blur-md transition-all cursor-pointer"
               >
                 <FaDownload />
                 <span>Export Report</span>
@@ -329,33 +329,33 @@ export default function NGODashboard() {
           </div>
 
           {/* Quick Stat Pill Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8 pt-6 border-t border-white/20">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15">
-              <div className="text-2xl font-black">{stats.totalMeals}</div>
-              <div className="text-xs text-purple-100 font-medium">Meals Rescued</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mt-8 pt-6 border-t border-white/20">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-white/15">
+              <div className="text-xl sm:text-2xl font-black">{stats.totalMeals}</div>
+              <div className="text-[11px] sm:text-xs text-purple-100 font-medium">Meals Rescued</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15">
-              <div className="text-2xl font-black">{stats.peopleServed}</div>
-              <div className="text-xs text-purple-100 font-medium">Individuals Fed</div>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-white/15">
+              <div className="text-xl sm:text-2xl font-black">{stats.peopleServed}</div>
+              <div className="text-[11px] sm:text-xs text-purple-100 font-medium">Individuals Fed</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15">
-              <div className="text-2xl font-black">{stats.co2Reduced} kg</div>
-              <div className="text-xs text-purple-100 font-medium">CO₂ Prevented</div>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-white/15">
+              <div className="text-xl sm:text-2xl font-black">{stats.co2Reduced} kg</div>
+              <div className="text-[11px] sm:text-xs text-purple-100 font-medium">CO₂ Prevented</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15">
-              <div className="text-2xl font-black">{formatPrice(stats.moneySaved)}</div>
-              <div className="text-xs text-purple-100 font-medium">Funds Saved</div>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-white/15">
+              <div className="text-xl sm:text-2xl font-black">{formatPrice(stats.moneySaved)}</div>
+              <div className="text-[11px] sm:text-xs text-purple-100 font-medium">Funds Saved</div>
             </div>
           </div>
         </motion.div>
 
         {/* 4 Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
           {[
             {
-              label: "Total Rescued Meals",
+              label: "Rescued Meals",
               value: stats.totalMeals,
-              sub: `${stats.thisWeekCount} pickups this week`,
+              sub: `${stats.thisWeekCount} this week`,
               icon: FaHandsHelping,
               bg: "from-purple-500/10 to-indigo-500/10 border-purple-200 dark:border-purple-800/60",
               iconBg: "bg-purple-600 text-white",
@@ -364,25 +364,25 @@ export default function NGODashboard() {
             {
               label: "People Served",
               value: stats.peopleServed,
-              sub: "Estimated direct beneficiaries",
+              sub: "Direct beneficiaries",
               icon: FaUsers,
               bg: "from-blue-500/10 to-cyan-500/10 border-blue-200 dark:border-blue-800/60",
               iconBg: "bg-blue-600 text-white",
               valColor: "text-blue-600 dark:text-blue-400",
             },
             {
-              label: "Carbon Offset",
+              label: "CO₂ Diverted",
               value: `${stats.co2Reduced} kg`,
-              sub: "Green environmental impact",
+              sub: "Carbon offset",
               icon: FaLeaf,
               bg: "from-emerald-500/10 to-green-500/10 border-emerald-200 dark:border-emerald-800/60",
               iconBg: "bg-emerald-600 text-white",
               valColor: "text-emerald-600 dark:text-emerald-400",
             },
             {
-              label: "This Week",
+              label: "Active Pickups",
               value: stats.thisWeekCount,
-              sub: "Active pickups scheduled",
+              sub: "Scheduled pickups",
               icon: FaCalendar,
               bg: "from-amber-500/10 to-orange-500/10 border-amber-200 dark:border-amber-800/60",
               iconBg: "bg-amber-500 text-white",
@@ -394,24 +394,24 @@ export default function NGODashboard() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
-              className={`bg-gradient-to-br ${card.bg} bg-white dark:bg-slate-900 border rounded-3xl p-5 sm:p-6 shadow-md hover:shadow-lg transition-all`}
+              className={`bg-gradient-to-br ${card.bg} bg-white dark:bg-slate-900 border rounded-3xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-all`}
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     {card.label}
                   </p>
-                  <p className={`text-3xl font-black mt-1 ${card.valColor}`}>
+                  <p className={`text-2xl sm:text-3xl font-black mt-1 ${card.valColor}`}>
                     {card.value}
                   </p>
                 </div>
                 <div
-                  className={`w-12 h-12 ${card.iconBg} rounded-2xl flex items-center justify-center shadow-md`}
+                  className={`w-10 h-10 sm:w-12 sm:h-12 ${card.iconBg} rounded-2xl flex items-center justify-center shadow-md shrink-0`}
                 >
-                  <card.icon className="w-5 h-5" />
+                  <card.icon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 font-medium">
+              <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-2 sm:mt-3 font-medium">
                 {card.sub}
               </p>
             </motion.div>
@@ -453,7 +453,7 @@ export default function NGODashboard() {
                   }`}
                 >
                   <FaCheckCircle className="text-xs" />
-                  <span>Completed Rescues</span>
+                  <span>Past Rescues</span>
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full font-black ${
                       activeTab === "completed"
@@ -518,11 +518,11 @@ export default function NGODashboard() {
           </div>
         </div>
 
-        {/* Recent Distributions Table Card with Scroll Container */}
+        {/* Recent Distributions Card */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-xl overflow-hidden mb-8">
-          <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center">
+          <div className="p-5 sm:p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center">
             <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
                 Food Distributions &amp; Pickups
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -556,99 +556,190 @@ export default function NGODashboard() {
               </button>
             </div>
           ) : (
-            <ScrollableContainer>
-              <div className="overflow-x-auto custom-scrollbar">
-                <table className="min-w-full divide-y divide-gray-100 dark:divide-slate-800/60">
-                  <thead className="bg-gray-50/80 dark:bg-slate-800/80">
-                    <tr>
-                      {[
-                        "Food Item",
-                        "Supplier",
-                        "Quantity",
-                        "Pickup Pass Code",
-                        "Scheduled Pickup",
-                        "Status",
-                        "Action",
-                      ].map((h) => (
-                        <th
-                          key={h}
-                          className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60 bg-transparent">
-                    {filteredReservations.map((r) => (
-                      <tr
-                        key={r.id}
-                        className="hover:bg-purple-50/40 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
-                        onClick={() =>
-                          router.push(`/protected/reservation/${r.id}`)
-                        }
-                      >
-                        <td className="px-6 py-4 font-bold text-gray-900 dark:text-white text-sm">
+            <div>
+              {/* MOBILE VIEW: Cards for small screens (sm:hidden) */}
+              <div className="block sm:hidden p-4 space-y-3">
+                {filteredReservations.map((r, idx) => (
+                  <motion.div
+                    key={r.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.03 }}
+                    onClick={() => router.push(`/protected/reservation/${r.id}`)}
+                    className="p-4 rounded-2xl bg-gray-50/80 dark:bg-slate-800/60 border border-gray-100 dark:border-slate-800 space-y-3 cursor-pointer hover:border-purple-500/40 transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-extrabold text-sm text-gray-900 dark:text-white">
                           {r.food.name}
-                        </td>
-                        <td className="px-6 py-4 text-xs font-medium text-gray-600 dark:text-gray-300">
-                          {r.food.supplierName}
-                        </td>
-                        <td className="px-6 py-4 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                          {r.quantity} {r.food.quantityUnit}
-                        </td>
-                        <td
-                          className="px-6 py-4 text-xs font-mono font-bold"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {r.pickupCode ? (
-                            <button
-                              type="button"
-                              onClick={(e) => handleCopyCode(r.pickupCode!, e)}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-slate-800 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-slate-700 border border-purple-200 dark:border-slate-700 transition-colors"
-                              title="Click to copy pickup code"
-                            >
-                              <FaQrcode className="text-xs text-purple-500" />
-                              <span>{r.pickupCode}</span>
-                              <FaCopy className="text-[10px] opacity-70" />
-                            </button>
-                          ) : (
-                            <span className="text-gray-400">—</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-xs text-gray-600 dark:text-gray-300 font-medium">
-                          {formatDate(r.pickupTime, "MMM d, yyyy - h:mm a")}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span
-                            className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${
-                              STATUS_STYLES[r.status] ?? STATUS_STYLES.expired
-                            }`}
-                          >
-                            {r.status.replace("_", " ").toUpperCase()}
+                        </h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Supplier: {r.food.supplierName}
+                        </p>
+                      </div>
+                      <span
+                        className={`px-2.5 py-0.5 text-[11px] font-bold rounded-full shrink-0 ${
+                          STATUS_STYLES[r.status] ?? STATUS_STYLES.expired
+                        }`}
+                      >
+                        {r.status.replace("_", " ").toUpperCase()}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-200/60 dark:border-slate-700/60">
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                        {r.quantity} {r.food.quantityUnit} portions
+                      </span>
+                      <span className="text-gray-500 dark:text-gray-400 text-[11px]">
+                        {formatDate(r.pickupTime, "MMM d, h:mm a")}
+                      </span>
+                    </div>
+
+                    {r.pickupCode && (
+                      <div
+                        className="p-2.5 rounded-xl bg-purple-50 dark:bg-slate-800 border border-purple-200/60 dark:border-slate-700 flex items-center justify-between gap-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center gap-2 text-xs">
+                          <FaQrcode className="text-purple-600 dark:text-purple-400" />
+                          <span className="text-gray-500 dark:text-gray-400 text-[11px]">Pickup Pass:</span>
+                          <span className="font-mono font-black text-purple-700 dark:text-purple-300">
+                            {r.pickupCode}
                           </span>
-                        </td>
-                        <td
-                          className="px-6 py-4"
-                          onClick={(e) => e.stopPropagation()}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => handleCopyCode(r.pickupCode!, e)}
+                          className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-700 text-xs font-bold text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-slate-600 flex items-center gap-1 shadow-xs cursor-pointer"
                         >
-                          {(r.status === "pending" ||
-                            r.status === "confirmed") && (
-                            <button
-                              disabled={isCancelling}
-                              onClick={() => cancelReservation({ id: r.id })}
-                              className="text-xs text-rose-600 hover:text-rose-700 disabled:opacity-40 font-bold cursor-pointer"
-                            >
-                              Cancel
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          <FaCopy className="text-[10px]" />
+                          <span>Copy</span>
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/protected/reservation/${r.id}`)}
+                        className="flex-1 py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                      >
+                        <FaQrcode className="text-xs" />
+                        <span>View Boarding Pass</span>
+                      </button>
+
+                      {(r.status === "pending" || r.status === "confirmed") && (
+                        <button
+                          type="button"
+                          disabled={isCancelling}
+                          onClick={() => cancelReservation({ id: r.id })}
+                          className="py-2 px-3 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-bold border border-rose-200 dark:border-rose-800/40 cursor-pointer disabled:opacity-40"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-            </ScrollableContainer>
+
+              {/* TABLET / DESKTOP VIEW: Data Table (hidden sm:block) */}
+              <div className="hidden sm:block">
+                <ScrollableContainer>
+                  <div className="overflow-x-auto custom-scrollbar">
+                    <table className="min-w-full divide-y divide-gray-100 dark:divide-slate-800/60">
+                      <thead className="bg-gray-50/80 dark:bg-slate-800/80">
+                        <tr>
+                          {[
+                            "Food Item",
+                            "Supplier",
+                            "Quantity",
+                            "Pickup Pass Code",
+                            "Scheduled Pickup",
+                            "Status",
+                            "Action",
+                          ].map((h) => (
+                            <th
+                              key={h}
+                              className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                            >
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60 bg-transparent">
+                        {filteredReservations.map((r) => (
+                          <tr
+                            key={r.id}
+                            className="hover:bg-purple-50/40 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+                            onClick={() =>
+                              router.push(`/protected/reservation/${r.id}`)
+                            }
+                          >
+                            <td className="px-6 py-4 font-bold text-gray-900 dark:text-white text-sm">
+                              {r.food.name}
+                            </td>
+                            <td className="px-6 py-4 text-xs font-medium text-gray-600 dark:text-gray-300">
+                              {r.food.supplierName}
+                            </td>
+                            <td className="px-6 py-4 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                              {r.quantity} {r.food.quantityUnit}
+                            </td>
+                            <td
+                              className="px-6 py-4 text-xs font-mono font-bold"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {r.pickupCode ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleCopyCode(r.pickupCode!, e)}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-slate-800 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-slate-700 border border-purple-200 dark:border-slate-700 transition-colors"
+                                  title="Click to copy pickup code"
+                                >
+                                  <FaQrcode className="text-xs text-purple-500" />
+                                  <span>{r.pickupCode}</span>
+                                  <FaCopy className="text-[10px] opacity-70" />
+                                </button>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-xs text-gray-600 dark:text-gray-300 font-medium">
+                              {formatDate(r.pickupTime, "MMM d, yyyy - h:mm a")}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span
+                                className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${
+                                  STATUS_STYLES[r.status] ?? STATUS_STYLES.expired
+                                }`}
+                              >
+                                {r.status.replace("_", " ").toUpperCase()}
+                              </span>
+                            </td>
+                            <td
+                              className="px-6 py-4"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {(r.status === "pending" ||
+                                r.status === "confirmed") && (
+                                <button
+                                  disabled={isCancelling}
+                                  onClick={() => cancelReservation({ id: r.id })}
+                                  className="text-xs text-rose-600 hover:text-rose-700 disabled:opacity-40 font-bold cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </ScrollableContainer>
+              </div>
+            </div>
           )}
         </div>
 

@@ -237,18 +237,18 @@ export default function ReservationDetailPage() {
         <motion.div
           initial={{ opacity: 0, y: -15 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`rounded-3xl p-5 sm:p-6 mb-8 border backdrop-blur-xl shadow-lg relative overflow-hidden ${statusMeta.bg}`}
+          className={`rounded-3xl p-4 sm:p-6 mb-6 sm:mb-8 border backdrop-blur-xl shadow-lg relative overflow-hidden ${statusMeta.bg}`}
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
-            <div className="flex items-start sm:items-center gap-4">
+            <div className="flex items-start sm:items-center gap-3.5 sm:gap-4">
               <div
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0 shadow-md ${statusMeta.badgeBg}`}
+                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-lg sm:text-xl shrink-0 shadow-md ${statusMeta.badgeBg}`}
               >
                 <statusMeta.icon />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-lg sm:text-xl font-black tracking-tight">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-base sm:text-xl font-black tracking-tight">
                     {statusMeta.title}
                   </h1>
                   {isPending && reservation.isSupplierView && (
@@ -263,11 +263,11 @@ export default function ReservationDetailPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
               <button
                 type="button"
                 onClick={handleShare}
-                className="px-3.5 py-2 rounded-xl bg-white/80 dark:bg-slate-900/80 hover:bg-white dark:hover:bg-slate-900 border border-gray-200 dark:border-slate-700 text-xs font-bold text-gray-700 dark:text-gray-200 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white/80 dark:bg-slate-900/80 hover:bg-white dark:hover:bg-slate-900 border border-gray-200 dark:border-slate-700 text-xs font-bold text-gray-700 dark:text-gray-200 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
               >
                 <FaShare className="w-3 h-3" />
                 <span>Share Ticket</span>
@@ -277,17 +277,17 @@ export default function ReservationDetailPage() {
         </motion.div>
 
         {/* 2-Column Content Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 items-start">
           {/* Left 2 Columns: Food Details, Pickup Address, Supplier/Customer Info */}
           <div className="lg:col-span-2 space-y-6">
             {/* Food Info Card */}
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-6 sm:p-7 border border-gray-200/80 dark:border-slate-800"
+              className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-5 sm:p-7 border border-gray-200/80 dark:border-slate-800"
             >
               <div className="flex items-center justify-between pb-4 mb-5 border-b border-gray-100 dark:border-slate-800">
-                <h3 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
                   <FaUtensils className="text-emerald-500" />
                   Reserved Food Details
                 </h3>
@@ -300,8 +300,8 @@ export default function ReservationDetailPage() {
                 </Link>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 mb-6">
-                <div className="w-24 h-24 sm:w-28 sm:h-28 bg-linear-to-br from-emerald-100 to-teal-50 dark:from-slate-800 dark:to-slate-800/80 rounded-2xl overflow-hidden shrink-0 border border-gray-200/80 dark:border-slate-700 shadow-inner flex items-center justify-center">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5 mb-6">
+                <div className="w-20 h-20 sm:w-28 sm:h-28 bg-linear-to-br from-emerald-100 to-teal-50 dark:from-slate-800 dark:to-slate-800/80 rounded-2xl overflow-hidden shrink-0 border border-gray-200/80 dark:border-slate-700 shadow-inner flex items-center justify-center">
                   {primaryImage ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -315,7 +315,7 @@ export default function ReservationDetailPage() {
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <h4 className="text-xl font-black text-gray-900 dark:text-white truncate">
+                  <h4 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white truncate">
                     {reservation.food.name}
                   </h4>
                   {reservation.food.description && (
@@ -344,8 +344,8 @@ export default function ReservationDetailPage() {
               </div>
 
               {/* Metrics Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-5 border-t border-gray-100 dark:border-slate-800">
-                <div className="bg-gray-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 pt-5 border-t border-gray-100 dark:border-slate-800">
+                <div className="bg-gray-50 dark:bg-slate-800/60 p-3 sm:p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
                     Portions
                   </div>
@@ -354,7 +354,7 @@ export default function ReservationDetailPage() {
                   </div>
                 </div>
 
-                <div className="bg-gray-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
+                <div className="bg-gray-50 dark:bg-slate-800/60 p-3 sm:p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
                     Total Amount
                   </div>
@@ -363,7 +363,7 @@ export default function ReservationDetailPage() {
                   </div>
                 </div>
 
-                <div className="bg-gray-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
+                <div className="bg-gray-50 dark:bg-slate-800/60 p-3 sm:p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
                     Pickup Time
                   </div>
@@ -377,7 +377,7 @@ export default function ReservationDetailPage() {
                   </div>
                 </div>
 
-                <div className="bg-gray-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
+                <div className="bg-gray-50 dark:bg-slate-800/60 p-3 sm:p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
                     Expiry Deadline
                   </div>
@@ -398,11 +398,11 @@ export default function ReservationDetailPage() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 }}
-              className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-6 sm:p-7 border border-gray-200/80 dark:border-slate-800"
+              className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-5 sm:p-7 border border-gray-200/80 dark:border-slate-800"
             >
-              <h3 className="text-base font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <h3 className="text-sm sm:text-base font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <FaMapMarkerAlt className="text-rose-500" />
-                Pickup Location & Address
+                Pickup Location &amp; Address
               </h3>
 
               <div className="p-4 bg-linear-to-br from-gray-50 to-blue-50/30 dark:from-slate-800/60 dark:to-slate-800/30 rounded-2xl border border-gray-200/80 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -415,11 +415,11 @@ export default function ReservationDetailPage() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
                   <button
                     type="button"
                     onClick={handleCopyAddress}
-                    className="px-3 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                    className="flex-1 sm:flex-initial px-3 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                   >
                     {addressCopied ? <FaCheck className="text-emerald-500" /> : <FaCopy />}
                     <span>{addressCopied ? "Copied" : "Copy"}</span>
@@ -430,7 +430,7 @@ export default function ReservationDetailPage() {
                       href={mapsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors"
+                      className="flex-1 sm:flex-initial px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 transition-colors"
                     >
                       <FaDirections />
                       <span>Directions</span>
@@ -446,9 +446,9 @@ export default function ReservationDetailPage() {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-6 sm:p-7 border border-gray-200/80 dark:border-slate-800"
+                className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-5 sm:p-7 border border-gray-200/80 dark:border-slate-800"
               >
-                <h3 className="text-base font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                   <FaUser className="text-emerald-500" />
                   Customer Information
                 </h3>
@@ -467,7 +467,7 @@ export default function ReservationDetailPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-gray-100 dark:border-slate-800 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-3 border-t border-gray-100 dark:border-slate-800 text-xs">
                   <button
                     type="button"
                     onClick={() => setIsChatOpen(true)}
@@ -501,11 +501,11 @@ export default function ReservationDetailPage() {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-6 sm:p-7 border border-gray-200/80 dark:border-slate-800"
+                className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-5 sm:p-7 border border-gray-200/80 dark:border-slate-800"
               >
-                <h3 className="text-base font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                   <FaStore className="text-emerald-500" />
-                  Supplier Contact & Support
+                  Supplier Contact &amp; Support
                 </h3>
 
                 <div className="flex items-center gap-4 mb-4">
@@ -522,7 +522,7 @@ export default function ReservationDetailPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-gray-100 dark:border-slate-800 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-3 border-t border-gray-100 dark:border-slate-800 text-xs">
                   <button
                     type="button"
                     onClick={() => setIsChatOpen(true)}
@@ -545,10 +545,10 @@ export default function ReservationDetailPage() {
                   {reservation.supplierEmail && (
                     <a
                       href={`mailto:${reservation.supplierEmail}`}
-                      className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-center gap-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600 font-semibold"
+                      className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-center gap-2 text-gray-700 dark:text-gray-300 hover:text-emerald-600 font-semibold truncate"
                     >
                       <FaEnvelope className="text-blue-500" />
-                      <span>Email Supplier</span>
+                      <span className="truncate">Email Supplier</span>
                     </a>
                   )}
                 </div>
@@ -563,13 +563,13 @@ export default function ReservationDetailPage() {
               <motion.div
                 initial={{ opacity: 0, x: 15 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-6 sm:p-7 border border-amber-200 dark:border-amber-900/60 sticky top-24 space-y-4"
+                className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-5 sm:p-7 border border-amber-200 dark:border-amber-900/60 sticky top-24 space-y-4"
               >
                 <div className="text-center pb-2">
-                  <div className="w-14 h-14 bg-amber-50 dark:bg-amber-950/60 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-3 text-xl">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-amber-50 dark:bg-amber-950/60 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-3 text-lg sm:text-xl">
                     <FaHourglassHalf className="animate-spin" />
                   </div>
-                  <h3 className="text-base font-black text-gray-900 dark:text-white">
+                  <h3 className="text-sm sm:text-base font-black text-gray-900 dark:text-white">
                     Pending Confirmation
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -609,12 +609,12 @@ export default function ReservationDetailPage() {
               <motion.div
                 initial={{ opacity: 0, x: 15 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-6 sm:p-7 border border-amber-200 dark:border-amber-900/60 sticky top-24 text-center space-y-4"
+                className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-5 sm:p-7 border border-amber-200 dark:border-amber-900/60 sticky top-24 text-center space-y-4"
               >
-                <div className="w-14 h-14 bg-amber-50 dark:bg-amber-950/60 text-amber-500 rounded-2xl flex items-center justify-center mx-auto text-xl">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-amber-50 dark:bg-amber-950/60 text-amber-500 rounded-2xl flex items-center justify-center mx-auto text-lg sm:text-xl">
                   <FaHourglassHalf />
                 </div>
-                <h3 className="text-base font-black text-gray-900 dark:text-white">
+                <h3 className="text-sm sm:text-base font-black text-gray-900 dark:text-white">
                   Request Sent to Supplier
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
@@ -645,8 +645,8 @@ export default function ReservationDetailPage() {
                 {/* Ticket Top Gradient Line */}
                 <div className="h-2.5 w-full bg-linear-to-r from-emerald-500 via-teal-500 to-green-500" />
 
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-5">
+                <div className="p-5 sm:p-6">
+                  <div className="flex items-center justify-between mb-4 sm:mb-5">
                     <h3 className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                       <FaQrcode />
                       <span>AnnoSetu Pickup Pass</span>
@@ -657,7 +657,7 @@ export default function ReservationDetailPage() {
                   </div>
 
                   {/* QR Code Container */}
-                  <div ref={qrWrapperRef} className="flex justify-center mb-5">
+                  <div ref={qrWrapperRef} className="flex justify-center mb-4 sm:mb-5">
                     <div className="p-3 bg-white rounded-2xl shadow-md border border-gray-100">
                       <QRCodeCanvas
                         value={JSON.stringify({
@@ -665,7 +665,7 @@ export default function ReservationDetailPage() {
                           code: reservation.pickupCode,
                           food: reservation.food.name,
                         })}
-                        size={170}
+                        size={155}
                         level="H"
                         includeMargin
                       />
@@ -674,26 +674,21 @@ export default function ReservationDetailPage() {
 
                   {/* Perforated Divider */}
                   <div className="relative py-4 border-y border-dashed border-gray-200 dark:border-slate-800 text-center">
-                    {/* Left Notch */}
-                    <div className="absolute -left-9 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-50 dark:bg-slate-950 border-r border-gray-200 dark:border-slate-800" />
-                    {/* Right Notch */}
-                    <div className="absolute -right-9 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-50 dark:bg-slate-950 border-l border-gray-200 dark:border-slate-800" />
-
                     <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">
                       Secret Pickup Code
                     </div>
 
                     <div className="flex items-center justify-center gap-2">
-                      <span className="text-2xl sm:text-3xl font-mono font-black tracking-[0.2em] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-4 py-1.5 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 shadow-inner">
+                      <span className="text-xl sm:text-3xl font-mono font-black tracking-[0.15em] sm:tracking-[0.2em] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-3.5 sm:px-4 py-1.5 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 shadow-inner">
                         {reservation.pickupCode}
                       </span>
                       <button
                         type="button"
                         onClick={handleCopyCode}
-                        className="p-3 rounded-2xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 transition-colors shadow-xs cursor-pointer"
+                        className="p-2.5 sm:p-3 rounded-2xl bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 transition-colors shadow-xs cursor-pointer"
                         aria-label="Copy pickup code"
                       >
-                        {copied ? <FaCheck className="text-emerald-500" /> : <FaCopy />}
+                        {copied ? <FaCheck className="text-emerald-500 text-sm" /> : <FaCopy className="text-sm" />}
                       </button>
                     </div>
                   </div>

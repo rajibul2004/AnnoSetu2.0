@@ -174,7 +174,7 @@ export default function HomePage() {
         </div>
 
         {/* Hero Content Container */}
-        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 md:pt-28 md:pb-20 text-center flex-1 flex flex-col justify-center">
+        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-12 sm:pt-20 sm:pb-16 md:pt-28 md:pb-20 text-center flex-1 flex flex-col justify-center">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -185,10 +185,10 @@ export default function HomePage() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring" }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/40 dark:bg-white/15 backdrop-blur-md rounded-full mb-8 border border-emerald-500/30 dark:border-white/25 shadow-md dark:shadow-lg"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-white/50 dark:bg-white/15 backdrop-blur-md rounded-full mb-5 sm:mb-8 border border-emerald-500/30 dark:border-white/25 shadow-md dark:shadow-lg"
             >
-              <FaLeaf className="w-4 h-4 text-emerald-600 dark:text-emerald-400 animate-bounce" />
-              <span className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+              <FaLeaf className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400 animate-bounce" />
+              <span className="text-xs sm:text-sm font-medium text-emerald-800 dark:text-emerald-200">
                 <span className="logotext font-semibold text-emerald-950 dark:text-white">অন্নসেতু</span> — the food bridge
               </span>
             </motion.div>
@@ -198,7 +198,7 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35 }}
-              className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-6 leading-tight drop-shadow-xs dark:drop-shadow-md"
+              className="text-3xl sm:text-5xl md:text-7xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-4 sm:mb-6 leading-tight drop-shadow-xs dark:drop-shadow-md"
             >
               Save Food! <br />
               <span className="bg-gradient-to-r from-emerald-600 via-green-600 to-amber-600 dark:from-emerald-400 dark:via-green-300 dark:to-amber-300 bg-clip-text text-transparent">
@@ -211,7 +211,7 @@ export default function HomePage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
-              className="text-base sm:text-lg md:text-xl text-gray-700 dark:text-gray-200 mb-10 max-w-2xl mx-auto leading-relaxed"
+              className="text-xs sm:text-base md:text-xl text-gray-700 dark:text-gray-200 mb-6 sm:mb-10 max-w-2xl mx-auto leading-relaxed px-2"
             >
               Every day, restaurants and home cooks have food left over — and
               every day, someone nearby could use it. Connect, rescue surplus
@@ -223,18 +223,18 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              className="max-w-2xl mx-auto mb-8"
+              className="max-w-2xl mx-auto mb-6 sm:mb-8"
             >
               <form onSubmit={handleSearchSubmit} className="relative group">
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full px-6 py-3.5 pl-14 pr-28 rounded-2xl border-2 border-gray-300/60 dark:border-white/30 bg-white/40 dark:bg-black/40 backdrop-blur-xl placeholder-gray-500 dark:placeholder-gray-300 text-gray-900 dark:text-white focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 dark:focus:ring-emerald-500/30 transition-all duration-300 text-base sm:text-lg shadow-xl dark:shadow-2xl"
+                  className="w-full px-4 py-3 sm:px-6 sm:py-3.5 pl-11 sm:pl-14 pr-12 sm:pr-28 rounded-2xl border-2 border-gray-300/70 dark:border-white/30 bg-white/60 dark:bg-black/45 backdrop-blur-xl placeholder-gray-500 dark:placeholder-gray-300 text-gray-900 dark:text-white focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 dark:focus:ring-emerald-500/30 transition-all duration-300 text-sm sm:text-lg shadow-xl dark:shadow-2xl"
                 />
-                <FaSearch className="absolute left-5 top-1/2 transform -translate-y-1/2 text-emerald-600 dark:text-emerald-400 text-xl pointer-events-none" />
+                <FaSearch className="absolute left-4 sm:left-5 top-1/2 transform -translate-y-1/2 text-emerald-600 dark:text-emerald-400 text-base sm:text-xl pointer-events-none" />
                 {!search && (
-                  <div className="absolute left-14 top-1/2 -translate-y-1/2 overflow-hidden h-7 pointer-events-none">
+                  <div className="absolute left-11 sm:left-14 top-1/2 -translate-y-1/2 overflow-hidden h-6 sm:h-7 pointer-events-none">
                     <motion.div
                       animate={{ y: -placeholderIndex * 28 }}
                       transition={{ duration: 0.3 }}
@@ -243,7 +243,7 @@ export default function HomePage() {
                       {PLACEHOLDERS.map((text) => (
                         <div
                           key={text}
-                          className="h-7 text-gray-600 dark:text-gray-300 text-base sm:text-lg font-normal"
+                          className="h-6 sm:h-7 text-gray-600 dark:text-gray-300 text-xs sm:text-lg font-normal truncate"
                         >
                           {text}
                         </div>
@@ -251,6 +251,15 @@ export default function HomePage() {
                     </motion.div>
                   </div>
                 )}
+                {/* Mobile Icon Button */}
+                <button
+                  type="submit"
+                  aria-label="Submit search"
+                  className="md:hidden absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-md active:scale-95 transition-transform"
+                >
+                  <FaSearch className="w-3.5 h-3.5" />
+                </button>
+                {/* Desktop Text Button */}
                 <button
                   type="submit"
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 px-5 py-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white rounded-xl font-semibold shadow-lg hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer hidden md:block"
@@ -265,65 +274,71 @@ export default function HomePage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.65 }}
-              className="flex flex-wrap items-center justify-center gap-4 text-sm sm:text-base font-semibold"
+              className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4 max-w-xl mx-auto w-full text-xs sm:text-sm font-semibold"
             >
               <Link
                 href="/public/food?tab=smart-match"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white shadow-xl hover:shadow-purple-500/30 hover:scale-105 transition-all duration-200"
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white shadow-lg shadow-purple-500/25 hover:scale-103 active:scale-95 transition-all duration-200"
               >
-                <FaMagic className="w-4 h-4 text-amber-300" />
-                AI Smart Matcher ✨
+                <FaMagic className="w-4 h-4 text-amber-300 animate-pulse" />
+                <span>AI Smart Matcher ✨</span>
               </Link>
               <Link
                 href="/public/food?tab=browse"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-linear-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white shadow-xl hover:shadow-emerald-500/30 hover:scale-105 transition-all duration-200"
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white shadow-lg shadow-emerald-500/25 hover:scale-103 active:scale-95 transition-all duration-200"
               >
-                <FaUtensils className="w-4 h-4" />
-                Browse Available Food
+                <FaUtensils className="w-3.5 h-3.5" />
+                <span>Browse Surplus</span>
               </Link>
               <Link
                 href="/protected/add-food"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-gray-300/60 dark:border-white/30 bg-white/40 dark:bg-white/15 hover:bg-white/50 dark:hover:bg-white/25 text-gray-900 dark:text-white backdrop-blur-md shadow-lg hover:scale-105 transition-all duration-200"
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border border-gray-300/80 dark:border-white/20 bg-white/60 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 text-gray-900 dark:text-white backdrop-blur-md shadow-md hover:scale-103 active:scale-95 transition-all duration-200"
               >
-                <FaHeart className="w-4 h-4 text-rose-500 dark:text-rose-400" />
-                Donate / Share Food
+                <FaHeart className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
+                <span>Donate / Share</span>
               </Link>
             </motion.div>
 
-            {/* Stats Cards */}
+            {/* Stats Cards (Compact 3-column on mobile) */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.75 }}
-              className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-6 mt-12 sm:mt-16 max-w-4xl mx-auto"
+              className="grid grid-cols-3 gap-2 sm:gap-6 mt-8 sm:mt-14 max-w-3xl mx-auto"
             >
-              <div className="backdrop-blur-xl bg-white/40 dark:bg-black/35 border border-gray-200/60 dark:border-white/20 rounded-2xl p-5 text-center shadow-lg dark:shadow-2xl hover:border-emerald-500/50 dark:hover:border-emerald-400/50 transition-all">
+              <div className="backdrop-blur-xl bg-white/50 dark:bg-black/40 border border-gray-200/70 dark:border-white/15 rounded-2xl p-2.5 sm:p-5 text-center shadow-md dark:shadow-xl hover:border-emerald-500/50 transition-all">
                 <AnimatedNumber
                   value={12.5}
                   decimals={1}
                   suffix="K+"
                   duration={0.5}
-                  className="mb-1"
+                  className="mb-0.5 text-lg sm:text-3xl font-black text-emerald-600 dark:text-emerald-400"
                 />
-                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Meals Saved</div>
+                <div className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 leading-tight">
+                  Meals Saved
+                </div>
               </div>
-              <div className="backdrop-blur-xl bg-white/40 dark:bg-black/35 border border-gray-200/60 dark:border-white/20 rounded-2xl p-5 text-center shadow-lg dark:shadow-2xl hover:border-amber-500/50 dark:hover:border-amber-400/50 transition-all">
+              <div className="backdrop-blur-xl bg-white/50 dark:bg-black/40 border border-gray-200/70 dark:border-white/15 rounded-2xl p-2.5 sm:p-5 text-center shadow-md dark:shadow-xl hover:border-amber-500/50 transition-all">
                 <AnimatedNumber
                   value={150}
                   duration={2}
-                  className="mb-1"
+                  className="mb-0.5 text-lg sm:text-3xl font-black text-amber-600 dark:text-amber-400"
                 />
-                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Partner Donors</div>
+                <div className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 leading-tight">
+                  Partners
+                </div>
               </div>
-              <div className="backdrop-blur-xl bg-white/40 dark:bg-black/35 border border-gray-200/60 dark:border-white/20 rounded-2xl p-5 text-center shadow-lg dark:shadow-2xl hover:border-teal-500/50 dark:hover:border-teal-400/50 transition-all">
+              <div className="backdrop-blur-xl bg-white/50 dark:bg-black/40 border border-gray-200/70 dark:border-white/15 rounded-2xl p-2.5 sm:p-5 text-center shadow-md dark:shadow-xl hover:border-teal-500/50 transition-all">
                 <AnimatedNumber
                   value={8.2}
                   decimals={1}
                   suffix="T"
                   duration={1}
-                  className="mb-1"
+                  className="mb-0.5 text-lg sm:text-3xl font-black text-teal-600 dark:text-teal-400"
                 />
-                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">CO₂ Reduced</div>
+                <div className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 leading-tight">
+                  CO₂ Cut
+                </div>
               </div>
             </motion.div>
           </motion.div>
@@ -346,22 +361,22 @@ export default function HomePage() {
       </div>
 
       {/* ================= FILTERS + LISTINGS ================= */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Filter Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="card rounded-2xl shadow-xl p-6 mb-8 border border-gray-200/80 dark:border-slate-800 backdrop-blur-md"
+          className="card rounded-2xl shadow-xl p-4 sm:p-6 mb-6 sm:mb-8 border border-gray-200/80 dark:border-slate-800 backdrop-blur-md"
         >
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center justify-between lg:justify-start gap-4">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-900 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-950 transition-colors duration-200 lg:hidden cursor-pointer"
+                className="flex items-center gap-2 px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 rounded-xl hover:bg-emerald-100 transition-colors duration-200 lg:hidden cursor-pointer text-xs font-bold"
               >
-                <FaFilter className="text-gray-600 dark:text-gray-300" />
-                <span className="font-medium">Filters</span>
+                <FaFilter className="text-emerald-600 dark:text-emerald-400" />
+                <span>{showFilters ? "Hide Filters" : "Filter Food"}</span>
               </button>
               <div className="hidden lg:flex items-center gap-2">
                 <FaFilter className="text-emerald-500" />
@@ -371,12 +386,12 @@ export default function HomePage() {
               </div>
             </div>
             <AnimatePresence>
-              <div className={`${showFilters ? "block" : "hidden"} lg:block`}>
+              <div className={`${showFilters ? "block" : "hidden"} lg:block mt-3 lg:mt-0`}>
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="flex flex-col p-1 px-2 lg:flex-row items-start lg:items-center gap-4 overflow-hidden"
+                  className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2.5 sm:gap-4 overflow-hidden"
                 >
                   <Select
                     value={filters.isDonation}
@@ -388,7 +403,7 @@ export default function HomePage() {
                       { value: "true", label: "Donations Only" },
                       { value: "false", label: "Discounted Food" },
                     ]}
-                    className="w-60 lg:w-45"
+                    className="w-full lg:w-45"
                   />
                   <Select
                     value={filters.maxDistance}
@@ -401,7 +416,7 @@ export default function HomePage() {
                       { value: "20", label: "Within 20km" },
                       { value: "50", label: "Within 50km" },
                     ]}
-                    className="w-60 lg:w-35"
+                    className="w-full lg:w-35"
                   />
                   <Select
                     value={filters.sortBy}
@@ -414,11 +429,11 @@ export default function HomePage() {
                       { value: "price_low", label: "Price: Low to High" },
                       { value: "price_high", label: "Price: High to Low" },
                     ]}
-                    className="w-60 lg:w-50"
+                    className="w-full lg:w-50"
                   />
                   <button
                     onClick={handleApplyFilters}
-                    className="w-full lg:w-auto px-6 py-3 cursor-pointer bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-300"
+                    className="w-full lg:w-auto px-6 py-2.5 sm:py-3 cursor-pointer bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white rounded-xl font-semibold hover:shadow-lg active:scale-95 transition-all duration-200 text-sm"
                   >
                     Apply Filters
                   </button>
@@ -428,67 +443,61 @@ export default function HomePage() {
           </div>
         </motion.div>
 
-        {/* Real-time 3 Stats Cards */}
+        {/* Real-time 3 Stats Cards (Organized 3-card layout on mobile) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
+          className="grid grid-cols-3 gap-2 sm:gap-6 mb-8"
         >
           <motion.div
-            whileHover={{ y: -4 }}
-            className="card rounded-2xl p-6 border border-blue-200/80 dark:border-blue-500/20 shadow-md hover:shadow-xl transition-all duration-300"
+            whileHover={{ y: -3 }}
+            className="card rounded-2xl p-2.5 sm:p-6 border border-blue-200/80 dark:border-blue-500/20 shadow-xs sm:shadow-md flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-center sm:text-left"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg text-white">
-                <FaMapMarkedAlt className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-sm text-blue-600 dark:text-blue-300 font-medium">
-                  Active Listings
-                </p>
-                <p className="text-3xl font-bold text-blue-900 dark:text-blue-400">
-                  {statsLoading ? "…" : stats.activeListings}
-                </p>
-              </div>
+            <div className="w-9 h-9 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-sm sm:shadow-md text-white shrink-0">
+              <FaMapMarkedAlt className="w-4 h-4 sm:w-6 sm:h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] sm:text-sm text-blue-600 dark:text-blue-300 font-medium">
+                Active Listings
+              </p>
+              <p className="text-base sm:text-3xl font-black text-blue-950 dark:text-blue-400">
+                {statsLoading ? "…" : stats.activeListings}
+              </p>
             </div>
           </motion.div>
 
           <motion.div
-            whileHover={{ y: -4 }}
-            className="card rounded-2xl p-6 border border-emerald-200/80 dark:border-emerald-500/20 shadow-md hover:shadow-xl transition-all duration-300"
+            whileHover={{ y: -3 }}
+            className="card rounded-2xl p-2.5 sm:p-6 border border-emerald-200/80 dark:border-emerald-500/20 shadow-xs sm:shadow-md flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-center sm:text-left"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg text-white">
-                <FaHeart className="w-6 h-6 animate-pulse" />
-              </div>
-              <div>
-                <p className="text-sm text-emerald-600 dark:text-emerald-300 font-medium">
-                  Donations
-                </p>
-                <p className="text-3xl font-bold text-emerald-900 dark:text-emerald-400">
-                  {statsLoading ? "…" : stats.donations}
-                </p>
-              </div>
+            <div className="w-9 h-9 sm:w-14 sm:h-14 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-sm sm:shadow-md text-white shrink-0">
+              <FaHeart className="w-4 h-4 sm:w-6 sm:h-6 animate-pulse" />
+            </div>
+            <div>
+              <p className="text-[10px] sm:text-sm text-emerald-600 dark:text-emerald-300 font-medium">
+                Donations
+              </p>
+              <p className="text-base sm:text-3xl font-black text-emerald-950 dark:text-emerald-400">
+                {statsLoading ? "…" : stats.donations}
+              </p>
             </div>
           </motion.div>
 
           <motion.div
-            whileHover={{ y: -4 }}
-            className="card rounded-2xl p-6 border border-pink-200/80 dark:border-pink-500/20 shadow-md hover:shadow-xl transition-all duration-300"
+            whileHover={{ y: -3 }}
+            className="card rounded-2xl p-2.5 sm:p-6 border border-pink-200/80 dark:border-pink-500/20 shadow-xs sm:shadow-md flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-center sm:text-left"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg text-white">
-                <FaStore className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-sm text-pink-600 dark:text-pink-300 font-medium">
-                  Restaurants
-                </p>
-                <p className="text-3xl font-bold text-pink-900 dark:text-pink-400">
-                  {statsLoading ? "…" : stats.uniqueRestaurants}
-                </p>
-              </div>
+            <div className="w-9 h-9 sm:w-14 sm:h-14 bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl flex items-center justify-center shadow-sm sm:shadow-md text-white shrink-0">
+              <FaStore className="w-4 h-4 sm:w-6 sm:h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] sm:text-sm text-pink-600 dark:text-pink-300 font-medium">
+                Restaurants
+              </p>
+              <p className="text-base sm:text-3xl font-black text-pink-950 dark:text-pink-400">
+                {statsLoading ? "…" : stats.uniqueRestaurants}
+              </p>
             </div>
           </motion.div>
         </motion.div>

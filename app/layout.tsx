@@ -7,6 +7,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ModernToaster from "@/components/common/ModernToaster";
 import InitialSplashScreen from "@/components/common/InitialSplashScreen";
+import MobileBottomNav from "@/components/layout/MobileBottomNav";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,8 +39,9 @@ export default function RootLayout({
           <ThemeProvider>
             <InitialSplashScreen />
             <Navbar />
-            {children}
+            <main className="pb-16 md:pb-0">{children}</main>
             <Footer />
+            <MobileBottomNav />
             <ModernToaster />
           </ThemeProvider>
         </QueryProvider>

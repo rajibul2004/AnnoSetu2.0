@@ -218,7 +218,7 @@ export default function ConfirmReservationContent() {
         <motion.div
           initial={{ opacity: 0, y: -15 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`rounded-3xl p-5 sm:p-6 mb-8 border backdrop-blur-xl shadow-lg relative overflow-hidden ${
+          className={`rounded-3xl p-4 sm:p-6 mb-6 sm:mb-8 border backdrop-blur-xl shadow-lg relative overflow-hidden ${
             isConfirmed
               ? "bg-emerald-500/10 dark:bg-emerald-950/40 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
               : isPending
@@ -229,9 +229,9 @@ export default function ConfirmReservationContent() {
           }`}
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
-            <div className="flex items-start sm:items-center gap-4">
+            <div className="flex items-start sm:items-center gap-3.5 sm:gap-4">
               <div
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0 shadow-md ${
+                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-lg sm:text-xl shrink-0 shadow-md ${
                   isConfirmed
                     ? "bg-emerald-500 text-white"
                     : isPending
@@ -247,8 +247,8 @@ export default function ConfirmReservationContent() {
                 {isCancelled && <FaTimesCircle />}
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-lg sm:text-xl font-black tracking-tight">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-base sm:text-xl font-black tracking-tight">
                     {isConfirmed && "Reservation Confirmed"}
                     {isPending && "Pending Confirmation"}
                     {isPickedUp && "Order Collected & Completed"}
@@ -275,7 +275,7 @@ export default function ConfirmReservationContent() {
             {isConfirmed && reservation.isSupplierView && (
               <Button
                 onClick={() => router.push("/protected/reservation/pickup")}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center gap-2 shadow-md cursor-pointer shrink-0"
+                className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer shrink-0"
               >
                 <FaQrcode />
                 <span>Verify Pickup QR</span>
@@ -285,14 +285,14 @@ export default function ConfirmReservationContent() {
         </motion.div>
 
         {/* 2-Column Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 items-start">
           {/* Main Details (Left 2 Columns) */}
           <div className="lg:col-span-2 space-y-6">
             {/* Food Details Card */}
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-6 sm:p-7 border border-gray-200/80 dark:border-slate-800"
+              className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-5 sm:p-7 border border-gray-200/80 dark:border-slate-800"
             >
               <div className="flex items-center justify-between pb-4 mb-5 border-b border-gray-100 dark:border-slate-800">
                 <h3 className="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">

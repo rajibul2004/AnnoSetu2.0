@@ -4,9 +4,13 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ── Base ─────────────────────────────────────────── */
+html,
 body {
   @apply font-sans text-gray-800 bg-white dark:text-gray-200 dark:bg-[#0A192F]
          transition-colors duration-300;
+  max-width: 100%;
+  overflow-x: hidden;
+  position: relative;
 }
 
 /* ── Components ───────────────────────────────────── */

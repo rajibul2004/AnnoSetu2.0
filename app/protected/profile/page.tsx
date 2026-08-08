@@ -404,11 +404,11 @@ export default function ProfilePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Sidebar */}
-          <div className="lg:col-span-4 sticky top-24 md:top-28 z-20">
+          <div className="lg:col-span-4 static lg:sticky lg:top-28 z-20">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-6 sm:p-8 rounded-3xl bg-white/85 dark:bg-gray-900/85 backdrop-blur-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-xl"
+              className="p-5 sm:p-8 rounded-3xl bg-white/85 dark:bg-gray-900/85 backdrop-blur-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-xl"
             >
               {/* Avatar Frame */}
               <div className="relative mb-6 mx-auto w-32 h-32">

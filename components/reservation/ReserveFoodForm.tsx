@@ -230,37 +230,37 @@ export default function ReserveFoodForm() {
     <div className="min-h-screen bg-transparent py-6 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Navigation Breadcrumb */}
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <nav className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400">
+        <div className="flex items-center justify-between gap-2 sm:gap-4 mb-4 sm:mb-6">
+          <nav className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400 min-w-0 truncate">
             <button
               onClick={() => router.push("/")}
-              className="hover:text-emerald-600 transition-colors cursor-pointer"
+              className="hover:text-emerald-600 transition-colors cursor-pointer shrink-0"
             >
               Home
             </button>
             <span>/</span>
             <button
               onClick={() => router.push("/public/food")}
-              className="hover:text-emerald-600 transition-colors cursor-pointer"
+              className="hover:text-emerald-600 transition-colors cursor-pointer shrink-0 hidden xs:inline-block"
             >
-              Explore Surplus
+              Explore
             </button>
-            <span>/</span>
+            <span className="hidden xs:inline-block">/</span>
             <button
               onClick={() => router.push(`/protected/food/${food.id}`)}
-              className="hover:text-emerald-600 transition-colors cursor-pointer truncate max-w-[120px] sm:max-w-xs"
+              className="hover:text-emerald-600 transition-colors cursor-pointer truncate max-w-[100px] sm:max-w-xs"
             >
               {food.name}
             </button>
             <span>/</span>
-            <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
               Reserve
             </span>
           </nav>
 
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-gray-200 dark:border-slate-800 text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-emerald-600 transition-colors shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-gray-200 dark:border-slate-800 text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-emerald-600 transition-colors shadow-xs cursor-pointer shrink-0"
           >
             <FaArrowLeft className="w-3 h-3" />
             <span>Back</span>
@@ -268,7 +268,7 @@ export default function ReserveFoodForm() {
         </div>
 
         {/* Main 2-Column Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 items-start">
           {/* Left 2 Columns: Food Overview Details */}
           <div className="lg:col-span-2 space-y-6">
             <motion.div
@@ -277,7 +277,7 @@ export default function ReserveFoodForm() {
               className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl overflow-hidden border border-gray-200/80 dark:border-slate-800"
             >
               {/* Image Banner */}
-              <div className="relative h-72 sm:h-96 w-full bg-linear-to-br from-emerald-100 via-teal-50 to-amber-50 dark:from-slate-800 dark:to-slate-900 overflow-hidden group">
+              <div className="relative h-60 sm:h-80 md:h-96 w-full bg-linear-to-br from-emerald-100 via-teal-50 to-amber-50 dark:from-slate-800 dark:to-slate-900 overflow-hidden group">
                 {primaryImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -360,7 +360,7 @@ export default function ReserveFoodForm() {
               </div>
 
               {/* Body Details */}
-              <div className="p-6 sm:p-8">
+              <div className="p-5 sm:p-8">
                 {/* Title & Pricing Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 pb-6 border-b border-gray-100 dark:border-slate-800">
                   <div>
@@ -541,7 +541,7 @@ export default function ReserveFoodForm() {
             <motion.div
               initial={{ opacity: 0, x: 15 }}
               animate={{ opacity: 1, x: 0 }}
-              className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-6 sm:p-7 sticky top-24 border border-gray-200/80 dark:border-slate-800"
+              className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl p-5 sm:p-7 sticky top-24 border border-gray-200/80 dark:border-slate-800"
             >
               <h2 className="text-lg font-black text-gray-900 dark:text-white mb-5 flex items-center gap-2">
                 <FaCheckCircle className="text-emerald-500" />

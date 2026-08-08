@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
@@ -14,11 +15,23 @@ import {
 } from "react-icons/fa";
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  // Hide footer on focused flows (auth funnels, fullscreen live chat, QR camera scanner)
+  const shouldHideFooter =
+    pathname?.startsWith("/auth/") ||
+    pathname === "/protected/messages" ||
+    pathname === "/protected/reservation/pickup";
+
+  if (shouldHideFooter) {
+    return null;
+  }
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   return (
-    <footer className="relative pt-16 pb-8 overflow-hidden">
+    <footer className="relative pt-16 pb-8 overflow-hidden border-t border-gray-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/40">
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           <motion.div
@@ -132,32 +145,32 @@ export default function Footer() {
               {[
                 {
                   name: "Restaurants",
-                  path: "/for-restaurants",
+                  path: "/public/how-works?role=restaurant",
                   color: "bg-blue-500",
                   icon: "🏪",
                 },
                 {
                   name: "Individuals",
-                  path: "/for-individuals",
+                  path: "/public/how-works?role=individual",
                   color: "bg-green-500",
                   icon: "👤",
                 },
                 {
-                  name: "NGOs",
-                  path: "/for-ngos",
+                  name: "NGOs & Shelters",
+                  path: "/public/how-works?role=ngo",
                   color: "bg-purple-500",
                   icon: "🏥",
                 },
                 {
-                  name: "Partners",
-                  path: "/partners",
+                  name: "Kitchen Partners",
+                  path: "/public/contact",
                   color: "bg-pink-500",
                   icon: "🤝",
                 },
                 {
-                  name: "Volunteer",
-                  path: "/volunteer",
-                  bg: "bg-orange-500",
+                  name: "Volunteer Support",
+                  path: "/public/contact",
+                  color: "bg-orange-500",
                   icon: "🙋",
                 },
               ].map((role) => (
@@ -169,7 +182,7 @@ export default function Footer() {
                     <span className="mr-3 text-lg">{role.icon}</span>
                     <span className="flex-1">{role.name}</span>
                     <span
-                      className={`w-2 h-2 rounded-full ${role.bg} opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
+                      className={`w-2 h-2 rounded-full ${role.color} opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
                     ></span>
                   </Link>
                 </li>

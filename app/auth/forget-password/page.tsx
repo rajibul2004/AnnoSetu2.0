@@ -64,19 +64,25 @@ const ForgotPassword: React.FC = () => {
   };
  
   return (
-    <div className="min-h-screen bg-transparent flex items-center justify-center px-4 py-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div
+      className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('/donate_image.png')" }}
+    >
+      {/* Subtle Cinematic Overlay */}
+      <div className="absolute inset-0 bg-black/45 dark:bg-slate-950/65" />
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="max-w-md w-full space-y-8 relative z-10"
+        className="max-w-md w-full mx-auto space-y-6 relative z-10"
       >
         {/* Back to Login Link */}
         <Link
-          href="/login"
-          className="inline-flex items-center text-sm text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-300 transition-colors mb-4"
+          href="/auth/login"
+          className="inline-flex items-center text-xs font-bold text-white/90 hover:text-white bg-white/10 hover:bg-white/20 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/20 transition-all shadow-xs"
         >
-          <FaArrowLeft className="mr-2" size={14} />
+          <FaArrowLeft className="mr-2" size={12} />
           Back to Login
         </Link>
  
@@ -86,7 +92,7 @@ const ForgotPassword: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="text-3xl font-bold logotext"
+            className="text-3xl font-black text-white drop-shadow-lg"
           >
             Forgot Password?
           </motion.h1>
@@ -94,7 +100,7 @@ const ForgotPassword: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="mt-2 text-sm text-gray-600 dark:text-gray-300"
+            className="mt-1.5 text-sm text-white/90 font-medium drop-shadow-sm"
           >
             No worries! Enter your email and we&apos;ll send you a reset link.
           </motion.p>
@@ -105,7 +111,7 @@ const ForgotPassword: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="card backdrop-blur-lg rounded-2xl shadow-2xl p-8 "
+          className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl shadow-2xl p-6 sm:p-8 border border-white/50 dark:border-slate-800/80"
         >
           {!isSubmitted ? (
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -159,8 +165,8 @@ const ForgotPassword: React.FC = () => {
               <p className="text-center text-xs text-gray-500 dark:text-gray-400">
                 Remember your password?{" "}
                 <Link
-                  href="/login"
-                  className="text-green-600 hover:text-green-700 font-medium"
+                  href="/auth/login"
+                  className="text-emerald-600 dark:text-emerald-400 hover:underline font-bold"
                 >
                   Sign in
                 </Link>

@@ -59,8 +59,8 @@ function MessagesInboxContent() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6 h-[calc(100vh-5rem)] md:h-[calc(100vh-6rem)]">
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-2xl overflow-hidden h-full flex flex-col md:flex-row">
+    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-6 h-[calc(100dvh-7.5rem)] md:h-[calc(100vh-6rem)]">
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl rounded-2xl sm:rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-2xl overflow-hidden h-full flex flex-col md:flex-row">
         
         {/* ================= LEFT PANE: CONVERSATION LIST ================= */}
         <div

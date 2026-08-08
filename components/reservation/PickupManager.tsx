@@ -176,17 +176,17 @@ export default function PickupManager() {
       {/* Verification Card */}
       <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl border border-gray-200/80 dark:border-slate-800 overflow-hidden">
         {/* Card Header */}
-        <div className="bg-linear-to-r from-emerald-600 to-teal-700 dark:from-emerald-900 dark:to-teal-950 p-6 sm:p-8 text-white relative overflow-hidden">
+        <div className="bg-linear-to-r from-emerald-600 to-teal-700 dark:from-emerald-900 dark:to-teal-950 p-5 sm:p-8 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-teal-400/10 rounded-full blur-2xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 shadow-inner shrink-0">
-                <FaShieldAlt className="w-7 h-7 text-white" />
+            <div className="flex items-center gap-3.5 sm:gap-4">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 shadow-inner shrink-0">
+                <FaShieldAlt className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
               <div>
-                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                <h2 className="text-lg sm:text-2xl font-black tracking-tight text-white">
                   Pickup Verification
                 </h2>
                 <p className="text-emerald-100 text-xs sm:text-sm font-medium mt-0.5">
@@ -196,7 +196,7 @@ export default function PickupManager() {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-sm border border-white/20">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold bg-white/20 backdrop-blur-sm border border-white/20">
                 <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
                 Live Verification
               </span>
@@ -205,12 +205,12 @@ export default function PickupManager() {
         </div>
 
         {/* Card Body */}
-        <div className="p-6 sm:p-8">
+        <div className="p-5 sm:p-8">
           {/* Method Switcher Tabs */}
-          <div className="flex bg-gray-100/90 dark:bg-slate-800/80 p-1.5 rounded-2xl mb-8 border border-gray-200/50 dark:border-slate-700/50">
+          <div className="flex bg-gray-100/90 dark:bg-slate-800/80 p-1.5 rounded-2xl mb-6 sm:mb-8 border border-gray-200/50 dark:border-slate-700/50">
             {[
-              { id: "code", label: "Manual Code Entry", icon: FaSearch },
-              { id: "qr", label: "Camera QR Scanner", icon: FaQrcode },
+              { id: "code", label: "Code Entry", fullLabel: "Manual Code Entry", icon: FaSearch },
+              { id: "qr", label: "Camera QR", fullLabel: "Camera QR Scanner", icon: FaQrcode },
             ].map((method) => {
               const isActive = verificationMethod === method.id;
               return (
@@ -225,14 +225,15 @@ export default function PickupManager() {
                       setScanning(false);
                     }
                   }}
-                  className={`flex-1 py-3 px-4 text-xs sm:text-sm font-black rounded-xl transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
+                  className={`flex-1 py-2.5 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm font-black rounded-xl transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
                     isActive
                       ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-md scale-101"
                       : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                   }`}
                 >
-                  <method.icon className="w-4 h-4" />
-                  <span>{method.label}</span>
+                  <method.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="sm:hidden">{method.label}</span>
+                  <span className="hidden sm:inline">{method.fullLabel}</span>
                 </button>
               );
             })}

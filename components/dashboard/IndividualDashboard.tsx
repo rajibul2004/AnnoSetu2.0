@@ -250,23 +250,23 @@ export default function UserDashboard() {
           <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-80 h-80 bg-blue-400/20 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-            <div className="flex items-center gap-5">
-              <div className="w-18 h-18 sm:w-20 sm:h-20 bg-white/15 backdrop-blur-md rounded-2xl p-1 border border-white/20 flex items-center justify-center text-3xl shadow-inner shrink-0">
+            <div className="flex items-center gap-4 sm:gap-5">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/15 backdrop-blur-md rounded-2xl p-1 border border-white/20 flex items-center justify-center text-3xl shadow-inner shrink-0">
                 {stats.avgRating >= 4.5 ? (
-                  <FaTrophy className="text-yellow-300 w-10 h-10 drop-shadow-md" />
+                  <FaTrophy className="text-yellow-300 w-8 h-8 sm:w-10 sm:h-10 drop-shadow-md" />
                 ) : (
-                  <FaHeart className="text-pink-200 w-10 h-10 drop-shadow-md" />
+                  <FaHeart className="text-pink-200 w-8 h-8 sm:w-10 sm:h-10 drop-shadow-md" />
                 )}
               </div>
               <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider mb-2 border border-white/20">
+                <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-[11px] sm:text-xs font-semibold uppercase tracking-wider mb-1.5 sm:mb-2 border border-white/20">
                   <FaShieldAlt className="text-emerald-300" />
                   <span>Individual Partner • Saver &amp; Sharer</span>
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+                <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
                   Welcome back, {firstName}! ✨
                 </h1>
-                <p className="text-pink-100/90 text-sm sm:text-base mt-1 flex items-center gap-2 font-medium">
+                <p className="text-pink-100/90 text-xs sm:text-base mt-1 flex items-center gap-2 font-medium">
                   <FaExchangeAlt className="opacity-80 shrink-0" />
                   Making a greener difference in your local community
                 </p>
@@ -274,21 +274,21 @@ export default function UserDashboard() {
             </div>
 
             {/* Badges & Actions */}
-            <div className="flex flex-wrap items-center gap-3">
-              <Link href="/public/food">
-                <Button className="bg-white text-gray-900 hover:bg-white/90 font-bold shadow-lg text-sm rounded-xl py-2.5">
+            <div className="flex flex-col sm:flex-row w-full lg:w-auto items-stretch sm:items-center gap-2.5 sm:gap-3">
+              <Link href="/public/food" className="w-full sm:w-auto">
+                <Button className="w-full bg-white text-gray-900 hover:bg-white/90 font-bold shadow-lg text-xs sm:text-sm rounded-xl py-3 sm:py-2.5">
                   <FaShoppingBag className="mr-2 text-pink-600" />
                   Save Food
                 </Button>
               </Link>
-              <Link href="/protected/add-food?role=individual">
-                <Button className="bg-white/20 hover:bg-white/30 text-white font-bold backdrop-blur-md border border-white/30 shadow-lg text-sm rounded-xl py-2.5">
+              <Link href="/protected/add-food?role=individual" className="w-full sm:w-auto">
+                <Button className="w-full bg-white/20 hover:bg-white/30 text-white font-bold backdrop-blur-md border border-white/30 shadow-lg text-xs sm:text-sm rounded-xl py-3 sm:py-2.5">
                   <FaPlus className="mr-2 text-yellow-300" />
                   Share Meals
                 </Button>
               </Link>
-              <Link href="/protected/reservation/pickup">
-                <Button className="bg-emerald-500/80 hover:bg-emerald-500 text-white font-bold backdrop-blur-md border border-white/20 shadow-lg text-sm rounded-xl py-2.5">
+              <Link href="/protected/reservation/pickup" className="w-full sm:w-auto">
+                <Button className="w-full bg-emerald-500/80 hover:bg-emerald-500 text-white font-bold backdrop-blur-md border border-white/20 shadow-lg text-xs sm:text-sm rounded-xl py-3 sm:py-2.5">
                   <FaQrcode className="mr-2" />
                   Pickup Scanner
                 </Button>
@@ -297,30 +297,30 @@ export default function UserDashboard() {
           </div>
 
           {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-8 pt-6 border-t border-white/15 relative z-10">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 hover:bg-white/15 transition-all">
-              <span className="text-xs text-pink-100/80 font-medium">Total Impact</span>
-              <div className="text-2xl sm:text-3xl font-extrabold mt-0.5">
-                {stats.totalImpact} <span className="text-sm font-normal">Meals</span>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 mt-8 pt-6 border-t border-white/15 relative z-10">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 hover:bg-white/15 transition-all">
+              <span className="text-[11px] sm:text-xs text-pink-100/80 font-medium">Total Impact</span>
+              <div className="text-xl sm:text-3xl font-extrabold mt-0.5">
+                {stats.totalImpact} <span className="text-xs sm:text-sm font-normal">Meals</span>
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 hover:bg-white/15 transition-all">
-              <span className="text-xs text-pink-100/80 font-medium">CO₂ Saved</span>
-              <div className="text-2xl sm:text-3xl font-extrabold mt-0.5 text-emerald-300">
-                {stats.co2Reduced} <span className="text-sm font-normal">kg</span>
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 hover:bg-white/15 transition-all">
+              <span className="text-[11px] sm:text-xs text-pink-100/80 font-medium">CO₂ Saved</span>
+              <div className="text-xl sm:text-3xl font-extrabold mt-0.5 text-emerald-300">
+                {stats.co2Reduced} <span className="text-xs sm:text-sm font-normal">kg</span>
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 hover:bg-white/15 transition-all">
-              <span className="text-xs text-pink-100/80 font-medium">Community Rank</span>
-              <div className="text-2xl sm:text-3xl font-extrabold mt-0.5 text-yellow-300">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 hover:bg-white/15 transition-all">
+              <span className="text-[11px] sm:text-xs text-pink-100/80 font-medium">Community Rank</span>
+              <div className="text-xl sm:text-3xl font-extrabold mt-0.5 text-yellow-300">
                 #{stats.communityRank}
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 hover:bg-white/15 transition-all">
-              <span className="text-xs text-pink-100/80 font-medium">Cook Rating</span>
-              <div className="text-2xl sm:text-3xl font-extrabold mt-0.5 flex items-center gap-1.5">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 hover:bg-white/15 transition-all">
+              <span className="text-[11px] sm:text-xs text-pink-100/80 font-medium">Cook Rating</span>
+              <div className="text-xl sm:text-3xl font-extrabold mt-0.5 flex items-center gap-1.5">
                 {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "New"}
-                <FaStar className="text-yellow-300 text-base" />
+                <FaStar className="text-yellow-300 text-sm sm:text-base" />
               </div>
             </div>
           </div>
@@ -329,20 +329,20 @@ export default function UserDashboard() {
         {/* Interactive Mode Switcher with Horizontal Scroll container for mobile */}
         <div className="relative mb-6">
           <div className="overflow-x-auto custom-scrollbar pb-1">
-            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800/80 rounded-2xl p-1.5 flex min-w-[500px] sm:min-w-0 shadow-sm">
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800/80 rounded-2xl p-1.5 flex min-w-[440px] sm:min-w-0 shadow-sm">
               <button
                 onClick={() => setActiveTab("consumer")}
-                className={`flex-1 flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
                   activeTab === "consumer"
                     ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20"
                     : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
                 <FaShoppingBag className={activeTab === "consumer" ? "text-white" : "text-blue-500"} />
-                <span>My Food Reservations (Saver Mode)</span>
+                <span>Saver Mode (Reservations)</span>
                 {userReservations.length > 0 && (
                   <span
-                    className={`ml-1 px-2.5 py-0.5 text-xs font-black rounded-full ${
+                    className={`ml-1 px-2 py-0.5 text-[11px] sm:text-xs font-black rounded-full ${
                       activeTab === "consumer"
                         ? "bg-white/20 text-white"
                         : "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300"
@@ -355,17 +355,17 @@ export default function UserDashboard() {
 
               <button
                 onClick={() => setActiveTab("supplier")}
-                className={`flex-1 flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
                   activeTab === "supplier"
                     ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md shadow-purple-500/20"
                     : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                 }`}
               >
                 <FaUtensils className={activeTab === "supplier" ? "text-white" : "text-purple-500"} />
-                <span>My Shared Foods (Sharer Mode)</span>
+                <span>Sharer Mode (Shared Food)</span>
                 {userSharedFood.length > 0 && (
                   <span
-                    className={`ml-1 px-2.5 py-0.5 text-xs font-black rounded-full ${
+                    className={`ml-1 px-2 py-0.5 text-[11px] sm:text-xs font-black rounded-full ${
                       activeTab === "supplier"
                         ? "bg-white/20 text-white"
                         : "bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300"

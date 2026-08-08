@@ -73,7 +73,8 @@ export default function FoodDetailsPage() {
             Food Item Not Found
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
-            This food item may have expired, been claimed, or was deleted by the supplier.
+            This food item may have expired, been claimed, or was deleted by the
+            supplier.
           </p>
           <Button
             onClick={() => router.push("/public/food")}
@@ -127,7 +128,12 @@ export default function FoodDetailsPage() {
       : "/protected/dashboard?role=individual";
 
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this surplus food listing?")) return;
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this surplus food listing?",
+      )
+    )
+      return;
     setIsDeleting(true);
     try {
       const res = await fetch(`/api/food/${food.id}`, { method: "DELETE" });
@@ -207,7 +213,9 @@ export default function FoodDetailsPage() {
                 {food.images && food.images.length > 0 ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={food.images[currentImageIndex]?.url || food.images[0].url}
+                    src={
+                      food.images[currentImageIndex]?.url || food.images[0].url
+                    }
                     alt={food.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                   />
@@ -273,7 +281,9 @@ export default function FoodDetailsPage() {
                 <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between z-10">
                   <div className="bg-black/60 backdrop-blur-md text-white px-3.5 py-1.5 rounded-xl text-xs font-bold border border-white/15 shadow-lg flex items-center gap-2">
                     <FaClock className="text-emerald-400" />
-                    <span>Expires in {formatTimeRemaining(food.expiresAt)}</span>
+                    <span>
+                      Expires in {formatTimeRemaining(food.expiresAt)}
+                    </span>
                   </div>
 
                   <div className="bg-black/60 backdrop-blur-md text-white px-3.5 py-1.5 rounded-xl text-xs font-bold border border-white/15 shadow-lg">
@@ -339,7 +349,8 @@ export default function FoodDetailsPage() {
                         <FaStar className="w-3.5 h-3.5" />
                         <span>{food.averageRating.toFixed(1)}</span>
                         <span className="text-gray-400 font-normal">
-                          ({food.reviewCount} {food.reviewCount === 1 ? "review" : "reviews"})
+                          ({food.reviewCount}{" "}
+                          {food.reviewCount === 1 ? "review" : "reviews"})
                         </span>
                       </div>
                     )}
@@ -355,11 +366,13 @@ export default function FoodDetailsPage() {
                         formatPrice(food.price)
                       )}
                     </div>
-                    {food.originalPrice !== null && !food.isDonation && food.originalPrice > food.price && (
-                      <div className="text-sm text-gray-400 line-through mt-0.5">
-                        Original: {formatPrice(food.originalPrice)}
-                      </div>
-                    )}
+                    {food.originalPrice !== null &&
+                      !food.isDonation &&
+                      food.originalPrice > food.price && (
+                        <div className="text-sm text-gray-400 line-through mt-0.5">
+                          Original: {formatPrice(food.originalPrice)}
+                        </div>
+                      )}
                   </div>
                 </div>
 
@@ -386,7 +399,9 @@ export default function FoodDetailsPage() {
                       {formatDate(food.expiresAt, "hh:mm a")}
                     </div>
                     <div className="text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-0.5">
-                      {expired ? "Expired" : formatTimeRemaining(food.expiresAt)}
+                      {expired
+                        ? "Expired"
+                        : formatTimeRemaining(food.expiresAt)}
                     </div>
                   </div>
 
@@ -527,7 +542,8 @@ export default function FoodDetailsPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 rounded-full bg-linear-to-br from-emerald-400 to-teal-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
-                            {review.reviewerName?.charAt(0)?.toUpperCase() || "U"}
+                            {review.reviewerName?.charAt(0)?.toUpperCase() ||
+                              "U"}
                           </div>
                           <div>
                             <div className="text-xs font-bold text-gray-900 dark:text-white">
@@ -564,7 +580,9 @@ export default function FoodDetailsPage() {
               ) : (
                 <div className="text-center py-8 text-gray-400">
                   <FaUtensils className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                  <p className="text-xs font-semibold">No reviews submitted yet for this food item.</p>
+                  <p className="text-xs font-semibold">
+                    No reviews submitted yet for this food item.
+                  </p>
                 </div>
               )}
             </motion.div>
@@ -589,7 +607,11 @@ export default function FoodDetailsPage() {
                       : "bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-gray-300 border-gray-200 dark:border-slate-700"
                   }`}
                 >
-                  {canReserve ? "Active & Ready" : isOwner ? "Your Listing" : "Unavailable"}
+                  {canReserve
+                    ? "Active & Ready"
+                    : isOwner
+                      ? "Your Listing"
+                      : "Unavailable"}
                 </span>
               </div>
 
@@ -600,7 +622,8 @@ export default function FoodDetailsPage() {
                     Portion Availability
                   </span>
                   <span className="font-black text-emerald-600 dark:text-emerald-400">
-                    {food.availableQty} / {food.quantity} {food.quantityUnit} left
+                    {food.availableQty} / {food.quantity} {food.quantityUnit}{" "}
+                    left
                   </span>
                 </div>
                 <div className="w-full h-2.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -615,9 +638,12 @@ export default function FoodDetailsPage() {
               {isOwner ? (
                 <div className="space-y-3 pt-2">
                   <div className="p-3.5 bg-blue-50/80 dark:bg-blue-950/40 rounded-2xl border border-blue-200/80 dark:border-blue-900/60 text-xs text-blue-900 dark:text-blue-200">
-                    <p className="font-bold mb-1">👑 You are the supplier of this listing</p>
+                    <p className="font-bold mb-1">
+                      👑 You are the supplier of this listing
+                    </p>
                     <p className="text-[11px] text-blue-700 dark:text-blue-300">
-                      Manage incoming reservation requests, confirm pickup codes, or modify surplus availability.
+                      Manage incoming reservation requests, confirm pickup
+                      codes, or modify surplus availability.
                     </p>
                   </div>
 
@@ -660,8 +686,11 @@ export default function FoodDetailsPage() {
                         </p>
                       </div>
 
-                      <Link href={`/protected/reservation/${food.userReservationId}`}>
+                      <Link
+                        href={`/protected/reservation/${food.userReservationId}`}
+                      >
                         <Button
+                          variant="secondary"
                           fullWidth
                           className="bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg text-xs"
                         >
@@ -696,10 +725,15 @@ export default function FoodDetailsPage() {
                         <Button
                           fullWidth
                           size="lg"
+                          variant="secondary"
                           className="bg-linear-to-r from-emerald-600 via-green-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black py-3.5 rounded-2xl shadow-xl shadow-emerald-600/30 hover:scale-102 transition-all text-xs flex items-center justify-center gap-2 cursor-pointer"
                         >
                           <FaTag />
-                          <span>{isAuthenticated ? "Reserve Food Now" : "Login to Reserve"}</span>
+                          <span>
+                            {isAuthenticated
+                              ? "Reserve Food Now"
+                              : "Login to Reserve"}
+                          </span>
                         </Button>
                       </Link>
                     </div>
@@ -721,6 +755,7 @@ export default function FoodDetailsPage() {
                       <Link href="/public/food">
                         <Button
                           fullWidth
+                          variant="secondary"
                           className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs"
                         >
                           Browse Surplus Food
@@ -786,7 +821,9 @@ export default function FoodDetailsPage() {
                       onClick={() => setShowContactInfo((prev) => !prev)}
                       className="w-full text-left text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
                     >
-                      {showContactInfo ? "Hide Supplier Contact" : "Show Supplier Contact"}
+                      {showContactInfo
+                        ? "Hide Supplier Contact"
+                        : "Show Supplier Contact"}
                     </button>
 
                     {showContactInfo && (
@@ -810,6 +847,83 @@ export default function FoodDetailsPage() {
               </div>
             </motion.div>
           </div>
+        </div>
+      </div>
+
+      {/* Sticky Mobile Action Bar for Small Screens */}
+      <div className="lg:hidden fixed bottom-16 sm:bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-gray-200/90 dark:border-slate-800 p-3.5 shadow-2xl safe-area-pb">
+        <div className="max-w-md mx-auto flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+              {food.isDonation ? "Community Meal" : "Discounted Price"}
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-lg font-black text-gray-900 dark:text-white">
+                {food.isDonation ? "FREE" : formatPrice(food.price)}
+              </span>
+              {food.originalPrice && food.originalPrice > (food.price || 0) && (
+                <span className="text-xs text-gray-400 line-through">
+                  {formatPrice(food.originalPrice)}
+                </span>
+              )}
+            </div>
+            <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+              {food.availableQty} {food.quantityUnit} left
+            </div>
+          </div>
+
+          {isOwner ? (
+            <Link
+              href={`/protected/food/${food.id}/requests`}
+              className="flex-1 max-w-[200px]"
+            >
+              <Button
+                fullWidth
+                variant="secondary"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-2xl shadow-md text-xs cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <FaListUl className="text-xs" />
+                <span>Manage ({food.availableQty})</span>
+              </Button>
+            </Link>
+          ) : food.userReservationId ? (
+            <Link
+              href={`/protected/reservation/${food.userReservationId}`}
+              className="flex-1 max-w-[200px]"
+            >
+              <Button
+                fullWidth
+                variant="secondary"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3 rounded-2xl shadow-md text-xs flex items-center justify-center gap-1.5"
+              >
+                <FaCheckCircle className="text-xs" />
+                <span>View Pickup Pass</span>
+              </Button>
+            </Link>
+          ) : canReserve ? (
+            <Link
+              href={
+                isAuthenticated
+                  ? `/protected/food/${food.id}/reserve`
+                  : `/auth/login?next=/protected/food/${food.id}/reserve`
+              }
+              className="flex-1 max-w-[220px]"
+            >
+              <Button
+                fullWidth
+                className="bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 hover:from-emerald-700 text-white font-black py-3 rounded-2xl shadow-lg shadow-emerald-600/30 text-xs flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <FaTag className="text-xs" />
+                <span>
+                  {isAuthenticated ? "Reserve Surplus" : "Login & Reserve"}
+                </span>
+              </Button>
+            </Link>
+          ) : (
+            <div className="px-3 py-2 bg-gray-100 dark:bg-slate-800 text-gray-500 text-xs font-bold rounded-xl text-center">
+              {expired ? "Expired" : "Claimed"}
+            </div>
+          )}
         </div>
       </div>
     </div>

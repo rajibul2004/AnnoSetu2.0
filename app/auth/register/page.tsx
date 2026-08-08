@@ -485,7 +485,7 @@ const RegisterContent = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="grid grid-cols-3 gap-4 mb-8"
+            className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8"
           >
             {roleOptions.map((option) => (
               <button
@@ -498,15 +498,15 @@ const RegisterContent = () => {
                   }));
                   setCurrentStep(1);
                 }}
-                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer duration-300 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md ${
+                className={`p-2.5 sm:p-4 rounded-2xl border-2 transition-all cursor-pointer duration-300 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md ${
                   formData.role === option.value
-                    ? `${option.activeClass} shadow-xl scale-105 ring-2 ring-emerald-500/20`
+                    ? `${option.activeClass} shadow-xl scale-[1.02] sm:scale-105 ring-2 ring-emerald-500/20`
                     : "border-gray-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-500 hover:scale-102"
                 }`}
               >
-                <div className="text-2xl mb-1.5">{option.icon}</div>
+                <div className="text-xl sm:text-2xl mb-1 sm:mb-1.5">{option.icon}</div>
                 <div
-                  className={`text-sm font-bold ${formData.role === option.value ? option.activeClass : "text-gray-700 dark:text-gray-200"}`}
+                  className={`text-xs sm:text-sm font-bold truncate ${formData.role === option.value ? option.activeClass : "text-gray-700 dark:text-gray-200"}`}
                 >
                   {option.label}
                 </div>
@@ -515,9 +515,9 @@ const RegisterContent = () => {
           </motion.div>
 
           {/* Progress Bar */}
-          <div className="mb-8 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-white/40 dark:border-slate-800/80 shadow-md">
+          <div className="mb-6 sm:mb-8 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-white/40 dark:border-slate-800/80 shadow-md">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200">
                 Registration Progress
               </span>
               <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
@@ -546,7 +546,7 @@ const RegisterContent = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl shadow-2xl p-6 sm:p-10 border border-white/50 dark:border-slate-800/80"
+            className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl shadow-2xl p-5 sm:p-10 border border-white/50 dark:border-slate-800/80"
           >
             <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
               <AnimatePresence mode="wait">

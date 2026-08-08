@@ -254,10 +254,10 @@ const About: React.FC = () => {
             </p>
 
             <div className="flex flex-wrap justify-center gap-4">
-              <Link href="/register">
+              <Link href="/auth/register">
                 <Button variant={"primary"}>Join Our Mission</Button>
               </Link>
-              <Link href="/contact">
+              <Link href="/public/contact">
                 <Button variant="outline">Contact Us</Button>
               </Link>
             </div>
@@ -686,12 +686,12 @@ const About: React.FC = () => {
               Be part of the change. Start saving food today!
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link href="/register?role=individual">
+              <Link href="/auth/register?role=individual">
                 <Button className="bg-transparent text-green-600 hover:bg-gray-100 dark:hover:bg-gray-700 px-8 py-4 text-lg border">
                   Join as Individual
                 </Button>
               </Link>
-              <Link href="/register?role=restaurant">
+              <Link href="/auth/register?role=restaurant">
                 <Button className="dark:bg-white/20 bg-gray-900/20 backdrop-blur-sm text-white border-white dark:hover:bg-white/30 hover:bg-gray-900/30 px-8 py-4 text-lg">
                   Join as Restaurant
                 </Button>
