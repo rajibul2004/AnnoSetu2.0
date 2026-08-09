@@ -39,7 +39,7 @@ export default function RootLayout({
           <ThemeProvider>
             <InitialSplashScreen />
             <Navbar />
-            <main className="pb-16 md:pb-0">{children}</main>
+            <main className="pb-20 md:pb-0">{children}</main>
             <Footer />
             <MobileBottomNav />
             <ModernToaster />

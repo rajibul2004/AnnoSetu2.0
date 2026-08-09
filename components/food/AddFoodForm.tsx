@@ -430,7 +430,7 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
 
   return (
     <div className="w-full">
-      <div className="relative bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl border border-gray-200/80 dark:border-gray-800/80 rounded-3xl shadow-2xl p-6 sm:p-10 transition-all duration-300">
+      <div className="relative bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl border border-gray-200/80 dark:border-gray-800/80 rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-10 transition-all duration-300">
         {/* Glow backdrop behind card */}
         <div
           className={`absolute -top-20 -right-20 w-80 h-80 bg-linear-to-br ${accentGradient} opacity-10 blur-3xl pointer-events-none rounded-full`}
@@ -441,22 +441,22 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
 
         {/* Top Header Card */}
         <div
-          className={`relative overflow-hidden bg-linear-to-r ${accentGradient} rounded-2xl p-6 sm:p-8 mb-8 text-white shadow-xl ${glowShadow}`}
+          className={`relative overflow-hidden bg-linear-to-r ${accentGradient} rounded-2xl p-5 sm:p-8 mb-6 sm:mb-8 text-white shadow-xl ${glowShadow}`}
         >
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4 text-center md:text-left">
-              <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-inner shrink-0">
-                <FaUtensils className="w-7 h-7 text-white" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-inner shrink-0">
+                <FaUtensils className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
               <div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-0.5 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold uppercase tracking-wider mb-1">
                   <FaMagic className="w-3 h-3 text-amber-300" />
                   {isRestaurant ? "Restaurant Surplus Feed" : "Home Cook Sharing"}
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight">
                   {isRestaurant ? "List Fresh Surplus Food" : "Share Homemade Delights"}
                 </h2>
-                <p className="text-white/85 text-sm mt-0.5">
+                <p className="text-white/85 text-xs sm:text-sm mt-0.5">
                   {isRestaurant
                     ? "Connect extra kitchen prep with hungry patrons & eliminate waste."
                     : "Spread warmth and home cooking joy with your community."}
@@ -481,7 +481,7 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
           </div>
         </div>
 
-        {/* AI Voice-to-Listing Action Banner */}
+        {/* Temporarily disabled AI features - Voice-to-Listing Action Banner
         <div className="mb-8">
           <VoiceListingButton
             onApplyParsedData={handleApplyVoiceParsedData}
@@ -509,10 +509,11 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
             </button>
           </motion.div>
         )}
+        */}
 
         {/* Step Progress Tracker */}
-        <div className="mb-10">
-          <div className="flex items-center justify-between relative max-w-2xl mx-auto px-4">
+        <div className="mb-8 sm:mb-10">
+          <div className="flex items-center justify-between relative max-w-2xl mx-auto px-2 sm:px-4">
             {/* Background Line */}
             <div className="absolute top-1/2 left-8 right-8 -translate-y-1/2 h-1 bg-gray-200 dark:bg-gray-800 rounded-full z-0" />
             
@@ -547,22 +548,22 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
                   }}
                 >
                   <div
-                    className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold transition-all duration-300 shadow-md ${
+                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center font-bold transition-all duration-300 shadow-md ${
                       isCompleted
                         ? `bg-linear-to-br ${accentGradient} text-white ring-4 ring-green-400/20`
                         : isCurrent
-                        ? `bg-linear-to-br ${accentGradient} text-white ring-4 ring-indigo-500/30 scale-110 shadow-lg`
+                        ? `bg-linear-to-br ${accentGradient} text-white ring-4 ring-indigo-500/30 scale-105 sm:scale-110 shadow-lg`
                         : "bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-700"
                     }`}
                   >
                     {isCompleted ? (
-                      <FaCheck className="w-5 h-5 text-white" />
+                      <FaCheck className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     ) : (
-                      <Icon className="w-5 h-5" />
+                      <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                     )}
                   </div>
                   <span
-                    className={`text-xs font-semibold mt-2 transition-colors ${
+                    className={`text-[10px] sm:text-xs font-semibold mt-1.5 sm:mt-2 text-center max-w-[85px] sm:max-w-none transition-colors ${
                       isCurrent
                         ? "text-gray-900 dark:text-white"
                         : isCompleted

@@ -274,8 +274,9 @@ export default function HomePage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.65 }}
-              className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4 max-w-xl mx-auto w-full text-xs sm:text-sm font-semibold"
+              className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-4 max-w-lg mx-auto w-full text-xs sm:text-sm font-semibold"
             >
+              {/* Temporarily disabled AI Smart Matcher
               <Link
                 href="/public/food?tab=smart-match"
                 className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white shadow-lg shadow-purple-500/25 hover:scale-103 active:scale-95 transition-all duration-200"
@@ -283,18 +284,19 @@ export default function HomePage() {
                 <FaMagic className="w-4 h-4 text-amber-300 animate-pulse" />
                 <span>AI Smart Matcher ✨</span>
               </Link>
+              */}
               <Link
-                href="/public/food?tab=browse"
-                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white shadow-lg shadow-emerald-500/25 hover:scale-103 active:scale-95 transition-all duration-200"
+                href="/public/food"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white shadow-lg shadow-emerald-500/25 hover:scale-103 active:scale-95 transition-all duration-200"
               >
-                <FaUtensils className="w-3.5 h-3.5" />
-                <span>Browse Surplus</span>
+                <FaUtensils className="w-4 h-4" />
+                <span>Browse Surplus Food</span>
               </Link>
               <Link
                 href="/protected/add-food"
-                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border border-gray-300/80 dark:border-white/20 bg-white/60 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 text-gray-900 dark:text-white backdrop-blur-md shadow-md hover:scale-103 active:scale-95 transition-all duration-200"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl border border-gray-300/80 dark:border-white/20 bg-white/60 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 text-gray-900 dark:text-white backdrop-blur-md shadow-md hover:scale-103 active:scale-95 transition-all duration-200"
               >
-                <FaHeart className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
+                <FaHeart className="w-4 h-4 text-rose-500 dark:text-rose-400" />
                 <span>Donate / Share</span>
               </Link>
             </motion.div>

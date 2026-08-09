@@ -11,17 +11,30 @@ export interface SpeechRecognitionErrorEvent extends Event {
   message?: string;
 }
 
+export type SupportedLanguage =
+  | "en-IN"
+  | "hi-IN"
+  | "bn-IN"
+  | "ta-IN"
+  | "te-IN"
+  | "mr-IN"
+  | "gu-IN"
+  | "kn-IN"
+  | "ml-IN"
+  | "pa-IN"
+  | "en-US";
+
 export interface SupportedVoiceLanguage {
-  code: string;
+  code: SupportedLanguage;
   name: string;
   nativeName: string;
   flag: string;
 }
 
 export const SUPPORTED_VOICE_LANGUAGES: SupportedVoiceLanguage[] = [
+  { code: "bn-IN", name: "Bengali", nativeName: "বাংলা", flag: "🇮🇳" },
   { code: "en-IN", name: "English (India)", nativeName: "English", flag: "🇮🇳" },
   { code: "hi-IN", name: "Hindi", nativeName: "हिन्दी", flag: "🇮🇳" },
-  { code: "bn-IN", name: "Bengali", nativeName: "বাংলা", flag: "🇮🇳" },
   { code: "ta-IN", name: "Tamil", nativeName: "தமிழ்", flag: "🇮🇳" },
   { code: "te-IN", name: "Telugu", nativeName: "తెలుగు", flag: "🇮🇳" },
   { code: "mr-IN", name: "Marathi", nativeName: "मराठी", flag: "🇮🇳" },
@@ -31,6 +44,8 @@ export const SUPPORTED_VOICE_LANGUAGES: SupportedVoiceLanguage[] = [
   { code: "pa-IN", name: "Punjabi", nativeName: "ਪੰਜਾਬੀ", flag: "🇮🇳" },
   { code: "en-US", name: "English (US)", nativeName: "English (US)", flag: "🇺🇸" },
 ];
+
+export const SUPPORTED_LANGUAGES = SUPPORTED_VOICE_LANGUAGES;
 
 export function isSpeechRecognitionSupported(): boolean {
   if (typeof window === "undefined") return false;
@@ -157,3 +172,28 @@ export class VoiceRecognitionManager {
     this.onStateChangeCallback?.(false);
   }
 }
+
+export const speechRecognitionService = {
+  manager: new VoiceRecognitionManager("bn-IN"),
+  startListening(options: {
+    language: SupportedLanguage;
+    onResult: (res: { transcript: string; isFinal: boolean }) => void;
+    onError?: (err: string) => void;
+    onEnd?: () => void;
+  }) {
+    this.manager.setLanguage(options.language);
+    this.manager.onTranscript((text, isFinal) => {
+      options.onResult({ transcript: text, isFinal });
+    });
+    if (options.onError) this.manager.onError(options.onError);
+    if (options.onEnd) {
+      this.manager.onStateChange((listening) => {
+        if (!listening) options.onEnd?.();
+      });
+    }
+    return this.manager.start();
+  },
+  stopListening() {
+    this.manager.stop();
+  },
+};

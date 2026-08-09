@@ -297,7 +297,7 @@ export default function Navbar() {
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <FaCompass className="text-emerald-500" />
-                  <span>Explore Food & AI Matcher</span>
+                  <span>Explore Food</span>
                 </Link>
 
                 {user ? (

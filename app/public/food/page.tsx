@@ -309,7 +309,7 @@ function FoodExplorerContent() {
               Live Surplus Food Rescue Hub
             </div>
 
-            {/* Quick Voice Add Action for Donors */}
+            {/* Temporarily disabled AI features - Voice-to-Listing
             <button
               onClick={() => setIsVoiceModalOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md hover:shadow-emerald-500/25 transition-all duration-200 cursor-pointer"
@@ -317,6 +317,7 @@ function FoodExplorerContent() {
               <FaMicrophone className="text-amber-300 animate-bounce" />
               <span>Voice-to-Listing (AI)</span>
             </button>
+            */}
           </div>
 
           {/* Hero Titles & Stats */}
@@ -358,75 +359,29 @@ function FoodExplorerContent() {
               <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-gray-200/80 dark:border-slate-800 shadow-sm backdrop-blur-xl shrink-0 min-w-[120px] sm:min-w-0">
                 <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 font-bold mb-1">
                   <FaBolt className="text-amber-500" />
-                  <span>AI Score</span>
+                  <span>Verified</span>
                 </div>
                 <div className="text-xl font-black text-gray-900 dark:text-white">Instant</div>
-                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Smart Match</span>
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Fast Pickup</span>
               </div>
             </div>
           </div>
 
-          {/* Segmented Mode Switcher (Smart Matcher vs Browse Marketplace) */}
+          {/* Mode Header */}
           <div className="mt-8 pt-4 border-t border-gray-200/60 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="relative p-1.5 rounded-2xl bg-gray-200/60 dark:bg-slate-900/90 border border-gray-300/60 dark:border-slate-800 shadow-inner flex items-center w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={() => handleTabChange("browse")}
-                className={`relative z-10 flex items-center justify-center gap-2.5 px-6 py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all duration-200 cursor-pointer ${
-                  activeTab === "browse"
-                    ? "text-white shadow-lg"
-                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                }`}
-              >
-                {activeTab === "browse" && (
-                  <motion.div
-                    layoutId="activeTabIndicator"
-                    className="absolute inset-0 bg-linear-to-r from-emerald-600 to-teal-600 rounded-xl shadow-md"
-                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                  />
-                )}
-                <FaUtensils className={`relative z-10 ${activeTab === "browse" ? "text-white" : "text-emerald-500"}`} />
-                <span className="relative z-10">Food Marketplace</span>
-                {totalItems > 0 && (
-                  <span className={`relative z-10 px-1.5 py-0.5 rounded-md text-[10px] font-black ${
-                    activeTab === "browse" ? "bg-white/25 text-white" : "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
-                  }`}>
-                    {totalItems}
-                  </span>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleTabChange("smart-match")}
-                className={`relative z-10 flex items-center justify-center gap-2.5 px-6 py-2.5 rounded-xl font-black text-xs sm:text-sm transition-all duration-200 cursor-pointer ${
-                  activeTab === "smart-match"
-                    ? "text-white shadow-lg"
-                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                }`}
-              >
-                {activeTab === "smart-match" && (
-                  <motion.div
-                    layoutId="activeTabIndicator"
-                    className="absolute inset-0 bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-xl shadow-md"
-                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                  />
-                )}
-                <FaMagic className={`relative z-10 ${activeTab === "smart-match" ? "text-amber-300" : "text-indigo-500"}`} />
-                <span className="relative z-10">AI Smart Matcher</span>
-                <span className={`relative z-10 px-1.5 py-0.5 rounded-md text-[10px] uppercase font-black tracking-wider ${
-                  activeTab === "smart-match" ? "bg-white/25 text-white" : "bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300"
-                }`}>
-                  AI Magic ✨
+            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/50 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold text-xs sm:text-sm">
+              <FaUtensils className="text-emerald-500" />
+              <span>Food Marketplace Catalog</span>
+              {totalItems > 0 && (
+                <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-emerald-600 text-white">
+                  {totalItems} Active
                 </span>
-              </button>
+              )}
             </div>
 
-            {/* Quick Tab Helper Description */}
-            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 text-center sm:text-right hidden md:block">
-              {activeTab === "browse"
-                ? "Browsing live catalog sorted by freshness and proximity"
-                : "AI multi-factor ranking based on GPS distance, urgency, and dietary safety"}
+            {/* Quick Helper Description */}
+            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 text-center sm:text-right">
+              Browsing live surplus food sorted by freshness and proximity
             </div>
           </div>
         </div>
@@ -435,6 +390,7 @@ function FoodExplorerContent() {
       {/* Main Tab Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 relative z-10">
         <AnimatePresence mode="wait">
+          {/* Temporarily disabled SmartMatcher tab
           {activeTab === "smart-match" ? (
             <motion.div
               key="smart-matcher-tab"
@@ -445,7 +401,7 @@ function FoodExplorerContent() {
             >
               <SmartMatcherDashboard />
             </motion.div>
-          ) : (
+          ) : ( */}
             <motion.div
               key="browse-marketplace-tab"
               initial={{ opacity: 0, y: 12 }}
@@ -914,7 +870,7 @@ function FoodExplorerContent() {
                 </div>
               </div>
             </motion.div>
-          )}
+          {/* )} */}
         </AnimatePresence>
       </main>
 
@@ -1064,7 +1020,7 @@ function FoodExplorerContent() {
         )}
       </AnimatePresence>
 
-      {/* Voice-to-Listing AI Modal */}
+      {/* Temporarily disabled AI Voice Modal
       {isVoiceModalOpen && (
         <VoiceToListingModal
           isOpen={isVoiceModalOpen}
@@ -1073,6 +1029,7 @@ function FoodExplorerContent() {
           userType={user?.role === "restaurant" ? "restaurant" : "individual"}
         />
       )}
+      */}
     </div>
   );
 }

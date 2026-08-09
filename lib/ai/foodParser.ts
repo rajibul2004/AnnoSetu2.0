@@ -637,45 +637,67 @@ Return ONLY a valid JSON object matching this exact schema:
 }`;
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                { text: systemPrompt },
+    const candidateModels = ["gemini-flash-latest", "gemini-2.0-flash", "gemini-1.5-flash"];
+    let data: any = null;
+
+    for (const model of candidateModels) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [
                 {
-                  text: `Spoken transcript (language hint: ${language}):\n"${transcript}"\n\nExtract and return only the JSON object.`,
+                  role: "user",
+                  parts: [
+                    { text: systemPrompt },
+                    {
+                      text: `Spoken transcript (language hint: ${language}):\n"${transcript}"\n\nExtract and return only the JSON object.`,
+                    },
+                  ],
                 },
               ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.05,
-            responseMimeType: "application/json",
-            maxOutputTokens: 512,
-          },
-        }),
-        signal: AbortSignal.timeout(8000),
-      }
-    );
+              generationConfig: {
+                temperature: 0.05,
+                responseMimeType: "application/json",
+                maxOutputTokens: 1024,
+              },
+            }),
+            signal: AbortSignal.timeout(10000),
+          }
+        );
 
-    if (!response.ok) {
-      console.warn("Gemini API error, falling back to local NLP:", response.statusText);
-      return parseFoodWithLocalNLP(transcript);
+        if (response.ok) {
+          data = await response.json();
+          break;
+        }
+      } catch {
+        // Try next model
+      }
     }
 
-    const data = await response.json();
     const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!raw) return parseFoodWithLocalNLP(transcript);
 
-    // Extract JSON even if wrapped in markdown code fences
-    const jsonStr = raw.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
-    const parsed = JSON.parse(jsonStr);
+    let parsed: any;
+    try {
+      const clean = raw
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
+      try {
+        parsed = JSON.parse(clean);
+      } catch {
+        const sanitized = clean.replace(/[\n\r\t]+/g, " ");
+        const jsonMatch = sanitized.match(/\{[\s\S]*\}/);
+        parsed = JSON.parse(jsonMatch ? jsonMatch[0] : sanitized);
+      }
+    } catch (parseErr) {
+      console.warn("JSON parse fallback to local NLP:", parseErr);
+      return parseFoodWithLocalNLP(transcript);
+    }
 
     const expiresInHours = Math.min(24, Math.max(1, Number(parsed.expiresInHours) || 4));
     const expiresAt = new Date(Date.now() + expiresInHours * 3_600_000).toISOString();
@@ -692,7 +714,7 @@ Return ONLY a valid JSON object matching this exact schema:
       ? (parsed.quantityUnit as QuantityUnit)
       : "servings";
 
-    return {
+    const finalResult: ParsedFoodListing = {
       name: parsed.name || "Delicious Fresh Food",
       description:
         parsed.description ||
@@ -731,6 +753,18 @@ Return ONLY a valid JSON object matching this exact schema:
       },
       rawTranscript: transcript,
     };
+
+    // Auto-record to offline learning dataset
+    try {
+      const { recordLearnedTestCase } = await import("./learningEngine");
+      if (transcript.length >= 5 && finalResult.name && finalResult.name !== "Delicious Fresh Food") {
+        recordLearnedTestCase(transcript, language, finalResult, "gemini");
+      }
+    } catch {
+      // Ignored
+    }
+
+    return finalResult;
   } catch (err) {
     console.error("Gemini parse error, falling back to local NLP:", err);
     return parseFoodWithLocalNLP(transcript);

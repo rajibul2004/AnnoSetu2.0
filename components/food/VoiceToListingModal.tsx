@@ -1,519 +1,869 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useTheme } from "next-themes";
 import {
-  FaMicrophone,
-  FaStop,
-  FaMagic,
-  FaTimes,
-  FaCheck,
-  FaUtensils,
-  FaClock,
-  FaTag,
-  FaHandHoldingHeart,
-  FaExclamationTriangle,
-  FaVolumeUp,
-  FaShieldAlt,
-} from "react-icons/fa";
-import {
-  VoiceRecognitionManager,
-  isSpeechRecognitionSupported,
-  SUPPORTED_VOICE_LANGUAGES,
+  speechRecognitionService,
+  SupportedLanguage,
+  SUPPORTED_LANGUAGES,
 } from "@/lib/voice/speechRecognition";
-import type { ParsedFoodListing } from "@/lib/ai/foodParser";
-import toast from "react-hot-toast";
+import { speechSynthManager } from "@/lib/voice/speechSynthesis";
+import {
+  ConversationStep,
+  STEP_METADATA,
+  STEP_PROMPTS,
+  getNextStep,
+} from "@/lib/voice/conversationStateMachine";
+import { ParsedFoodListing } from "@/lib/ai/foodParser";
 
 interface VoiceToListingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onApplyParsedData: (data: ParsedFoodListing) => void;
-  userType?: "individual" | "restaurant";
+  onApplyParsedData: (parsed: ParsedFoodListing) => void;
+  defaultLanguage?: SupportedLanguage;
+  userType?: "individual" | "restaurant" | string;
 }
 
-const SAMPLE_PROMPTS = [
-  "Amar kache 10 plate biriyani ache jeta ami donation hisabe dite chai",
-  "5 plates of homemade paneer butter masala combo with 10 rotis, free donation, pickup in 3 hours",
-  "Mere paas 15 plate veg pulao aur paneer hai jo main daan me dena chahta hu",
-  "10 boxes fresh vegetable biryani surplus at 80 rupees each, pick up tonight before 10 PM",
-  "Amader kache 20 packet fried rice ache 50 taka kore nite paren",
-  "3 kg fresh bakery bread and muffins, 100% vegetarian, free donation, pick up within 4 hours",
-];
+interface ChatMessage {
+  id: string;
+  sender: "ai" | "user";
+  text: string;
+  timestamp: string;
+  step?: ConversationStep;
+}
 
 export default function VoiceToListingModal({
   isOpen,
   onClose,
   onApplyParsedData,
-  userType = "individual",
+  defaultLanguage = "bn-IN",
 }: VoiceToListingModalProps) {
-  const [selectedLanguage, setSelectedLanguage] = useState("en-IN");
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  const [language, setLanguage] = useState<SupportedLanguage>(defaultLanguage);
+  const [currentStep, setCurrentStep] = useState<ConversationStep>("DISH_NAME");
+  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+
   const [transcript, setTranscript] = useState("");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [parsedData, setParsedData] = useState<ParsedFoodListing | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [speechSupported, setSpeechSupported] = useState(true);
+  const [manualInput, setManualInput] = useState("");
+  const [isEditingTranscript, setIsEditingTranscript] = useState(false);
 
-  const voiceManagerRef = useRef<VoiceRecognitionManager | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [formData, setFormData] = useState<Partial<ParsedFoodListing>>({
+    name: "",
+    quantity: undefined,
+    quantityUnit: "plates",
+    isDonation: undefined,
+    price: undefined,
+    expiresInHours: undefined,
+  });
 
-  useEffect(() => {
-    setSpeechSupported(isSpeechRecognitionSupported());
-  }, []);
+  const [isComplete, setIsComplete] = useState(false);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const audioListenTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (!isOpen) {
-      if (voiceManagerRef.current) {
-        voiceManagerRef.current.stop();
-      }
-      setIsListening(false);
-      return;
-    }
+  const stepMeta = STEP_METADATA[currentStep];
+  const stepPrompt = STEP_PROMPTS[language]?.[currentStep] || STEP_PROMPTS["en-IN"][currentStep];
 
-    const manager = new VoiceRecognitionManager(selectedLanguage);
-    voiceManagerRef.current = manager;
-
-    manager.onTranscript((text) => {
-      setTranscript(text);
-      setErrorMessage(null);
-    });
-
-    manager.onStateChange((listening) => {
-      setIsListening(listening);
-    });
-
-    manager.onError((err) => {
-      setErrorMessage(err);
-      setIsListening(false);
-      toast.error(err);
-    });
-
-    return () => {
-      manager.stop();
-    };
-  }, [isOpen, selectedLanguage]);
-
-  const toggleListening = () => {
-    if (!voiceManagerRef.current) return;
-
-    if (isListening) {
-      voiceManagerRef.current.stop();
-      if (transcript.trim()) {
-        handleAnalyze(transcript);
-      }
-    } else {
-      setErrorMessage(null);
-      setParsedData(null);
-      const started = voiceManagerRef.current.start();
-      if (started) {
-        toast("Listening... Speak your meal details now!", { icon: "🎙️" });
-      }
+  // Scroll chat to bottom
+  const scrollToBottom = () => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
   };
 
-  const handleAnalyze = async (textToParse: string) => {
-    const text = textToParse.trim();
-    if (!text || text.length < 3) {
-      toast.error("Please speak or type food listing details first");
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, transcript]);
+
+  // Clean up audio on unmount or close
+  useEffect(() => {
+    return () => {
+      speechSynthManager.stop();
+      speechRecognitionService.stopListening();
+      if (audioListenTimeoutRef.current) clearTimeout(audioListenTimeoutRef.current);
+    };
+  }, []);
+
+  /**
+   * Speak a text string via SpeechSynthesis, guaranteed echo-safe (mic starts AFTER speech ends)
+   */
+  const speakAndListen = useCallback(
+    async (textToSpeak: string, targetLanguage: SupportedLanguage, shouldListenAfter = true) => {
+      // 1. Stop any active speech recognition
+      speechRecognitionService.stopListening();
+      setIsListening(false);
+
+      if (!voiceEnabled || !speechSynthManager.isSupported()) {
+        // If voice is disabled, start listening directly after a small pause
+        if (shouldListenAfter) {
+          startListeningSafely();
+        }
+        return;
+      }
+
+      setIsAiSpeaking(true);
+
+      await speechSynthManager.speak(textToSpeak, targetLanguage, {
+        onStart: () => setIsAiSpeaking(true),
+        onEnd: () => {
+          setIsAiSpeaking(false);
+          // Safety gap (400ms) to ensure speaker output has completely ended
+          if (shouldListenAfter) {
+            if (audioListenTimeoutRef.current) clearTimeout(audioListenTimeoutRef.current);
+            audioListenTimeoutRef.current = setTimeout(() => {
+              startListeningSafely();
+            }, 400);
+          }
+        },
+        onError: () => {
+          setIsAiSpeaking(false);
+          if (shouldListenAfter) {
+            startListeningSafely();
+          }
+        },
+      });
+    },
+    [voiceEnabled, language]
+  );
+
+  /**
+   * Start Speech Recognition safely
+   */
+  const startListeningSafely = () => {
+    if (isAiSpeaking || isProcessing) return;
+
+    speechSynthManager.stop();
+    setIsAiSpeaking(false);
+    setTranscript("");
+    setIsListening(true);
+
+    speechRecognitionService.startListening({
+      language,
+      onResult: (result) => {
+        setTranscript(result.transcript);
+        if (result.isFinal && result.transcript.trim().length > 0) {
+          handleUserSubmission(result.transcript.trim());
+        }
+      },
+      onError: (err) => {
+        console.warn("Speech recognition error:", err);
+        setIsListening(false);
+      },
+      onEnd: () => {
+        setIsListening(false);
+      },
+    });
+  };
+
+  /**
+   * Stop Speech Recognition
+   */
+  const stopListening = () => {
+    speechRecognitionService.stopListening();
+    setIsListening(false);
+  };
+
+  /**
+   * Initialize assistant when modal opens or language changes
+   */
+  useEffect(() => {
+    if (!isOpen) {
+      speechSynthManager.stop();
+      speechRecognitionService.stopListening();
+      if (audioListenTimeoutRef.current) clearTimeout(audioListenTimeoutRef.current);
       return;
     }
 
-    setIsAnalyzing(true);
-    setErrorMessage(null);
+    // Reset state on initial open
+    const initialStep: ConversationStep = "DISH_NAME";
+    const initialPrompt =
+      STEP_PROMPTS[language]?.[initialStep] || STEP_PROMPTS["en-IN"][initialStep];
+
+    setCurrentStep(initialStep);
+    setIsComplete(false);
+    setTranscript("");
+    setManualInput("");
+    setFormData({
+      name: "",
+      quantity: undefined,
+      quantityUnit: "plates",
+      isDonation: undefined,
+      price: undefined,
+      expiresInHours: undefined,
+    });
+
+    setMessages([
+      {
+        id: "msg-initial",
+        sender: "ai",
+        text: initialPrompt.displayTitle,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        step: initialStep,
+      },
+    ]);
+
+    // Speak initial greeting
+    const timer = setTimeout(() => {
+      speakAndListen(initialPrompt.spokenText, language, true);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [isOpen, language]);
+
+  /**
+   * Handle user submission (from Speech-to-Text, typing, or quick chip)
+   */
+  const handleUserSubmission = async (textToSubmit: string) => {
+    const cleanInput = textToSubmit.trim();
+    if (!cleanInput) return;
+
+    stopListening();
+    setIsProcessing(true);
+    setTranscript("");
+    setManualInput("");
+    setIsEditingTranscript(false);
+
+    // Append user message
+    const userMsg: ChatMessage = {
+      id: `user-${Date.now()}`,
+      sender: "user",
+      text: cleanInput,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      step: currentStep,
+    };
+    setMessages((prev) => [...prev, userMsg]);
 
     try {
-      const res = await fetch("/api/ai/voice-parse", {
+      const res = await fetch("/api/ai/voice-assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          transcript: text,
-          language: selectedLanguage,
+          transcript: cleanInput,
+          language,
+          currentStep,
+          currentFormData: formData,
         }),
       });
 
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || "Failed to analyze voice listing");
-      }
+      const data = await res.json();
 
-      setParsedData(json.data);
-      toast.success("AI extracted listing details! Review below ✨");
-    } catch (err: any) {
-      setErrorMessage(err.message || "Could not parse voice details");
-      toast.error(err.message || "Could not parse voice details");
+      if (data.success && data.extracted) {
+        const updated = data.extracted;
+        setFormData(updated);
+
+        const next = data.nextStep as ConversationStep;
+        setCurrentStep(next);
+
+        if (data.isComplete || next === "COMPLETED") {
+          setIsComplete(true);
+          const aiMsg: ChatMessage = {
+            id: `ai-${Date.now()}`,
+            sender: "ai",
+            text:
+              data.displayTitle ||
+              "All details collected! Click the button below to auto-fill the form.",
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            step: "COMPLETED",
+          };
+          setMessages((prev) => [...prev, aiMsg]);
+          speakAndListen(data.aiResponseText, language, false);
+        } else {
+          const aiMsg: ChatMessage = {
+            id: `ai-${Date.now()}`,
+            sender: "ai",
+            text: data.displayTitle,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            step: next,
+          };
+          setMessages((prev) => [...prev, aiMsg]);
+          speakAndListen(data.aiResponseText, language, true);
+        }
+      }
+    } catch (err) {
+      console.error("Submission error:", err);
     } finally {
-      setIsAnalyzing(false);
+      setIsProcessing(false);
     }
   };
 
-  const handleApply = () => {
-    if (!parsedData) return;
-    onApplyParsedData(parsedData);
-    toast.success("Details applied to food form! ✨");
-    onClose();
+  /**
+   * Reset the voice session
+   */
+  const handleReset = () => {
+    speechSynthManager.stop();
+    stopListening();
+    setFormData({
+      name: "",
+      quantity: undefined,
+      quantityUnit: "plates",
+      isDonation: undefined,
+      price: undefined,
+      expiresInHours: undefined,
+    });
+    setCurrentStep("DISH_NAME");
+    setIsComplete(false);
+    setTranscript("");
+    setManualInput("");
+
+    const initialPrompt =
+      STEP_PROMPTS[language]?.["DISH_NAME"] || STEP_PROMPTS["en-IN"]["DISH_NAME"];
+    setMessages([
+      {
+        id: `msg-reset-${Date.now()}`,
+        sender: "ai",
+        text: initialPrompt.displayTitle,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        step: "DISH_NAME",
+      },
+    ]);
+
+    speakAndListen(initialPrompt.spokenText, language, true);
   };
 
-  const isRestaurant = userType === "restaurant";
-  const themeGradient = isRestaurant
-    ? "from-blue-600 via-indigo-600 to-cyan-500"
-    : "from-rose-500 via-pink-600 to-amber-500";
+  /**
+   * Apply extracted data directly to the AddFoodForm
+   */
+  const handleApply = () => {
+    speechSynthManager.stop();
+    stopListening();
+
+    const expiresInHours = formData.expiresInHours || 4;
+    const expiresAt =
+      formData.expiresAt ||
+      new Date(Date.now() + expiresInHours * 3_600_000).toISOString();
+
+    const isDonation =
+      formData.isDonation !== undefined ? formData.isDonation : true;
+    const price = isDonation ? 0 : Number(formData.price) || 0;
+    const originalPrice =
+      formData.originalPrice || (price > 0 ? Math.round(price * 1.4) : null);
+
+    const finalParsed: ParsedFoodListing = {
+      name: formData.name || "Fresh Prepared Food",
+      description:
+        formData.description ||
+        `${formData.name || "Fresh Food"}. Prepared fresh and ready for pickup.`,
+      quantity: Math.max(1, Number(formData.quantity) || 1),
+      quantityUnit: formData.quantityUnit || "plates",
+      isDonation,
+      price,
+      originalPrice,
+      discountPct:
+        originalPrice && originalPrice > price
+          ? Math.round(((originalPrice - price) / originalPrice) * 100)
+          : 0,
+      isRaw: Boolean(formData.isRaw),
+      isHomeCooked:
+        formData.isHomeCooked !== undefined ? formData.isHomeCooked : true,
+      cuisineType: formData.cuisineType || null,
+      allergens: formData.allergens || [],
+      tags: [isDonation ? "donation" : "discounted", "fresh"],
+      expiresInHours,
+      expiresAt,
+      pickupAddressHint: null,
+      confidence: {
+        overall: 0.98,
+        name: 0.98,
+        quantity: 0.98,
+        price: 0.98,
+        expiry: 0.98,
+      },
+      detectedEntities: {
+        dishName: formData.name,
+        quantityFound: `${formData.quantity} ${formData.quantityUnit}`,
+        pricingFound: isDonation ? "Free Donation" : `₹${price}`,
+        expiryFound: `in ${expiresInHours} hours`,
+      },
+      rawTranscript: messages
+        .filter((m) => m.sender === "user")
+        .map((m) => m.text)
+        .join(" | "),
+    };
+
+    onApplyParsedData(finalParsed);
+    onClose();
+  };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-      {/* Backdrop */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity"
-      />
-
-      {/* Modal Card */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-2xl bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden z-10 my-8"
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+      <div
+        className={`relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-3xl shadow-2xl border overflow-hidden ${
+          isDark
+            ? "bg-slate-900/95 border-slate-700/60 text-slate-100 shadow-purple-950/30"
+            : "bg-white/95 border-slate-200 text-slate-900 shadow-purple-500/10"
+        }`}
       >
-        {/* Glow ambient background */}
+        {/* TOP BAR: Header, Language Selector, Voice Toggle & Close */}
         <div
-          className={`absolute -top-24 -right-24 w-72 h-72 rounded-full blur-3xl opacity-20 bg-linear-to-br ${themeGradient} pointer-events-none`}
-        />
-        <div
-          className={`absolute -bottom-24 -left-24 w-72 h-72 rounded-full blur-3xl opacity-20 bg-linear-to-tr ${themeGradient} pointer-events-none`}
-        />
-
-        {/* Modal Header */}
-        <div className={`p-6 bg-linear-to-r ${themeGradient} text-white relative`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shadow-inner">
-                <FaMagic className="w-5 h-5 text-amber-300" />
-              </div>
-              <div>
-                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/20 text-[11px] font-semibold tracking-wide uppercase">
-                  ✨ AI Multilingual Assistant
-                </div>
-                <h3 className="text-xl sm:text-2xl font-black">
-                  Voice-to-Listing
-                </h3>
-              </div>
+          className={`flex items-center justify-between px-5 py-4 border-b ${
+            isDark ? "border-slate-800 bg-slate-950/60" : "border-slate-100 bg-slate-50/80"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-pink-500 flex items-center justify-center text-white shadow-md shadow-purple-500/20 animate-pulse">
+              <span className="text-xl">🎙️</span>
             </div>
-
-            <button
-              onClick={onClose}
-              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all"
-            >
-              <FaTimes className="w-4 h-4" />
-            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-bold">AnnoSetu Voice Assistant</h3>
+                <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-purple-500/10 text-purple-500 border border-purple-500/20">
+                  Multilingual AI
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">Speak naturally in Bengali, Hindi, or English</p>
+            </div>
           </div>
 
-          <p className="text-white/85 text-xs sm:text-sm mt-2">
-            Just speak naturally. AI extracts food name, quantity, price or donation status, allergens, and expiry window instantly!
-          </p>
-        </div>
-
-        {/* Modal Body */}
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
-          {/* Controls Bar: Language + Speech Support */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-800/60 rounded-2xl border border-gray-200/80 dark:border-gray-700/80">
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
-              <FaVolumeUp className="text-indigo-500" />
-              <span>Input Language:</span>
-            </div>
-
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Language Selector */}
             <select
-              value={selectedLanguage}
-              onChange={(e) => {
-                const code = e.target.value;
-                setSelectedLanguage(code);
-                if (voiceManagerRef.current) {
-                  voiceManagerRef.current.setLanguage(code);
-                }
-              }}
-              disabled={isListening}
-              className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}
+              aria-label="Select Voice Language"
+              className={`text-xs sm:text-sm font-medium px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
+                isDark
+                  ? "bg-slate-800 border-slate-700 text-slate-200 hover:border-purple-500"
+                  : "bg-white border-slate-200 text-slate-700 hover:border-purple-500"
+              }`}
             >
-              {SUPPORTED_VOICE_LANGUAGES.map((lang) => (
+              {SUPPORTED_LANGUAGES.map((lang) => (
                 <option key={lang.code} value={lang.code}>
-                  {lang.flag} {lang.name} ({lang.nativeName})
+                  {lang.flag} {lang.nativeName} ({lang.name})
                 </option>
               ))}
             </select>
+
+            {/* Voice Audio Toggle */}
+            <button
+              onClick={() => {
+                const next = !voiceEnabled;
+                setVoiceEnabled(next);
+                if (!next) speechSynthManager.stop();
+              }}
+              title={voiceEnabled ? "Voice Output Enabled" : "Voice Output Muted"}
+              className={`p-2 rounded-xl border text-sm transition-all ${
+                voiceEnabled
+                  ? isDark
+                    ? "bg-purple-950/50 border-purple-800 text-purple-300"
+                    : "bg-purple-50 border-purple-200 text-purple-700"
+                  : "bg-slate-200/50 border-slate-300 text-slate-400"
+              }`}
+            >
+              {voiceEnabled ? "🔊" : "🔇"}
+            </button>
+
+            {/* Close Modal */}
+            <button
+              onClick={() => {
+                speechSynthManager.stop();
+                stopListening();
+                onClose();
+              }}
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors"
+            >
+              ✕
+            </button>
           </div>
+        </div>
 
-          {/* Voice Microphone Center Stage */}
-          <div className="flex flex-col items-center justify-center py-4 text-center">
-            {/* Animated Mic Button */}
-            <div className="relative flex items-center justify-center">
-              {isListening && (
-                <>
-                  <motion.div
-                    animate={{ scale: [1, 1.35, 1], opacity: [0.6, 0, 0.6] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    className={`absolute w-32 h-32 rounded-full bg-linear-to-r ${themeGradient} blur-md`}
-                  />
-                  <motion.div
-                    animate={{ scale: [1, 1.2, 1], opacity: [0.8, 0.2, 0.8] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                    className={`absolute w-28 h-28 rounded-full bg-linear-to-r ${themeGradient}`}
-                  />
-                </>
-              )}
+        {/* STEP PROGRESS BAR */}
+        <div
+          className={`px-5 py-2.5 border-b flex items-center justify-between gap-2 overflow-x-auto ${
+            isDark ? "border-slate-800/80 bg-slate-900/40" : "border-slate-100 bg-slate-50/50"
+          }`}
+        >
+          {(
+            ["DISH_NAME", "QUANTITY", "PRICING", "EXPIRY", "COMPLETED"] as ConversationStep[]
+          ).map((stepKey, idx) => {
+            const meta = STEP_METADATA[stepKey];
+            const isCurrent = currentStep === stepKey;
+            const isPassed =
+              (stepKey === "DISH_NAME" && Boolean(formData.name)) ||
+              (stepKey === "QUANTITY" && Boolean(formData.quantity)) ||
+              (stepKey === "PRICING" && formData.isDonation !== undefined) ||
+              (stepKey === "EXPIRY" && Boolean(formData.expiresInHours)) ||
+              (stepKey === "COMPLETED" && isComplete);
 
-              <button
-                type="button"
-                onClick={toggleListening}
-                className={`relative z-10 w-24 h-24 rounded-full flex flex-col items-center justify-center text-white shadow-xl transition-all duration-300 transform active:scale-95 ${
-                  isListening
-                    ? "bg-red-600 ring-8 ring-red-500/30 scale-105"
-                    : `bg-linear-to-r ${themeGradient} hover:scale-105 ring-4 ring-indigo-500/20`
+            return (
+              <div
+                key={stepKey}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  isCurrent
+                    ? "bg-purple-600 text-white shadow-md shadow-purple-600/30 scale-105"
+                    : isPassed
+                    ? isDark
+                      ? "bg-emerald-950/40 text-emerald-400 border border-emerald-800/40"
+                      : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    : isDark
+                    ? "text-slate-500 bg-slate-800/40"
+                    : "text-slate-400 bg-slate-100"
                 }`}
               >
-                {isListening ? (
-                  <>
-                    <FaStop className="w-8 h-8 mb-1 animate-pulse" />
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider">
-                      Stop & Parse
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <FaMicrophone className="w-8 h-8 mb-1" />
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider">
-                      Tap to Speak
-                    </span>
-                  </>
-                )}
-              </button>
-            </div>
+                <span>{isPassed && !isCurrent ? "✓" : meta.icon}</span>
+                <span>{meta.title}</span>
+              </div>
+            );
+          })}
+        </div>
 
-            {/* Sound Wave Bars when Listening */}
-            {isListening && (
-              <div className="flex items-center justify-center gap-1.5 mt-5">
-                {[40, 75, 100, 60, 90, 45, 80, 50, 95, 65, 85].map((height, i) => (
-                  <motion.div
+        {/* MAIN BODY: 2 Columns */}
+        <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-0">
+          {/* LEFT COLUMN: Conversational Agent (7 cols) */}
+          <div className="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-700/40 min-h-0">
+            {/* Live Visualizer Banner */}
+            <div
+              className={`p-4 flex items-center justify-between border-b ${
+                isDark ? "border-slate-800/60 bg-slate-950/40" : "border-slate-100 bg-slate-50/40"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                {/* Glowing Avatar */}
+                <div
+                  className={`relative w-12 h-12 rounded-2xl flex items-center justify-center text-xl transition-all duration-300 ${
+                    isAiSpeaking
+                      ? "bg-gradient-to-tr from-purple-600 to-pink-500 shadow-lg shadow-purple-500/50 scale-105 animate-pulse text-white"
+                      : isListening
+                      ? "bg-gradient-to-tr from-emerald-500 to-teal-400 shadow-lg shadow-emerald-500/50 scale-105 animate-bounce text-white"
+                      : isProcessing
+                      ? "bg-gradient-to-tr from-amber-500 to-orange-400 shadow-lg shadow-amber-500/40 animate-spin text-white"
+                      : isDark
+                      ? "bg-slate-800 text-slate-300"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {isAiSpeaking ? "🗣️" : isListening ? "🎙️" : isProcessing ? "⏳" : "🤖"}
+                  {isListening && (
+                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-400 rounded-full animate-ping" />
+                  )}
+                </div>
+
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-purple-400">
+                    {isAiSpeaking
+                      ? "AI Speaking..."
+                      : isListening
+                      ? "Listening to You..."
+                      : isProcessing
+                      ? "AI Thinking & Parsing..."
+                      : "Ready to Listen"}
+                  </div>
+                  <div className="text-sm font-semibold text-slate-200">
+                    {isListening
+                      ? "Speak clearly into your microphone"
+                      : isAiSpeaking
+                      ? "Please listen to the prompt"
+                      : "Tap the mic or choose an option below"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Audio Waves */}
+              <div className="flex items-center gap-1">
+                {[40, 70, 100, 60, 90, 50, 80].map((h, i) => (
+                  <div
                     key={i}
-                    animate={{
-                      height: [`${height * 0.3}%`, `${height}%`, `${height * 0.4}%`],
+                    style={{
+                      height: isAiSpeaking || isListening ? `${h}%` : "20%",
+                      animationDelay: `${i * 0.15}s`,
                     }}
-                    transition={{
-                      duration: 0.6 + (i % 3) * 0.2,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                    className="w-1 bg-linear-to-t from-rose-500 to-indigo-500 rounded-full h-8"
+                    className={`w-1 rounded-full transition-all duration-200 ${
+                      isAiSpeaking
+                        ? "bg-purple-400 animate-pulse"
+                        : isListening
+                        ? "bg-emerald-400 animate-bounce"
+                        : "bg-slate-700"
+                    }`}
                   />
                 ))}
               </div>
-            )}
-
-            <div className="mt-3 text-xs font-medium text-gray-500 dark:text-gray-400">
-              {isListening
-                ? "🎙️ Listening... Speak clearly (e.g., '10 plates veg pulao for free donation')"
-                : isAnalyzing
-                ? "⚡ AI analyzing your speech..."
-                : "Press the microphone and speak your food surplus details"}
             </div>
-          </div>
 
-          {/* Transcript Box */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                <span>Spoken Transcript / Prompt:</span>
-                {transcript && (
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                    (Ready to Parse)
-                  </span>
-                )}
-              </label>
-              {transcript && (
-                <button
-                  type="button"
-                  onClick={() => setTranscript("")}
-                  className="text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            {/* Conversation Messages Feed */}
+            <div
+              ref={chatScrollRef}
+              className="flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth"
+            >
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  Clear
-                </button>
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
+                      msg.sender === "user"
+                        ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-br-none"
+                        : isDark
+                        ? "bg-slate-800/90 text-slate-100 border border-slate-700/60 rounded-bl-none"
+                        : "bg-white text-slate-800 border border-slate-200 rounded-bl-none"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-4 mb-1">
+                      <span className="text-[10px] font-bold uppercase opacity-75">
+                        {msg.sender === "user" ? "You (Voice/Text)" : "AnnoSetu AI"}
+                      </span>
+                      <span className="text-[10px] opacity-60">{msg.timestamp}</span>
+                    </div>
+                    <p className="font-medium text-sm leading-relaxed">{msg.text}</p>
+                  </div>
+                </div>
+              ))}
+
+              {/* Real-Time Listening Waveform Preview */}
+              {isListening && (
+                <div className="flex justify-end animate-in fade-in duration-150">
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm border border-dashed ${
+                      isDark
+                        ? "bg-emerald-950/30 border-emerald-500/50 text-emerald-300"
+                        : "bg-emerald-50 border-emerald-300 text-emerald-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">
+                        Listening in Real-Time...
+                      </span>
+                    </div>
+                    <p className="font-medium italic">
+                      {transcript || "Listening... Speak now (e.g. dish name, portions, free/price)"}
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
 
-            <div className="relative">
-              <textarea
-                value={transcript}
-                onChange={(e) => setTranscript(e.target.value)}
-                placeholder="Speak using the microphone above, or type details here (e.g., '5 plates hot rajma chawal donation, ready for pickup in 3 hours')..."
-                rows={3}
-                className="w-full px-4 py-3 text-sm rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none resize-none shadow-xs"
-              />
-
-              {!isListening && transcript.trim().length > 3 && (
-                <button
-                  type="button"
-                  onClick={() => handleAnalyze(transcript)}
-                  disabled={isAnalyzing}
-                  className="absolute right-3 bottom-3 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md flex items-center gap-1.5 transition-all"
-                >
-                  <FaMagic className="w-3 h-3 text-amber-300" />
-                  {isAnalyzing ? "Analyzing..." : "Re-Analyze with AI"}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Sample Prompts Inspiration */}
-          <div>
-            <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider block mb-2">
-              💡 Quick Sample Inspiration (Click to Test):
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {SAMPLE_PROMPTS.map((prompt, idx) => (
+            {/* Quick Answer Suggestion Chips */}
+            <div
+              className={`px-4 py-2 border-t flex flex-wrap items-center gap-1.5 ${
+                isDark ? "border-slate-800 bg-slate-950/40" : "border-slate-100 bg-slate-50/60"
+              }`}
+            >
+              <span className="text-[11px] font-bold text-slate-400 mr-1">Suggested:</span>
+              {stepPrompt.quickChips.map((chip, idx) => (
                 <button
                   key={idx}
-                  type="button"
-                  onClick={() => {
-                    setTranscript(prompt);
-                    handleAnalyze(prompt);
-                  }}
-                  className="text-xs text-left px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200/80 dark:border-gray-700/80 transition-all cursor-pointer"
+                  onClick={() => handleUserSubmission(chip)}
+                  disabled={isProcessing}
+                  className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-all ${
+                    isDark
+                      ? "bg-slate-800 border-slate-700 text-slate-200 hover:bg-purple-900/40 hover:border-purple-600"
+                      : "bg-white border-slate-200 text-slate-700 hover:bg-purple-50 hover:border-purple-300"
+                  }`}
                 >
-                  &ldquo;{prompt.slice(0, 45)}...&rdquo;
+                  {chip}
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* Parsed Output Card Preview */}
-          <AnimatePresence>
-            {parsedData && (
-              <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 15 }}
-                className="p-5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/80 space-y-4"
+            {/* Bottom Controls: Microphone & Text Input Bar */}
+            <div
+              className={`p-4 border-t flex items-center gap-2 ${
+                isDark ? "border-slate-800 bg-slate-950/80" : "border-slate-200 bg-white"
+              }`}
+            >
+              {/* Big Pulsing Mic Button */}
+              <button
+                onClick={() => {
+                  if (isListening) {
+                    stopListening();
+                  } else {
+                    startListeningSafely();
+                  }
+                }}
+                disabled={isProcessing}
+                className={`relative px-4 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-md ${
+                  isListening
+                    ? "bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/40 animate-pulse"
+                    : isAiSpeaking
+                    ? "bg-purple-700 text-white opacity-80 cursor-not-allowed"
+                    : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-600/30"
+                }`}
               >
-                <div className="flex items-center justify-between border-b border-emerald-200/60 dark:border-emerald-800/60 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs">
-                      <FaCheck className="w-3.5 h-3.5" />
-                    </span>
-                    <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-200">
-                      Extracted Food Listing Fields
-                    </h4>
-                  </div>
-                  <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-200/70 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300">
-                    AI Confidence: {Math.round(parsedData.confidence.overall * 100)}%
-                  </span>
-                </div>
+                <span className="text-lg">{isListening ? "⏹️" : "🎙️"}</span>
+                <span className="text-xs sm:text-sm whitespace-nowrap">
+                  {isListening ? "Stop Listening" : "Speak to Answer"}
+                </span>
+              </button>
 
-                {/* Grid of Extracted Attributes */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div className="p-2.5 rounded-xl bg-white/80 dark:bg-gray-900/80 border border-emerald-100 dark:border-emerald-900">
-                    <span className="text-gray-400 font-medium block text-[10px] uppercase">
-                      Dish Name
-                    </span>
-                    <span className="font-bold text-gray-900 dark:text-white text-sm">
-                      {parsedData.name}
-                    </span>
-                  </div>
+              {/* Text Input Fallback Bar */}
+              <div className="flex-1 flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={manualInput}
+                  onChange={(e) => setManualInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && manualInput.trim()) {
+                      handleUserSubmission(manualInput);
+                    }
+                  }}
+                  placeholder={stepPrompt.placeholder}
+                  disabled={isProcessing}
+                  className={`w-full text-xs sm:text-sm px-3.5 py-3 rounded-2xl border outline-none transition-all ${
+                    isDark
+                      ? "bg-slate-900 border-slate-700/80 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                      : "bg-slate-50 border-slate-300 text-slate-900 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                  }`}
+                />
 
-                  <div className="p-2.5 rounded-xl bg-white/80 dark:bg-gray-900/80 border border-emerald-100 dark:border-emerald-900">
-                    <span className="text-gray-400 font-medium block text-[10px] uppercase">
-                      Quantity
-                    </span>
-                    <span className="font-bold text-gray-900 dark:text-white text-sm">
-                      {parsedData.quantity} {parsedData.quantityUnit}
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-white/80 dark:bg-gray-900/80 border border-emerald-100 dark:border-emerald-900">
-                    <span className="text-gray-400 font-medium block text-[10px] uppercase">
-                      Listing Type & Price
-                    </span>
-                    <span className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1">
-                      {parsedData.isDonation ? (
-                        <>
-                          <FaHandHoldingHeart className="text-purple-500" />
-                          <span>100% Free Donation</span>
-                        </>
-                      ) : (
-                        <>
-                          <FaTag className="text-blue-500" />
-                          <span>₹{parsedData.price} (Surplus Deal)</span>
-                        </>
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-white/80 dark:bg-gray-900/80 border border-emerald-100 dark:border-emerald-900">
-                    <span className="text-gray-400 font-medium block text-[10px] uppercase">
-                      Expiry Window
-                    </span>
-                    <span className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1">
-                      <FaClock className="text-amber-500" />
-                      <span>{parsedData.expiresInHours} hours from now</span>
-                    </span>
-                  </div>
-                </div>
-
-                {/* Allergens & Dietary */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[11px] text-gray-500 font-medium mr-1">
-                    Tags:
-                  </span>
-                  {parsedData.cuisineType && (
-                    <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-[11px] font-semibold capitalize">
-                      🍲 {parsedData.cuisineType.replace("_", " ")}
-                    </span>
-                  )}
-                  {parsedData.allergens.length > 0 ? (
-                    parsedData.allergens.map((a) => (
-                      <span
-                        key={a}
-                        className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[11px] font-semibold capitalize"
-                      >
-                        ⚠️ {a}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="px-2 py-0.5 rounded-md bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 text-[11px] font-semibold">
-                      🌱 No Common Allergens
-                    </span>
-                  )}
-                </div>
-
-                {/* Apply Button */}
                 <button
-                  type="button"
-                  onClick={handleApply}
-                  className={`w-full py-3 rounded-2xl bg-linear-to-r ${themeGradient} text-white font-bold text-sm shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 transform active:scale-98`}
+                  onClick={() => handleUserSubmission(manualInput)}
+                  disabled={!manualInput.trim() || isProcessing}
+                  className="px-3.5 py-3 rounded-2xl font-semibold bg-slate-800 hover:bg-purple-600 text-white disabled:opacity-30 disabled:hover:bg-slate-800 transition-colors text-xs sm:text-sm"
                 >
-                  <FaMagic className="w-4 h-4 text-amber-300" />
-                  Apply & Populate Food Form ✨
+                  Send
                 </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Modal Footer */}
-        <div className="p-4 bg-gray-50 dark:bg-gray-800/40 border-t border-gray-200/80 dark:border-gray-700/80 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-          <div className="flex items-center gap-1.5">
-            <FaShieldAlt className="text-emerald-500" />
-            <span>Encrypted & Private Audio Processing</span>
+              </div>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="font-semibold text-gray-700 dark:text-gray-300 hover:underline"
+
+          {/* RIGHT COLUMN: Real-Time Populated Listing Card Preview (5 cols) */}
+          <div
+            className={`lg:col-span-5 flex flex-col p-5 overflow-y-auto ${
+              isDark ? "bg-slate-950/40" : "bg-slate-50/50"
+            }`}
           >
-            Cancel
-          </button>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-slate-400">
+                Live Listing Preview
+              </h4>
+              <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                {formData.name ? "AI Extraction Active" : "Awaiting Input"}
+              </span>
+            </div>
+
+            {/* Extracted Card Preview Box */}
+            <div
+              className={`p-4 rounded-2xl border transition-all duration-300 ${
+                isDark
+                  ? "bg-slate-900/90 border-slate-700/60 shadow-xl"
+                  : "bg-white border-slate-200 shadow-md"
+              }`}
+            >
+              {/* Dish Name */}
+              <div className="mb-3">
+                <span className="text-[11px] font-bold text-slate-400 uppercase">Dish Title</span>
+                <h3 className="text-lg font-extrabold text-purple-400 flex items-center gap-2">
+                  <span>{formData.name || "—"}</span>
+                  {formData.name && <span className="text-xs">✓</span>}
+                </h3>
+              </div>
+
+              {/* 2x2 Grid: Portions, Pricing, Expiry, Type */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {/* Portions */}
+                <div
+                  className={`p-3 rounded-xl border ${
+                    formData.quantity
+                      ? isDark
+                        ? "bg-emerald-950/30 border-emerald-800/50 text-emerald-300"
+                        : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                      : isDark
+                      ? "bg-slate-800/40 border-slate-800 text-slate-500"
+                      : "bg-slate-100 border-slate-200 text-slate-400"
+                  }`}
+                >
+                  <div className="text-[10px] font-bold uppercase">Quantity</div>
+                  <div className="text-sm font-bold mt-0.5">
+                    {formData.quantity ? `${formData.quantity} ${formData.quantityUnit}` : "—"}
+                  </div>
+                </div>
+
+                {/* Pricing / Donation */}
+                <div
+                  className={`p-3 rounded-xl border ${
+                    formData.isDonation !== undefined
+                      ? isDark
+                        ? "bg-purple-950/30 border-purple-800/50 text-purple-300"
+                        : "bg-purple-50 border-purple-200 text-purple-800"
+                      : isDark
+                      ? "bg-slate-800/40 border-slate-800 text-slate-500"
+                      : "bg-slate-100 border-slate-200 text-slate-400"
+                  }`}
+                >
+                  <div className="text-[10px] font-bold uppercase">Pricing</div>
+                  <div className="text-sm font-bold mt-0.5">
+                    {formData.isDonation === true
+                      ? "Free Donation 🎁"
+                      : formData.price !== undefined
+                      ? `₹${formData.price} / portion`
+                      : "—"}
+                  </div>
+                </div>
+
+                {/* Expiry Window */}
+                <div
+                  className={`p-3 rounded-xl border ${
+                    formData.expiresInHours
+                      ? isDark
+                        ? "bg-amber-950/30 border-amber-800/50 text-amber-300"
+                        : "bg-amber-50 border-amber-200 text-amber-800"
+                      : isDark
+                      ? "bg-slate-800/40 border-slate-800 text-slate-500"
+                      : "bg-slate-100 border-slate-200 text-slate-400"
+                  }`}
+                >
+                  <div className="text-[10px] font-bold uppercase">Pickup Window</div>
+                  <div className="text-sm font-bold mt-0.5">
+                    {formData.expiresInHours ? `Within ${formData.expiresInHours} hrs` : "—"}
+                  </div>
+                </div>
+
+                {/* Cuisine / Style */}
+                <div
+                  className={`p-3 rounded-xl border ${
+                    formData.cuisineType || formData.isHomeCooked !== undefined
+                      ? isDark
+                        ? "bg-indigo-950/30 border-indigo-800/50 text-indigo-300"
+                        : "bg-indigo-50 border-indigo-200 text-indigo-800"
+                      : isDark
+                      ? "bg-slate-800/40 border-slate-800 text-slate-500"
+                      : "bg-slate-100 border-slate-200 text-slate-400"
+                  }`}
+                >
+                  <div className="text-[10px] font-bold uppercase">Cuisine / Style</div>
+                  <div className="text-sm font-bold mt-0.5 capitalize">
+                    {formData.cuisineType || (formData.isHomeCooked ? "Home Cooked" : "—")}
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Hint */}
+              <div className="text-xs text-slate-400 border-t border-slate-800/60 pt-3">
+                {isComplete
+                  ? "✅ All 4 fields filled! Ready to populate form."
+                  : `Next step: ${stepMeta.description}`}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="mt-auto pt-4 space-y-2">
+              <button
+                onClick={handleApply}
+                disabled={!formData.name}
+                className="w-full py-3.5 px-4 rounded-2xl font-bold bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white shadow-lg shadow-emerald-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all transform active:scale-95 flex items-center justify-center gap-2"
+              >
+                <span>✨</span>
+                <span>Apply to Listing Form</span>
+              </button>
+
+              <button
+                onClick={handleReset}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border border-transparent hover:border-slate-700 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <span>🔄</span>
+                <span>Reset & Start Over</span>
+              </button>
+            </div>
+          </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

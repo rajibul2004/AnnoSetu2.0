@@ -1,0 +1,463 @@
+[
+  {
+    "id": "seed-1",
+    "transcript": "Amar kache 10 plate biriyani ache jeta ami donation hisabe dite chai",
+    "language": "bn-IN",
+    "provider": "gemini",
+    "timestamp": "2026-08-08T07:16:18.098Z",
+    "confidence": 0.99,
+    "groundTruth": {
+      "name": "Biriyani",
+      "description": "Biriyani. Freshly prepared quality meal. Available as a free community donation.",
+      "quantity": 10,
+      "quantityUnit": "plates",
+      "isDonation": true,
+      "price": 0,
+      "originalPrice": null,
+      "discountPct": 0,
+      "isRaw": false,
+      "isHomeCooked": false,
+      "cuisineType": "bengali",
+      "allergens": [],
+      "tags": [
+        "donation",
+        "restaurant",
+        "bengali"
+      ],
+      "expiresInHours": 4,
+      "expiresAt": "2026-08-08T11:16:18.101Z",
+      "pickupAddressHint": null,
+      "confidence": {
+        "overall": 0.99,
+        "name": 0.99,
+        "quantity": 0.99,
+        "price": 0.99,
+        "expiry": 0.95
+      },
+      "detectedEntities": {
+        "dishName": "Biriyani",
+        "quantityFound": "10 plates",
+        "pricingFound": "Free Donation",
+        "cuisineFound": "bengali"
+      },
+      "rawTranscript": "Amar kache 10 plate biriyani ache jeta ami donation hisabe dite chai"
+    }
+  },
+  {
+    "id": "seed-2",
+    "transcript": "5 plates of homemade paneer butter masala combo, free donation, pickup in 3 hours",
+    "language": "en-IN",
+    "provider": "gemini",
+    "timestamp": "2026-08-08T07:16:18.101Z",
+    "confidence": 0.98,
+    "groundTruth": {
+      "name": "Paneer Butter Masala",
+      "description": "Paneer Butter Masala. Wholesome homemade cooking. Available as a free community donation.",
+      "quantity": 5,
+      "quantityUnit": "plates",
+      "isDonation": true,
+      "price": 0,
+      "originalPrice": null,
+      "discountPct": 0,
+      "isRaw": false,
+      "isHomeCooked": true,
+      "cuisineType": "north_indian",
+      "allergens": [
+        "dairy"
+      ],
+      "tags": [
+        "donation",
+        "homestyle",
+        "vegetarian",
+        "north_indian"
+      ],
+      "expiresInHours": 3,
+      "expiresAt": "2026-08-08T10:16:18.101Z",
+      "pickupAddressHint": null,
+      "confidence": {
+        "overall": 0.98,
+        "name": 0.98,
+        "quantity": 0.98,
+        "price": 0.98,
+        "expiry": 0.98
+      },
+      "detectedEntities": {
+        "dishName": "Paneer Butter Masala",
+        "quantityFound": "5 plates",
+        "pricingFound": "Free Donation",
+        "expiryFound": "in 3 hours",
+        "cuisineFound": "north_indian",
+        "allergensFound": [
+          "dairy"
+        ]
+      },
+      "rawTranscript": "5 plates of homemade paneer butter masala combo, free donation, pickup in 3 hours"
+    }
+  },
+  {
+    "id": "seed-3",
+    "transcript": "Mere paas 15 plate veg pulao aur paneer hai jo main daan me dena chahta hu",
+    "language": "hi-IN",
+    "provider": "gemini",
+    "timestamp": "2026-08-08T07:16:18.101Z",
+    "confidence": 0.98,
+    "groundTruth": {
+      "name": "Veg Pulao",
+      "description": "Veg Pulao. Freshly prepared quality meal. Available as a free community donation.",
+      "quantity": 15,
+      "quantityUnit": "plates",
+      "isDonation": true,
+      "price": 0,
+      "originalPrice": null,
+      "discountPct": 0,
+      "isRaw": false,
+      "isHomeCooked": false,
+      "cuisineType": "north_indian",
+      "allergens": [
+        "dairy"
+      ],
+      "tags": [
+        "donation",
+        "restaurant",
+        "vegetarian",
+        "north_indian"
+      ],
+      "expiresInHours": 4,
+      "expiresAt": "2026-08-08T11:16:18.101Z",
+      "pickupAddressHint": null,
+      "confidence": {
+        "overall": 0.98,
+        "name": 0.98,
+        "quantity": 0.98,
+        "price": 0.98,
+        "expiry": 0.95
+      },
+      "detectedEntities": {
+        "dishName": "Veg Pulao",
+        "quantityFound": "15 plates",
+        "pricingFound": "Free Donation",
+        "cuisineFound": "north_indian"
+      },
+      "rawTranscript": "Mere paas 15 plate veg pulao aur paneer hai jo main daan me dena chahta hu"
+    }
+  },
+  {
+    "id": "seed-4",
+    "transcript": "10 boxes fresh vegetable biryani surplus at 80 rupees each, pick up tonight before 10 PM",
+    "language": "en-IN",
+    "provider": "gemini",
+    "timestamp": "2026-08-08T07:16:18.101Z",
+    "confidence": 0.98,
+    "groundTruth": {
+      "name": "Vegetable Biryani",
+      "description": "Vegetable Biryani. Freshly prepared quality meal. Available at surplus rate (₹80).",
+      "quantity": 10,
+      "quantityUnit": "packets",
+      "isDonation": false,
+      "price": 80,
+      "originalPrice": 128,
+      "discountPct": 38,
+      "isRaw": false,
+      "isHomeCooked": false,
+      "cuisineType": "north_indian",
+      "allergens": [],
+      "tags": [
+        "surplus",
+        "restaurant",
+        "vegetarian"
+      ],
+      "expiresInHours": 5,
+      "expiresAt": "2026-08-08T12:16:18.101Z",
+      "pickupAddressHint": null,
+      "confidence": {
+        "overall": 0.98,
+        "name": 0.98,
+        "quantity": 0.98,
+        "price": 0.98,
+        "expiry": 0.95
+      },
+      "detectedEntities": {
+        "dishName": "Vegetable Biryani",
+        "quantityFound": "10 packets",
+        "pricingFound": "₹80"
+      },
+      "rawTranscript": "10 boxes fresh vegetable biryani surplus at 80 rupees each, pick up tonight before 10 PM"
+    }
+  },
+  {
+    "id": "case-1786173378176-g57ls",
+    "transcript": "Amar kache 8 plate chicken biryani ache jeta 60 taka kore dite chai",
+    "language": "bn-IN",
+    "groundTruth": {
+      "name": "Chicken Biryani",
+      "description": "Chicken Biryani Freshly prepared quality meal. Available at surplus rate (₹60). Please pick up within 4 hours.",
+      "quantity": 8,
+      "quantityUnit": "plates",
+      "isDonation": false,
+      "price": 60,
+      "originalPrice": 96,
+      "discountPct": 38,
+      "isRaw": false,
+      "isHomeCooked": false,
+      "cuisineType": null,
+      "allergens": [],
+      "tags": [],
+      "expiresInHours": 4,
+      "expiresAt": "2026-08-08T11:16:18.173Z",
+      "pickupAddressHint": "e chicken biryani ache jeta 60 taka kore dite chai",
+      "confidence": {
+        "overall": 0.87,
+        "name": 0.97,
+        "quantity": 0.97,
+        "price": 0.95,
+        "expiry": 0.6
+      },
+      "detectedEntities": {
+        "dishName": "Chicken Biryani",
+        "quantityFound": "8 plate",
+        "pricingFound": "₹60",
+        "expiryFound": "4 hours (default)",
+        "cuisineFound": "general",
+        "allergensFound": []
+      },
+      "rawTranscript": "Amar kache 8 plate chicken biryani ache jeta 60 taka kore dite chai"
+    },
+    "provider": "gemini",
+    "timestamp": "2026-08-08T07:16:18.176Z",
+    "confidence": 0.87
+  },
+  {
+    "id": "case-1786173847173-v73p4",
+    "transcript": "15 प्लेट वेज पुलाव दान करना है",
+    "language": "hi-IN",
+    "groundTruth": {
+      "name": "Veg Pulao",
+      "description": "15 plates of fresh Veg Pulao for donation",
+      "quantity": 15,
+      "quantityUnit": "plates",
+      "isDonation": true,
+      "price": 0,
+      "originalPrice": null,
+      "discountPct": 0,
+      "isRaw": false,
+      "isHomeCooked": true,
+      "cuisineType": "north_indian",
+      "allergens": [],
+      "tags": [
+        "donation",
+        "homestyle"
+      ],
+      "expiresInHours": 4,
+      "expiresAt": "2026-08-08T11:24:07.171Z",
+      "pickupAddressHint": null,
+      "confidence": {
+        "overall": 0.98,
+        "name": 0.98,
+        "quantity": 0.98,
+        "price": 0.98,
+        "expiry": 0.95
+      },
+      "detectedEntities": {
+        "dishName": "Veg Pulao",
+        "quantityFound": "15 plates",
+        "pricingFound": "Free Donation"
+      },
+      "rawTranscript": "15 प्लेट वेज पुलाव दान करना है"
+    },
+    "provider": "gemini",
+    "timestamp": "2026-08-08T07:24:07.173Z",
+    "confidence": 0.98
+  },
+  {
+    "id": "case-1786173912428-42d79",
+    "transcript": "Mere paas 20 packet fresh roti sabji hai jo 40 rupaye me dena chahta hu",
+    "language": "hi-IN",
+    "groundTruth": {
+      "name": "Roti Sabji",
+      "description": "Fresh Roti Sabji packet",
+      "quantity": 20,
+      "quantityUnit": "packets",
+      "isDonation": false,
+      "price": 40,
+      "originalPrice": 60,
+      "discountPct": 33,
+      "isRaw": false,
+      "isHomeCooked": true,
+      "cuisineType": "north_indian",
+      "allergens": [
+        "gluten"
+      ],
+      "tags": [
+        "surplus",
+        "homestyle"
+      ],
+      "expiresInHours": 4,
+      "expiresAt": "2026-08-08T11:25:12.420Z",
+      "pickupAddressHint": null,
+      "confidence": {
+        "overall": 0.98,
+        "name": 0.98,
+        "quantity": 0.97,
+        "price": 0.98,
+        "expiry": 0.96
+      },
+      "detectedEntities": {
+        "dishName": "Roti Sabji",
+        "quantityFound": "20 packets",
+        "pricingFound": "₹40",
+        "expiryFound": "in 4 hours",
+        "cuisineFound": "north_indian",
+        "allergensFound": [
+          "gluten"
+        ]
+      },
+      "rawTranscript": "Mere paas 20 packet fresh roti sabji hai jo 40 rupaye me dena chahta hu"
+    },
+    "provider": "gemini",
+    "timestamp": "2026-08-08T07:25:12.428Z",
+    "confidence": 0.98
+  },
+  {
+    "id": "case-1786173984645-yjbb0",
+    "transcript": "Amar kache 15 plate veg biryani ache jeta ami free donation hisabe dite chai",
+    "language": "bn-IN",
+    "groundTruth": {
+      "name": "Veg Biryani",
+      "description": "15 plates of fresh veg biryani available for free donation.",
+      "quantity": 15,
+      "quantityUnit": "plates",
+      "isDonation": true,
+      "price": 0,
+      "originalPrice": null,
+      "discountPct": 0,
+      "isRaw": false,
+      "isHomeCooked": true,
+      "cuisineType": "bengali",
+      "allergens": [
+        "dairy"
+      ],
+      "tags": [
+        "donation",
+        "homestyle"
+      ],
+      "expiresInHours": 4,
+      "expiresAt": "2026-08-08T11:26:24.638Z",
+      "pickupAddressHint": null,
+      "confidence": {
+        "overall": 0.98,
+        "name": 0.98,
+        "quantity": 0.97,
+        "price": 0.98,
+        "expiry": 0.96
+      },
+      "detectedEntities": {
+        "dishName": "Veg Biryani",
+        "quantityFound": "15 plates",
+        "pricingFound": "Free Donation",
+        "expiryFound": "in 4 hours",
+        "cuisineFound": "bengali",
+        "allergensFound": [
+          "dairy"
+        ]
+      },
+      "rawTranscript": "Amar kache 15 plate veg biryani ache jeta ami free donation hisabe dite chai"
+    },
+    "provider": "gemini",
+    "timestamp": "2026-08-08T07:26:24.645Z",
+    "confidence": 0.98
+  },
+  {
+    "id": "case-1786173994846-fr7ak",
+    "transcript": "10 boxes of fresh home cooked chicken fried rice for donation pickup within 3 hours",
+    "language": "en-IN",
+    "groundTruth": {
+      "name": "Chicken Fried Rice",
+      "description": "Fresh home cooked chicken fried rice",
+      "quantity": 10,
+      "quantityUnit": "packets",
+      "isDonation": true,
+      "price": 0,
+      "originalPrice": null,
+      "discountPct": 0,
+      "isRaw": false,
+      "isHomeCooked": true,
+      "cuisineType": "chinese",
+      "allergens": [],
+      "tags": [
+        "donation",
+        "homestyle"
+      ],
+      "expiresInHours": 3,
+      "expiresAt": "2026-08-08T10:26:34.844Z",
+      "pickupAddressHint": null,
+      "confidence": {
+        "overall": 0.98,
+        "name": 0.98,
+        "quantity": 0.97,
+        "price": 0.98,
+        "expiry": 0.96
+      },
+      "detectedEntities": {
+        "dishName": "Chicken Fried Rice",
+        "quantityFound": "10 packets",
+        "pricingFound": "Free Donation",
+        "expiryFound": "in 3 hours",
+        "cuisineFound": "chinese",
+        "allergensFound": []
+      },
+      "rawTranscript": "10 boxes of fresh home cooked chicken fried rice for donation pickup within 3 hours"
+    },
+    "provider": "gemini",
+    "timestamp": "2026-08-08T07:26:34.846Z",
+    "confidence": 0.98
+  },
+  {
+    "id": "case-1786175122002-wcpw9",
+    "transcript": "চিকেন বিরিয়ানি",
+    "language": "bn-IN",
+    "groundTruth": {
+      "name": "Chicken Biryani",
+      "quantityUnit": "plates"
+    },
+    "provider": "gemini",
+    "timestamp": "2026-08-08T07:45:22.002Z",
+    "confidence": 0.95
+  },
+  {
+    "id": "case-1786175161041-w6tsx",
+    "transcript": "চিকেন বিরিয়ানি",
+    "language": "bn-IN",
+    "groundTruth": {
+      "name": "Chicken Biryani",
+      "quantityUnit": "plates"
+    },
+    "provider": "gemini",
+    "timestamp": "2026-08-08T07:46:01.042Z",
+    "confidence": 0.95
+  },
+  {
+    "id": "case-1786175191346-xx6qu",
+    "transcript": "বিরিয়ানি",
+    "language": "bn-IN",
+    "groundTruth": {
+      "name": "Biryani",
+      "quantityUnit": "plates"
+    },
+    "provider": "gemini",
+    "timestamp": "2026-08-08T07:46:31.346Z",
+    "confidence": 0.95
+  },
+  {
+    "id": "case-1786175197856-1ebw6",
+    "transcript": "১৫ প্যাকেট",
+    "language": "bn-IN",
+    "groundTruth": {
+      "name": "Biryani",
+      "quantityUnit": "packets",
+      "quantity": 15
+    },
+    "provider": "gemini",
+    "timestamp": "2026-08-08T07:46:37.856Z",
+    "confidence": 0.95
+  }
+]

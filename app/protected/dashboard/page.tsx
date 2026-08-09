@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import IndividualDashboard from "@/components/dashboard/IndividualDashboard";
 import RestaurantDashboard from "@/components/dashboard/RestaurantDashboard";
 import NgoDashboard from "@/components/dashboard/NgoDashboard";
+import AdminDashboard from "@/components/dashboard/AdminDashboard";
 
 function DashboardContent() {
   const { user } = useAuth();
@@ -13,6 +14,8 @@ function DashboardContent() {
   const role = searchParams.get("role")?.toLowerCase() || user?.role?.toLowerCase();
 
   switch (role) {
+    case "admin":
+      return <AdminDashboard />;
     case "restaurant":
       return <RestaurantDashboard />;
     case "ngo":
