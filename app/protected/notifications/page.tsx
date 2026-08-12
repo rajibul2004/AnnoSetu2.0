@@ -390,61 +390,63 @@ export default function NotificationsPage() {
         </div>
 
         {/* Content List */}
-        {isLoading ? (
-          <div className="flex justify-center py-24">
-            <LoadingSpinner text="Loading your notifications..." />
-          </div>
-        ) : filtered.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-20 p-8 rounded-3xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-xl"
-          >
-            <div className="w-20 h-20 mx-auto rounded-3xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-4xl mb-4">
-              {filter === "unread" ? "🎉" : "📭"}
+        <div className="h-[60vh] min-h-[400px] max-h-[800px] overflow-y-auto custom-scrollbar rounded-3xl bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-gray-200/80 dark:border-gray-800/80 shadow-xl p-2 sm:p-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <LoadingSpinner text="Loading your notifications..." />
             </div>
-            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">
-              {filter === "unread"
-                ? "All caught up!"
-                : filter === "priority"
-                ? "No high priority alerts"
-                : "No notifications found"}
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
-              {filter === "all"
-                ? "You'll see real-time updates when someone reserves your food, sends confirmation, or makes a pickup."
-                : `No notifications match the "${filter.replace("_", " ")}" filter.`}
-            </p>
+          ) : filtered.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center justify-center h-full text-center py-10 px-4"
+            >
+              <div className="w-20 h-20 mx-auto rounded-3xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-center text-4xl mb-4">
+                {filter === "unread" ? "🎉" : "📭"}
+              </div>
+              <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">
+                {filter === "unread"
+                  ? "All caught up!"
+                  : filter === "priority"
+                  ? "No high priority alerts"
+                  : "No notifications found"}
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
+                {filter === "all"
+                  ? "You'll see real-time updates when someone reserves your food, sends confirmation, or makes a pickup."
+                  : `No notifications match the "${filter.replace("_", " ")}" filter.`}
+              </p>
 
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              {filter !== "all" && (
-                <button
-                  type="button"
-                  onClick={() => setFilter("all")}
-                  className="px-4 py-2.5 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-all flex items-center gap-2 cursor-pointer"
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                {filter !== "all" && (
+                  <button
+                    type="button"
+                    onClick={() => setFilter("all")}
+                    className="px-4 py-2.5 rounded-2xl bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm border border-gray-200 dark:border-gray-700 transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    <FaFilter className="w-3 h-3" />
+                    <span>Show All Notifications</span>
+                  </button>
+                )}
+                <Link
+                  href="/public/food"
+                  className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all flex items-center gap-2"
                 >
-                  <FaFilter className="w-3 h-3" />
-                  <span>Show All Notifications</span>
-                </button>
-              )}
-              <Link
-                href="/public/food"
-                className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all flex items-center gap-2"
-              >
-                <FaUtensils className="w-3 h-3" />
-                <span>Explore Available Food</span>
-              </Link>
+                  <FaUtensils className="w-3 h-3" />
+                  <span>Explore Available Food</span>
+                </Link>
+              </div>
+            </motion.div>
+          ) : (
+            <div className="space-y-3 pb-2">
+              <AnimatePresence mode="popLayout" initial={false}>
+                {filtered.map((n) => (
+                  <NotificationCard key={n.id} notification={n} />
+                ))}
+              </AnimatePresence>
             </div>
-          </motion.div>
-        ) : (
-          <div className="space-y-4">
-            <AnimatePresence mode="popLayout" initial={false}>
-              {filtered.map((n) => (
-                <NotificationCard key={n.id} notification={n} />
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

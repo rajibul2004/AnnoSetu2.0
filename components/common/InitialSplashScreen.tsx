@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaLeaf, FaUtensils, FaHeart } from "react-icons/fa";
+import { FaHeart } from "react-icons/fa";
+import Image from "next/image";
 
 const LOADING_STEPS = [
-  "Connecting to AnnaSetu Network...",
-  "Loading Local Community Hubs...",
-  "Discovering Fresh Surplus Food...",
+  "Bridging the food gap...",
+  "Rescuing fresh surplus meals...",
+  "Connecting donors to hungry neighbors...",
+  "Reducing food waste...",
   "Almost Ready...",
 ];
 
@@ -98,11 +100,15 @@ export default function InitialSplashScreen() {
               />
 
               {/* Logo Box */}
-              <div className="relative w-20 h-20 rounded-2xl bg-slate-900 border border-emerald-500/40 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
-                <div className="relative flex items-center justify-center">
-                  <FaUtensils className="text-emerald-400 text-2xl -mr-1" />
-                  <FaLeaf className="text-emerald-300 text-3xl animate-bounce" />
-                </div>
+              <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-3xl bg-white/5 backdrop-blur-xl border border-emerald-500/40 flex items-center justify-center shadow-2xl shadow-emerald-500/30 overflow-hidden p-4">
+                <Image
+                  src="/logo.png"
+                  alt="AnnaSetu Logo"
+                  width={120}
+                  height={120}
+                  className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse"
+                  priority
+                />
               </div>
             </motion.div>
 

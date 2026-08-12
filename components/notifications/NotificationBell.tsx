@@ -129,18 +129,22 @@ export default function NotificationBell() {
   useNotificationStream(isAuthenticated);
 
   const unreadCount = useUnreadCount();
-  const { notifications, isLoading } = useNotifications(10, 0);
+  const { notifications, isLoading, refetch } = useNotifications(10, 0);
   const { mutate: markAllRead, isPending: isMarkingAll } = useMarkAllAsRead();
 
-  // Close on outside click
+  // Close on outside click and refetch on open
   useEffect(() => {
     if (!open) return;
+    
+    // Force a fresh fetch when the dropdown is opened
+    refetch();
+
     const handle = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
-  }, [open]);
+  }, [open, refetch]);
 
   if (!isAuthenticated) return null;
 

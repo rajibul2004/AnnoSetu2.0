@@ -114,26 +114,38 @@ textarea:-webkit-autofill {
   transition: transform 0.2s ease;
 }
 
-/* ── Custom Scrollbar Utilities ──────────────────── */
-.custom-scrollbar::-webkit-scrollbar {
-  height: 6px;
-  width: 6px;
+/* ── Premium Scrollbar (Global) ──────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: transparent;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(156, 163, 175, 0.4);
-  border-radius: 9999px;
+::-webkit-scrollbar-thumb {
+  background-color: rgba(16, 185, 129, 0.4); /* Emerald 500 with opacity */
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(156, 163, 175, 0.7);
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(16, 185, 129, 0.8);
 }
-.dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(148, 163, 184, 0.25);
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
-.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(148, 163, 184, 0.5);
+
+.dark ::-webkit-scrollbar-thumb {
+  background-color: rgba(52, 211, 153, 0.3); /* Emerald 400 with opacity */
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(52, 211, 153, 0.7);
+}
+
+/* Specific classes if needed */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
 .no-scrollbar::-webkit-scrollbar {

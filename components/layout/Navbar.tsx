@@ -25,7 +25,7 @@ import {
 } from "react-icons/fa";
 
 export default function Navbar() {
-  const { user, isRestaurant, isIndividual, isNGO, logout } = useAuth();
+  const { user, isRestaurant, isIndividual, isNGO, isAdmin, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const getDashboardLink = (): string => {
@@ -115,7 +115,7 @@ export default function Navbar() {
 
             {user && (
               <>
-                <NavbarMessagesButton />
+                {!isAdmin && <NavbarMessagesButton />}
                 <NotificationBell />
               </>
             )}
@@ -176,13 +176,15 @@ export default function Navbar() {
                       </div>
                     </div>
 
-                    <Link
-                      href="/protected/messages"
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
-                    >
-                      <FaCommentDots className="text-base text-gray-400" />
-                      <span>Pickup Messages</span>
-                    </Link>
+                    {!isAdmin && (
+                      <Link
+                        href="/protected/messages"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                      >
+                        <FaCommentDots className="text-base text-gray-400" />
+                        <span>Pickup Messages</span>
+                      </Link>
+                    )}
 
                     <Link
                       href="/protected/profile"
@@ -235,7 +237,7 @@ export default function Navbar() {
           {/* Mobile Menu Controls */}
           <div className="md:hidden flex items-center space-x-1 sm:space-x-2">
             <ThemeToggle />
-            {user && <NavbarMessagesButton />}
+            {user && !isAdmin && <NavbarMessagesButton />}
             {user && <NotificationBell />}
 
             <button
@@ -311,14 +313,16 @@ export default function Navbar() {
                       <span>Dashboard</span>
                     </Link>
 
-                    <Link
-                      href="/protected/messages"
-                      className="flex items-center gap-3 px-4 py-3 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <FaCommentDots className="text-emerald-500" />
-                      <span>Pickup Messages</span>
-                    </Link>
+                    {!isAdmin && (
+                      <Link
+                        href="/protected/messages"
+                        className="flex items-center gap-3 px-4 py-3 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <FaCommentDots className="text-emerald-500" />
+                        <span>Pickup Messages</span>
+                      </Link>
+                    )}
 
                     {(isRestaurant || isIndividual) && addFoodLink && (
                       <Link

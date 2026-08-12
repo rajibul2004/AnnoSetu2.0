@@ -337,74 +337,80 @@ export default function AdminDashboard() {
     <div className="space-y-6 pb-12 animate-in fade-in duration-300">
       {/* 1. TOP HEADER & SYSTEM HEALTH BAR */}
       <div
-        className={`p-6 rounded-3xl border backdrop-blur-xl shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+        className={`relative overflow-hidden p-6 sm:p-8 rounded-[2rem] border backdrop-blur-2xl shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6 ${
           isDark
-            ? "bg-slate-900/90 border-slate-800 text-white shadow-purple-950/20"
-            : "bg-white/95 border-slate-200 text-slate-900 shadow-slate-200/50"
+            ? "bg-gradient-to-br from-slate-900/95 via-slate-900/90 to-purple-950/20 border-white/10 shadow-purple-900/10"
+            : "bg-gradient-to-br from-white via-slate-50 to-purple-50/50 border-slate-200/60 shadow-slate-200/50"
         }`}
       >
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-pink-500 flex items-center justify-center text-white text-2xl shadow-lg shadow-purple-600/30">
-            <FaShieldAlt />
+        {/* Subtle decorative glowing orb behind the icon */}
+        <div className="absolute top-0 left-0 w-64 h-64 bg-purple-500/20 rounded-full blur-[80px] pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-5">
+          <div className="w-16 h-16 rounded-[1.25rem] bg-gradient-to-tr from-purple-600 via-indigo-600 to-pink-500 flex items-center justify-center text-white text-2xl shadow-xl shadow-purple-600/30 ring-4 ring-white/10 dark:ring-[#081220]/50">
+            <FaShieldAlt className="drop-shadow-md" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight">
-                AnnoSetu Operations Center
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-1">
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                AnnoSetu Operations
               </h1>
-              <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                Admin Suite
+              <span className="inline-flex w-max items-center px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                Command Center
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-lg font-medium">
               Real-time platform moderation, compliance verifications, and operational analytics.
             </p>
           </div>
         </div>
 
         {/* System Health Status & Refresh */}
-        <div className="flex items-center gap-3">
+        <div className="relative z-10 flex items-center gap-3 w-full md:w-auto">
           <div
-            className={`px-3.5 py-2 rounded-2xl border flex items-center gap-2.5 text-xs font-semibold ${
-              isDark ? "bg-slate-800/80 border-slate-700" : "bg-slate-50 border-slate-200"
+            className={`flex-1 md:flex-none px-4 py-2.5 rounded-2xl border flex items-center gap-3 text-xs font-semibold backdrop-blur-xl ${
+              isDark ? "bg-slate-800/40 border-slate-700/50" : "bg-white/60 border-slate-200"
             }`}
           >
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+            <div className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+            </div>
             <div className="flex flex-col">
-              <span className="text-[10px] text-slate-400 uppercase font-bold">System Status</span>
-              <span className="text-emerald-500 font-bold">Operational (99.98%)</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">System Status</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">Operational (99.9%)</span>
             </div>
           </div>
 
           <button
             onClick={reloadAll}
             disabled={refreshing}
-            className={`p-3 rounded-2xl border transition-all hover:scale-105 active:scale-95 ${
+            className={`p-3.5 rounded-2xl border transition-all duration-300 hover:scale-105 active:scale-95 shadow-sm ${
               isDark
-                ? "bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700"
-                : "bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200"
+                ? "bg-slate-800/50 border-slate-700/50 text-slate-300 hover:bg-slate-700 hover:text-white hover:border-slate-600"
+                : "bg-white/80 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
             }`}
             title="Refresh All Data"
           >
-            <FaSyncAlt className={refreshing ? "animate-spin text-purple-400" : ""} />
+            <FaSyncAlt className={refreshing ? "animate-spin text-purple-500" : ""} />
           </button>
         </div>
       </div>
 
       {/* 2. 6 KEY KPI CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-5">
         {/* Card 1: Total Users */}
         <div
-          className={`p-4 rounded-2xl border transition-all ${
-            isDark ? "bg-slate-900/80 border-slate-800" : "bg-white border-slate-200 shadow-sm"
+          className={`p-5 rounded-[1.5rem] border transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${
+            isDark ? "bg-gradient-to-b from-slate-800/80 to-slate-900/80 border-slate-700/50 hover:border-slate-600" : "bg-gradient-to-b from-white to-slate-50 border-slate-200 shadow-sm hover:border-slate-300"
           }`}
         >
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Total Users</span>
-            <FaUsers className="text-purple-400" />
+            <div className="p-2 rounded-xl bg-purple-500/10"><FaUsers className="text-purple-600 dark:text-purple-400" /></div>
           </div>
-          <div className="text-2xl font-black text-purple-400">{stats?.users?.total ?? 0}</div>
-          <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
+          <div className="text-2xl sm:text-3xl font-black text-purple-600 dark:text-purple-400">{stats?.users?.total ?? 0}</div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 flex items-center justify-between font-medium">
             <span>🍽️ {stats?.users?.restaurant ?? 0} Rest.</span>
             <span>🤝 {stats?.users?.ngo ?? 0} NGOs</span>
             <span>👤 {stats?.users?.individual ?? 0} Indiv.</span>
@@ -413,16 +419,16 @@ export default function AdminDashboard() {
 
         {/* Card 2: Food Surplus Listings */}
         <div
-          className={`p-4 rounded-2xl border transition-all ${
-            isDark ? "bg-slate-900/80 border-slate-800" : "bg-white border-slate-200 shadow-sm"
+          className={`p-5 rounded-[1.5rem] border transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${
+            isDark ? "bg-gradient-to-b from-slate-800/80 to-slate-900/80 border-slate-700/50 hover:border-slate-600" : "bg-gradient-to-b from-white to-slate-50 border-slate-200 shadow-sm hover:border-slate-300"
           }`}
         >
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Active Listings</span>
-            <FaUtensils className="text-emerald-400" />
+            <div className="p-2 rounded-xl bg-emerald-500/10"><FaUtensils className="text-emerald-500 dark:text-emerald-400" /></div>
           </div>
-          <div className="text-2xl font-black text-emerald-400">{stats?.foods?.active ?? 0}</div>
-          <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
+          <div className="text-2xl sm:text-3xl font-black text-emerald-500 dark:text-emerald-400">{stats?.foods?.active ?? 0}</div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 flex items-center justify-between font-medium">
             <span>🎁 {stats?.foods?.donations ?? 0} Free</span>
             <span>🏷️ {stats?.foods?.paid ?? 0} Discount</span>
             <span>⏳ {stats?.foods?.expired ?? 0} Expired</span>
@@ -431,34 +437,34 @@ export default function AdminDashboard() {
 
         {/* Card 3: Completed Pickups */}
         <div
-          className={`p-4 rounded-2xl border transition-all ${
-            isDark ? "bg-slate-900/80 border-slate-800" : "bg-white border-slate-200 shadow-sm"
+          className={`p-5 rounded-[1.5rem] border transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${
+            isDark ? "bg-gradient-to-b from-slate-800/80 to-slate-900/80 border-slate-700/50 hover:border-slate-600" : "bg-gradient-to-b from-white to-slate-50 border-slate-200 shadow-sm hover:border-slate-300"
           }`}
         >
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Meals Rescued</span>
-            <FaBoxOpen className="text-indigo-400" />
+            <div className="p-2 rounded-xl bg-indigo-500/10"><FaBoxOpen className="text-indigo-500 dark:text-indigo-400" /></div>
           </div>
-          <div className="text-2xl font-black text-indigo-400">
+          <div className="text-2xl sm:text-3xl font-black text-indigo-500 dark:text-indigo-400">
             {stats?.impact?.portionsRescued ?? 0}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
             <span>~{stats?.impact?.kgRescued ?? 0} kg surplus rescued</span>
           </div>
         </div>
 
         {/* Card 4: Environmental CO2 Saved */}
         <div
-          className={`p-4 rounded-2xl border transition-all ${
-            isDark ? "bg-slate-900/80 border-slate-800" : "bg-white border-slate-200 shadow-sm"
+          className={`p-5 rounded-[1.5rem] border transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${
+            isDark ? "bg-gradient-to-b from-slate-800/80 to-slate-900/80 border-slate-700/50 hover:border-slate-600" : "bg-gradient-to-b from-white to-slate-50 border-slate-200 shadow-sm hover:border-slate-300"
           }`}
         >
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">CO₂ Avoided</span>
-            <FaLeaf className="text-teal-400" />
+            <div className="p-2 rounded-xl bg-teal-500/10"><FaLeaf className="text-teal-500 dark:text-teal-400" /></div>
           </div>
-          <div className="text-2xl font-black text-teal-400">{stats?.impact?.co2SavedKg ?? 0} kg</div>
-          <div className="text-[11px] text-slate-400 mt-1">
+          <div className="text-2xl sm:text-3xl font-black text-teal-500 dark:text-teal-400">{stats?.impact?.co2SavedKg ?? 0} kg</div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
             <span>Reduced landfill methane</span>
           </div>
         </div>
@@ -466,29 +472,29 @@ export default function AdminDashboard() {
         {/* Card 5: Verification Queue */}
         <div
           onClick={() => setActiveTab("users")}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer hover:border-amber-500/50 ${
+          className={`p-5 rounded-[1.5rem] border transition-all duration-300 cursor-pointer hover:shadow-lg hover:-translate-y-1 ${
             stats?.queues?.pendingVerifications > 0
               ? isDark
-                ? "bg-amber-950/20 border-amber-800/40"
-                : "bg-amber-50 border-amber-200"
+                ? "bg-gradient-to-b from-amber-900/30 to-amber-950/20 border-amber-500/30 hover:border-amber-500/50"
+                : "bg-gradient-to-b from-amber-50 to-amber-100/50 border-amber-200 hover:border-amber-300"
               : isDark
-              ? "bg-slate-900/80 border-slate-800"
-              : "bg-white border-slate-200 shadow-sm"
+              ? "bg-gradient-to-b from-slate-800/80 to-slate-900/80 border-slate-700/50 hover:border-slate-600"
+              : "bg-gradient-to-b from-white to-slate-50 border-slate-200 shadow-sm hover:border-slate-300"
           }`}
         >
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Verifications</span>
-            <FaFileAlt className="text-amber-400" />
+            <div className="p-2 rounded-xl bg-amber-500/10"><FaFileAlt className="text-amber-500 dark:text-amber-400" /></div>
           </div>
-          <div className="text-2xl font-black text-amber-400 flex items-center gap-2">
+          <div className="text-2xl sm:text-3xl font-black text-amber-500 dark:text-amber-400 flex items-center gap-2">
             <span>{stats?.queues?.pendingVerifications ?? 0}</span>
             {stats?.queues?.pendingVerifications > 0 && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-bold animate-pulse">
+              <span className="text-[10px] px-2 py-1 rounded-full bg-amber-500 text-white font-bold shadow-md shadow-amber-500/40 animate-pulse">
                 Pending
               </span>
             )}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
             <span>FSSAI & NGO audit queue</span>
           </div>
         </div>
@@ -496,53 +502,53 @@ export default function AdminDashboard() {
         {/* Card 6: Safety Moderation Queue */}
         <div
           onClick={() => setActiveTab("reports")}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer hover:border-rose-500/50 ${
+          className={`p-5 rounded-[1.5rem] border transition-all duration-300 cursor-pointer hover:shadow-lg hover:-translate-y-1 ${
             stats?.queues?.pendingReports > 0
               ? isDark
-                ? "bg-rose-950/20 border-rose-800/40"
-                : "bg-rose-50 border-rose-200"
+                ? "bg-gradient-to-b from-rose-900/30 to-rose-950/20 border-rose-500/30 hover:border-rose-500/50"
+                : "bg-gradient-to-b from-rose-50 to-rose-100/50 border-rose-200 hover:border-rose-300"
               : isDark
-              ? "bg-slate-900/80 border-slate-800"
-              : "bg-white border-slate-200 shadow-sm"
+              ? "bg-gradient-to-b from-slate-800/80 to-slate-900/80 border-slate-700/50 hover:border-slate-600"
+              : "bg-gradient-to-b from-white to-slate-50 border-slate-200 shadow-sm hover:border-slate-300"
           }`}
         >
-          <div className="flex items-center justify-between text-slate-400 mb-2">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Safety Reports</span>
-            <FaExclamationTriangle className="text-rose-400" />
+            <div className="p-2 rounded-xl bg-rose-500/10"><FaExclamationTriangle className="text-rose-500 dark:text-rose-400" /></div>
           </div>
-          <div className="text-2xl font-black text-rose-400 flex items-center gap-2">
+          <div className="text-2xl sm:text-3xl font-black text-rose-500 dark:text-rose-400 flex items-center gap-2">
             <span>{stats?.queues?.pendingReports ?? 0}</span>
             {stats?.queues?.pendingReports > 0 && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 font-bold animate-pulse">
-                Action
+              <span className="text-[10px] px-2 py-1 rounded-full bg-rose-500 text-white font-bold shadow-md shadow-rose-500/40 animate-pulse">
+                Action Req.
               </span>
             )}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
             <span>Community flags to review</span>
           </div>
         </div>
       </div>
 
       {/* 3. NAVIGATION TABS */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+      <div className="flex items-center gap-2 overflow-x-auto py-2 no-scrollbar mt-4 -mx-2 px-2">
         {[
           { id: "overview", label: "Overview & Analytics", icon: FaChartPie },
           {
             id: "users",
-            label: "User & Verification Center",
+            label: "User Verification",
             icon: FaUsers,
             badge: stats?.queues?.pendingVerifications,
           },
-          { id: "listings", label: "Food Surplus Moderation", icon: FaUtensils },
-          { id: "reservations", label: "Reservations Ledger", icon: FaBoxOpen },
+          { id: "listings", label: "Surplus Moderation", icon: FaUtensils },
+          { id: "reservations", label: "Reservations", icon: FaBoxOpen },
           {
             id: "reports",
-            label: "Safety & Flag Reports",
+            label: "Safety Reports",
             icon: FaExclamationTriangle,
             badge: stats?.queues?.pendingReports,
           },
-          { id: "broadcast", label: "Broadcast Alerts", icon: FaBullhorn },
+          { id: "broadcast", label: "Broadcasts", icon: FaBullhorn },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -550,18 +556,18 @@ export default function AdminDashboard() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as AdminTab)}
-              className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all ${
+              className={`px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all duration-300 ${
                 isActive
-                  ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30 scale-105"
+                  ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/40 scale-105 border border-transparent"
                   : isDark
-                  ? "bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800"
-                  : "bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-sm"
+                  ? "bg-slate-800/80 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 hover:border-slate-500"
+                  : "bg-white border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300 shadow-sm"
               }`}
             >
-              <Icon />
+              <Icon className={isActive ? "text-purple-200" : "text-slate-400"} />
               <span>{tab.label}</span>
               {tab.badge > 0 && (
-                <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white">
+                <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white shadow-md shadow-rose-500/30">
                   {tab.badge}
                 </span>
               )}
@@ -592,11 +598,11 @@ export default function AdminDashboard() {
                     isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"
                   }`}
                 >
-                  <div className="text-xs text-slate-400 font-bold uppercase">Meals Served</div>
-                  <div className="text-2xl font-black text-emerald-400 mt-1">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase">Meals Served</div>
+                  <div className="text-2xl font-black text-emerald-500 dark:text-emerald-400 mt-1">
                     {stats?.impact?.portionsRescued ?? 0}
                   </div>
-                  <div className="text-xs text-slate-400 mt-1">Portions distributed</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Portions distributed</div>
                 </div>
 
                 <div
@@ -604,11 +610,11 @@ export default function AdminDashboard() {
                     isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"
                   }`}
                 >
-                  <div className="text-xs text-slate-400 font-bold uppercase">Landfill Avoidance</div>
-                  <div className="text-2xl font-black text-teal-400 mt-1">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase">Landfill Avoidance</div>
+                  <div className="text-2xl font-black text-teal-500 dark:text-teal-400 mt-1">
                     {stats?.impact?.kgRescued ?? 0} kg
                   </div>
-                  <div className="text-xs text-slate-400 mt-1">Direct food rescue</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Direct food rescue</div>
                 </div>
 
                 <div
@@ -616,18 +622,18 @@ export default function AdminDashboard() {
                     isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"
                   }`}
                 >
-                  <div className="text-xs text-slate-400 font-bold uppercase">Economic Value Rescued</div>
-                  <div className="text-2xl font-black text-purple-400 mt-1">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase">Economic Value Rescued</div>
+                  <div className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1">
                     ₹{stats?.impact?.volumeInr ?? 0}
                   </div>
-                  <div className="text-xs text-slate-400 mt-1">Total transactions</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Total transactions</div>
                 </div>
               </div>
 
               {/* Breakdown Bars */}
               <div className="space-y-4">
                 <div>
-                  <div className="flex justify-between text-xs font-bold text-slate-400 mb-1">
+                  <div className="flex justify-between text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">
                     <span>Listing Model: Free Donations vs Discounted Food</span>
                     <span>
                       {stats?.foods?.total > 0
@@ -635,7 +641,7 @@ export default function AdminDashboard() {
                         : "0%"}
                     </span>
                   </div>
-                  <div className="w-full h-3 rounded-full bg-slate-800 overflow-hidden flex">
+                  <div className="w-full h-3 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden flex">
                     <div
                       style={{
                         width: `${
@@ -660,7 +666,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-xs font-bold text-slate-400 mb-1">
+                  <div className="flex justify-between text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">
                     <span>Pickup Fulfillment Rate</span>
                     <span>
                       {stats?.reservations?.total > 0
@@ -670,7 +676,7 @@ export default function AdminDashboard() {
                         : "0%"}
                     </span>
                   </div>
-                  <div className="w-full h-3 rounded-full bg-slate-800 overflow-hidden flex">
+                  <div className="w-full h-3 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden flex">
                     <div
                       style={{
                         width: `${
@@ -711,7 +717,7 @@ export default function AdminDashboard() {
                       </div>
                       <div>
                         <div className="text-xs font-bold">Document Verifications</div>
-                        <div className="text-[11px] text-slate-400">
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
                           {stats?.queues?.pendingVerifications} awaiting review
                         </div>
                       </div>
@@ -731,7 +737,7 @@ export default function AdminDashboard() {
                       </div>
                       <div>
                         <div className="text-xs font-bold">Safety Reports Queue</div>
-                        <div className="text-[11px] text-slate-400">
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
                           {stats?.queues?.pendingReports} pending moderation
                         </div>
                       </div>
@@ -751,7 +757,7 @@ export default function AdminDashboard() {
                       </div>
                       <div>
                         <div className="text-xs font-bold">Dispatch Platform Broadcast</div>
-                        <div className="text-[11px] text-slate-400">Reach all active users</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">Reach all active users</div>
                       </div>
                     </div>
                     <span className="text-xs text-purple-400 font-bold">Send →</span>
@@ -759,7 +765,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-800/60 text-xs text-slate-400">
+              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400">
                 Admin Session Active • All actions are logged and audited.
               </div>
             </div>
@@ -780,7 +786,7 @@ export default function AdminDashboard() {
                   <span>👥</span>
                   <span>User & Verification Directory</span>
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Manage accounts, review KYC documents, FSSAI licenses, and verify organizations.
                 </p>
               </div>
@@ -792,7 +798,7 @@ export default function AdminDashboard() {
                     isDark ? "bg-slate-800/80 border-slate-700" : "bg-slate-50 border-slate-200"
                   }`}
                 >
-                  <FaSearch className="text-slate-400 text-xs" />
+                  <FaSearch className="text-slate-500 dark:text-slate-400 text-xs" />
                   <input
                     type="text"
                     value={userSearch}
@@ -820,7 +826,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Users Table */}
-            <div className="overflow-x-auto rounded-2xl border border-slate-800/60">
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800/60">
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead
                   className={`text-[11px] font-bold uppercase tracking-wider ${
@@ -836,7 +842,7 @@ export default function AdminDashboard() {
                     <th className="p-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/40 font-medium">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/40 font-medium">
                   {users.map((u) => {
                     const displayName =
                       u.restaurantProfile?.restaurantName ||
@@ -865,8 +871,8 @@ export default function AdminDashboard() {
                               {displayName?.[0]?.toUpperCase() || "U"}
                             </div>
                             <div>
-                              <div className="font-bold text-slate-100">{displayName}</div>
-                              <div className="text-xs text-slate-400">{u.email}</div>
+                              <div className="font-bold text-slate-900 dark:text-slate-100">{displayName}</div>
+                              <div className="text-xs text-slate-500 dark:text-slate-400">{u.email}</div>
                             </div>
                           </div>
                         </td>
@@ -881,7 +887,7 @@ export default function AdminDashboard() {
                                 ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                                 : u.role === "admin"
                                 ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
-                                : "bg-slate-700/30 text-slate-300 border border-slate-700"
+                                : isDark ? "bg-slate-700/30 text-slate-300 border border-slate-700" : "bg-slate-100 text-slate-600 border border-slate-300"
                             }`}
                           >
                             {u.role}
@@ -899,7 +905,7 @@ export default function AdminDashboard() {
                                     ? "bg-emerald-950/40 text-emerald-400 border-emerald-800/60"
                                     : fssai === "pending"
                                     ? "bg-amber-950/40 text-amber-400 border-amber-800/60 animate-pulse"
-                                    : "bg-slate-800 text-slate-400 border-slate-700"
+                                    : isDark ? "bg-slate-800 text-slate-400 border-slate-700" : "bg-slate-100 text-slate-500 border-slate-300"
                                 }`}
                               >
                                 FSSAI: {fssai}
@@ -914,7 +920,7 @@ export default function AdminDashboard() {
                                     ? "bg-emerald-950/40 text-emerald-400 border-emerald-800/60"
                                     : darpan === "pending"
                                     ? "bg-amber-950/40 text-amber-400 border-amber-800/60 animate-pulse"
-                                    : "bg-slate-800 text-slate-400 border-slate-700"
+                                    : isDark ? "bg-slate-800 text-slate-400 border-slate-700" : "bg-slate-100 text-slate-500 border-slate-300"
                                 }`}
                               >
                                 Darpan: {darpan}
@@ -929,7 +935,7 @@ export default function AdminDashboard() {
                                     ? "bg-emerald-950/40 text-emerald-400 border-emerald-800/60"
                                     : govtId === "pending"
                                     ? "bg-amber-950/40 text-amber-400 border-amber-800/60 animate-pulse"
-                                    : "bg-slate-800 text-slate-400 border-slate-700"
+                                    : isDark ? "bg-slate-800 text-slate-400 border-slate-700" : "bg-slate-100 text-slate-500 border-slate-300"
                                 }`}
                               >
                                 ID: {govtId}
@@ -943,7 +949,7 @@ export default function AdminDashboard() {
                         </td>
 
                         {/* Counts */}
-                        <td className="p-3.5 text-xs text-slate-400">
+                        <td className="p-3.5 text-xs text-slate-500 dark:text-slate-400">
                           <div>🍲 {u._count?.foods || 0} listings</div>
                           <div>📦 {u._count?.reservationsPlaced || 0} reservations</div>
                         </td>
@@ -1012,24 +1018,24 @@ export default function AdminDashboard() {
                       </h4>
                       <button
                         onClick={() => setSelectedUserForVerification(null)}
-                        className="text-slate-400 hover:text-white"
+                        className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
                       >
                         ✕
                       </button>
                     </div>
 
-                    <div className="p-3.5 rounded-2xl bg-slate-800/50 border border-slate-700 mb-4 text-xs">
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 mb-4 text-xs">
                       <div className="font-bold text-sm text-purple-400">
                         {selectedUserForVerification.email}
                       </div>
-                      <div className="text-slate-400 mt-0.5">
+                      <div className="text-slate-500 dark:text-slate-400 mt-0.5">
                         Role: <span className="uppercase">{selectedUserForVerification.role}</span>
                       </div>
                     </div>
 
                     {/* Restaurant FSSAI Section */}
                     {selectedUserForVerification.role === "restaurant" && (
-                      <div className="p-4 rounded-2xl border border-slate-700/60 mb-4 space-y-3">
+                      <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 mb-4 space-y-3">
                         <div className="text-xs font-bold uppercase text-amber-400">
                           FSSAI License & Certificate
                         </div>
@@ -1070,7 +1076,7 @@ export default function AdminDashboard() {
 
                     {/* NGO Darpan Section */}
                     {selectedUserForVerification.role === "ngo" && (
-                      <div className="p-4 rounded-2xl border border-slate-700/60 mb-4 space-y-3">
+                      <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 mb-4 space-y-3">
                         <div className="text-xs font-bold uppercase text-emerald-400">
                           NITI Aayog Darpan & 80G Certificate
                         </div>
@@ -1111,7 +1117,7 @@ export default function AdminDashboard() {
 
                     {/* Individual Govt ID */}
                     {selectedUserForVerification.role === "individual" && (
-                      <div className="p-4 rounded-2xl border border-slate-700/60 mb-4 space-y-3">
+                      <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 mb-4 space-y-3">
                         <div className="text-xs font-bold uppercase text-indigo-400">
                           Govt ID & Food Safety Pledge
                         </div>
@@ -1146,7 +1152,7 @@ export default function AdminDashboard() {
 
                     <button
                       onClick={() => setSelectedUserForVerification(null)}
-                      className="w-full py-2.5 rounded-xl border border-slate-700 text-xs font-semibold text-slate-300 hover:bg-slate-800"
+                      className="w-full py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                     >
                       Close Audit Drawer
                     </button>
@@ -1171,7 +1177,7 @@ export default function AdminDashboard() {
                   <span>🍲</span>
                   <span>Food Surplus Moderation Hub</span>
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Inspect listings, verify freshness guidelines, force expire or delist policy violations.
                 </p>
               </div>
@@ -1182,7 +1188,7 @@ export default function AdminDashboard() {
                     isDark ? "bg-slate-800/80 border-slate-700" : "bg-slate-50 border-slate-200"
                   }`}
                 >
-                  <FaSearch className="text-slate-400 text-xs" />
+                  <FaSearch className="text-slate-500 dark:text-slate-400 text-xs" />
                   <input
                     type="text"
                     value={listingSearch}
@@ -1209,7 +1215,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Listings Table */}
-            <div className="overflow-x-auto rounded-2xl border border-slate-800/60">
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800/60">
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead
                   className={`text-[11px] font-bold uppercase tracking-wider ${
@@ -1225,7 +1231,7 @@ export default function AdminDashboard() {
                     <th className="p-3.5 text-right">Moderation Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/40 font-medium">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/40 font-medium">
                   {listings.map((f) => {
                     const isExpired = new Date(f.expiresAt) <= new Date() || !f.isActive;
                     const supplierName =
@@ -1241,14 +1247,14 @@ export default function AdminDashboard() {
                         }`}
                       >
                         <td className="p-3.5">
-                          <div className="font-bold text-slate-100">{f.name}</div>
-                          <div className="text-xs text-slate-400 truncate max-w-xs">
+                          <div className="font-bold text-slate-900 dark:text-slate-100">{f.name}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs">
                             {f.pickupAddress || "No address provided"}
                           </div>
                         </td>
 
                         <td className="p-3.5">
-                          <div className="font-semibold text-slate-200">{supplierName}</div>
+                          <div className="font-semibold text-slate-800 dark:text-slate-200">{supplierName}</div>
                           <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-400">
                             {f.supplier?.role}
                           </span>
@@ -1258,12 +1264,12 @@ export default function AdminDashboard() {
                           <div className="font-bold">
                             {f.quantity} {f.quantityUnit}
                           </div>
-                          <div className="text-xs text-slate-400">
+                          <div className="text-xs text-slate-500 dark:text-slate-400">
                             {f.isDonation ? "Free Donation 🎁" : `₹${f.price} / portion`}
                           </div>
                         </td>
 
-                        <td className="p-3.5 text-xs text-slate-300">
+                        <td className="p-3.5 text-xs text-slate-600 dark:text-slate-300">
                           {formatDate(f.expiresAt)}
                         </td>
 
@@ -1272,7 +1278,7 @@ export default function AdminDashboard() {
                             className={`px-2.5 py-1 rounded-xl text-[11px] font-bold ${
                               !isExpired
                                 ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                                : "bg-slate-700/40 text-slate-400 border border-slate-700"
+                                : isDark ? "bg-slate-700/40 text-slate-400 border border-slate-700" : "bg-slate-100 text-slate-500 border border-slate-200"
                             }`}
                           >
                             {!isExpired ? "Available" : "Expired / Inactive"}
@@ -1331,8 +1337,8 @@ export default function AdminDashboard() {
                   <span>📦</span>
                   <span>Reservation & Pickup Audit Ledger</span>
                 </h3>
-                <p className="text-xs text-slate-400">
-                  Track full transaction cycles, pickup verification codes, and handle dispute overrides.
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Track full lifecycle of food pickups, cancellations, and active holds.
                 </p>
               </div>
 
@@ -1342,7 +1348,7 @@ export default function AdminDashboard() {
                     isDark ? "bg-slate-800/80 border-slate-700" : "bg-slate-50 border-slate-200"
                   }`}
                 >
-                  <FaSearch className="text-slate-400 text-xs" />
+                  <FaSearch className="text-slate-500 dark:text-slate-400 text-xs" />
                   <input
                     type="text"
                     value={reservationSearch}
@@ -1368,7 +1374,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-slate-800/60">
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800/60">
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead
                   className={`text-[11px] font-bold uppercase tracking-wider ${
@@ -1384,7 +1390,7 @@ export default function AdminDashboard() {
                     <th className="p-3.5 text-right">Admin Override</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/40 font-medium">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/40 font-medium">
                   {reservations.map((r) => (
                     <tr
                       key={r.id}
@@ -1399,24 +1405,24 @@ export default function AdminDashboard() {
                       </td>
 
                       <td className="p-3.5">
-                        <div className="font-bold text-slate-100">{r.food?.name}</div>
-                        <div className="text-xs text-slate-400">{r.quantity} portions</div>
+                        <div className="font-bold text-slate-900 dark:text-slate-100">{r.food?.name}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">{r.quantity} portions</div>
                       </td>
 
                       <td className="p-3.5">
-                        <div className="font-semibold text-slate-200">
+                        <div className="font-semibold text-slate-800 dark:text-slate-200">
                           {r.reserver?.individualProfile?.name || r.reserver?.email}
                         </div>
-                        <div className="text-[10px] text-slate-400 uppercase">{r.reserver?.role}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">{r.reserver?.role}</div>
                       </td>
 
                       <td className="p-3.5">
-                        <div className="font-semibold text-slate-200">
+                        <div className="font-semibold text-slate-800 dark:text-slate-200">
                           {r.supplier?.restaurantProfile?.restaurantName ||
                             r.supplier?.individualProfile?.name ||
                             r.supplier?.email}
                         </div>
-                        <div className="text-[10px] text-slate-400 uppercase">{r.supplier?.role}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">{r.supplier?.role}</div>
                       </td>
 
                       <td className="p-3.5">
@@ -1479,14 +1485,14 @@ export default function AdminDashboard() {
                   <span>🛡️</span>
                   <span>Safety Reports & Flag Moderation</span>
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Review safety violations, misleading food listings, and community flags.
                 </p>
               </div>
             </div>
 
             {reports.length === 0 ? (
-              <div className="p-12 text-center border border-dashed border-slate-800 rounded-2xl text-slate-400">
+              <div className="p-12 text-center border border-dashed border-slate-300 dark:border-slate-800 rounded-2xl text-slate-500 dark:text-slate-400">
                 <FaCheckCircle className="text-4xl text-emerald-400 mx-auto mb-2" />
                 <p className="font-bold">Zero active reports in the moderation queue!</p>
                 <p className="text-xs mt-1">Platform community standards are strictly maintained.</p>
@@ -1505,14 +1511,14 @@ export default function AdminDashboard() {
                         <span className="text-xs px-2.5 py-0.5 rounded-full font-bold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">
                           {rep.reason}
                         </span>
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
                           Reported: {formatDate(rep.createdAt)}
                         </span>
                       </div>
-                      <div className="font-bold text-slate-100 text-sm">
+                      <div className="font-bold text-slate-900 dark:text-slate-100 text-sm">
                         Item: {rep.food?.name || "Deleted Food Item"}
                       </div>
-                      <div className="text-xs text-slate-300 italic mt-0.5">
+                      <div className="text-xs text-slate-600 dark:text-slate-300 italic mt-0.5">
                         &ldquo;{rep.details || "No details provided"}&rdquo;
                       </div>
                     </div>
@@ -1529,7 +1535,7 @@ export default function AdminDashboard() {
                       <button
                         onClick={() => handleReportAction(rep.id, "dismissed")}
                         disabled={actionLoadingId === rep.id}
-                        className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-slate-200"
+                        className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200"
                       >
                         Dismiss
                       </button>
@@ -1553,7 +1559,7 @@ export default function AdminDashboard() {
                 <span>📢</span>
                 <span>System Broadcast & Emergency Alerts</span>
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Dispatch platform-wide notifications or role-specific announcements directly to user inboxes.
               </p>
             </div>
@@ -1562,7 +1568,7 @@ export default function AdminDashboard() {
               {/* Form Input (7 cols) */}
               <div className="lg:col-span-7 space-y-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                  <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
                     Alert Title
                   </label>
                   <input
@@ -1581,7 +1587,7 @@ export default function AdminDashboard() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                    <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
                       Target Audience
                     </label>
                     <select
@@ -1599,7 +1605,7 @@ export default function AdminDashboard() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                    <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
                       Priority Level
                     </label>
                     <select
@@ -1618,7 +1624,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                  <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">
                     Announcement Content
                   </label>
                   <textarea
@@ -1645,7 +1651,7 @@ export default function AdminDashboard() {
                 </button>
 
                 {broadcastSuccess && (
-                  <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-800/60 text-emerald-400 text-xs font-bold flex items-center gap-2">
+                  <div className={`p-3.5 rounded-2xl border text-xs font-bold flex items-center gap-2 ${isDark ? "bg-emerald-950/40 border-emerald-800/60 text-emerald-400" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
                     <FaCheckCircle />
                     <span>{broadcastSuccess}</span>
                   </div>
@@ -1659,7 +1665,7 @@ export default function AdminDashboard() {
                 }`}
               >
                 <div>
-                  <div className="text-xs font-bold uppercase text-slate-400 mb-3 flex items-center justify-between">
+                  <div className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-3 flex items-center justify-between">
                     <span>Live Notification Preview</span>
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 uppercase font-bold">
                       {broadcastPriority}
@@ -1676,20 +1682,20 @@ export default function AdminDashboard() {
                         📢
                       </div>
                       <div>
-                        <div className="font-bold text-sm text-slate-100">
+                        <div className="font-bold text-sm text-slate-900 dark:text-slate-100">
                           {broadcastTitle || "AnnoSetu Platform Announcement"}
                         </div>
-                        <div className="text-[10px] text-slate-400">Just now • System Broadcast</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400">Just now • System Broadcast</div>
                       </div>
                     </div>
-                    <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
                       {broadcastMessage ||
                         "Preview message content will render here in real-time as you compose your broadcast announcement."}
                     </p>
                   </div>
                 </div>
 
-                <div className="text-[11px] text-slate-400 mt-4 border-t border-slate-700/40 pt-3">
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-4 border-t border-slate-200 dark:border-slate-700/40 pt-3">
                   Delivered via real-time WebSocket stream & persistent Notification Center.
                 </div>
               </div>

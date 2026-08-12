@@ -91,7 +91,7 @@ export default function MobileBottomNav() {
       label: centerAction.label,
       href: centerAction.href,
       icon: centerAction.icon,
-      isCenter: true,
+      isCenter: !isAdmin,
       isActive: centerAction.isActive,
     },
     {
@@ -146,14 +146,19 @@ export default function MobileBottomNav() {
     },
   ];
 
-  const currentNavItems = isAuthenticated ? authenticatedItems : guestItems;
+  const currentNavItems = isAuthenticated 
+    ? (isAdmin ? authenticatedItems.filter(item => item.label !== "Messages") : authenticatedItems)
+    : guestItems;
 
   return (
     <aside
       aria-label="Mobile Bottom Navigation"
-      className="md:hidden fixed bottom-0 inset-x-0 z-50 w-full max-w-full overflow-x-hidden bg-white/95 dark:bg-[#081220]/95 backdrop-blur-2xl border-t border-gray-200/80 dark:border-white/10 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.7)]"
+      className="md:hidden fixed bottom-0 inset-x-0 z-50 w-full bg-white/95 dark:bg-[#081220]/95 backdrop-blur-2xl border-t border-gray-200/80 dark:border-white/10 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.7)]"
     >
-      <nav className="w-full max-w-lg mx-auto grid grid-cols-5 items-center px-1.5 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] box-border">
+      <nav 
+        className="w-full max-w-lg mx-auto grid items-center px-1.5 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] box-border"
+        style={{ gridTemplateColumns: `repeat(${currentNavItems.length}, minmax(0, 1fr))` }}
+      >
         {currentNavItems.map((item) => {
           const Icon = item.icon;
 

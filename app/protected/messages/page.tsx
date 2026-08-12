@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,9 +23,16 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import type { ConversationDTO } from "@/types/message";
 
 function MessagesInboxContent() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialConvId = searchParams.get("conversationId");
+
+  useEffect(() => {
+    if (isAdmin) {
+      router.replace("/protected/admin");
+    }
+  }, [isAdmin, router]);
 
   const [selectedConvId, setSelectedConvId] = useState<string | null>(initialConvId);
   const [searchQuery, setSearchQuery] = useState("");
