@@ -120,6 +120,13 @@ async function handleSmartMatch(request: NextRequest) {
               ngoProfile: { select: { ngoName: true } },
             },
           },
+          _count: {
+            select: {
+              reservations: {
+                where: { status: "pending" },
+              },
+            },
+          },
         },
       });
 
@@ -134,6 +141,7 @@ async function handleSmartMatch(request: NextRequest) {
             supplierType: (f.supplier?.role || "individual") as any,
             averageRating: f.averageRating,
             reviewCount: f.reviewCount,
+            pendingCount: f._count?.reservations || 0,
             images: f.images.map((img) => ({ id: img.id, url: img.url })),
             availableQty: f.availableQty,
             quantityUnit: f.quantityUnit,

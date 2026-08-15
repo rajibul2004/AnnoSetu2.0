@@ -19,11 +19,10 @@ export async function PUT(
 
   const { id } = await params;
 
-  // Fetch reservation + food name in one query so we have everything needed
-  // for the notification without an extra round-trip.
+  // Fetch reservation + food info in one query
   const existing = await prisma.reservation.findUnique({
     where: { id },
-    include: { food: { select: { name: true } } },
+    include: { food: { select: { name: true, availableQty: true } } },
   });
 
   if (!existing) {
@@ -41,18 +40,30 @@ export async function PUT(
       { status: 400 },
     );
   }
+  if (existing.food.availableQty < existing.quantity) {
+    return NextResponse.json(
+      { success: false, message: `Only ${existing.food.availableQty} portions remaining. Cannot confirm ${existing.quantity}.` },
+      { status: 400 },
+    );
+  }
 
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       const pickupCode = generatePickupCode();
-      const reservation = await prisma.reservation.update({
-        where: { id },
-        data: {
-          status: "confirmed",
-          pickupCode,
-          readyAt: new Date(),
-        },
-      });
+      const [reservation] = await prisma.$transaction([
+        prisma.reservation.update({
+          where: { id },
+          data: {
+            status: "confirmed",
+            pickupCode,
+            readyAt: new Date(),
+          },
+        }),
+        prisma.food.update({
+          where: { id: existing.foodId },
+          data: { availableQty: { decrement: existing.quantity } },
+        }),
+      ]);
 
       // Notify the reserver about their confirmed pickup code (non-blocking)
       void notifyReservationConfirmed(

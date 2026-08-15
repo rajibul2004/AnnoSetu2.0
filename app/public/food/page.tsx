@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -160,12 +160,15 @@ function FoodExplorerContent() {
 
   // Sync tab with URL search parameter
   useEffect(() => {
-    if (tabParam === "smart-match" && activeTab !== "smart-match") {
-      setActiveTab("smart-match");
-    } else if (tabParam === "browse" && activeTab !== "browse") {
-      setActiveTab("browse");
-    }
-  }, [tabParam]);
+    const id = setTimeout(() => {
+      if (tabParam === "smart-match" && activeTab !== "smart-match") {
+        setActiveTab("smart-match");
+      } else if (tabParam === "browse" && activeTab !== "browse") {
+        setActiveTab("browse");
+      }
+    }, 0);
+    return () => clearTimeout(id);
+  }, [tabParam, activeTab]);
 
   const handleTabChange = (newTab: "smart-match" | "browse") => {
     setActiveTab(newTab);
@@ -182,22 +185,33 @@ function FoodExplorerContent() {
   const [filters, setFilters] = useState<FoodFilters>(DEFAULT_FILTERS);
   const [activeQuickFilter, setActiveQuickFilter] = useState("all");
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+  const [itemsPerPage, setItemsPerPage] = useState(12);
+
+  // Responsive items per page
+  useEffect(() => {
+    const handleResize = () => {
+      setItemsPerPage(window.innerWidth < 768 ? 6 : 12);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Debounced search
   useEffect(() => {
-    const id = setTimeout(() => setSearchTerm(searchInput), 300);
+    const id = setTimeout(() => {
+      setSearchTerm(searchInput);
+      setCurrentPage(1); // Reset page when search changes
+    }, 300);
     return () => clearTimeout(id);
   }, [searchInput]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
 
   const { foods: allFood, isLoading, meta } = useAllFood(
     filters,
     searchTerm,
     currentPage,
-    12
+    itemsPerPage
   );
   const totalPages = meta?.totalPages || 1;
   const totalItems = meta?.total ?? allFood?.length ?? 0;
@@ -653,7 +667,7 @@ function FoodExplorerContent() {
                 </aside>
 
                 {/* Main Food Content Area */}
-                <div className="flex-1 w-full min-w-0">
+                <div className="flex-1 w-full min-w-0" ref={gridContainerRef}>
                   {/* Results Count & View Mode / Sort Toolbar */}
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-200 dark:border-slate-800">
                     <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
@@ -800,17 +814,22 @@ function FoodExplorerContent() {
                     </div>
                   )}
 
-                  {/* Modern Glass Pagination */}
+                  {/* Modern Premium Glass Pagination */}
                   {totalPages > 1 && (
-                    <div className="mt-12 flex justify-center">
-                      <nav className="flex items-center gap-2 bg-white dark:bg-slate-900/90 backdrop-blur-xl p-2 rounded-2xl border border-gray-200/80 dark:border-slate-800 shadow-md">
+                    <div className="mt-12 flex justify-center pb-8">
+                      <nav className="flex items-center gap-1.5 sm:gap-2 bg-white/60 dark:bg-slate-900/40 backdrop-blur-2xl p-2 rounded-full border border-white/40 dark:border-slate-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
                         <button
                           onClick={() => {
                             setCurrentPage((prev) => Math.max(prev - 1, 1));
-                            window.scrollTo({ top: 300, behavior: "smooth" });
+                            if (gridContainerRef.current) {
+                              const y = gridContainerRef.current.getBoundingClientRect().top + window.scrollY - 120;
+                              window.scrollTo({ top: y, behavior: "smooth" });
+                            } else {
+                              window.scrollTo({ top: 300, behavior: "smooth" });
+                            }
                           }}
                           disabled={currentPage === 1}
-                          className="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-xs text-gray-700 dark:text-gray-200"
+                          className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-300 shadow-sm border border-gray-100 dark:border-slate-700 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:-translate-x-1"
                           aria-label="Previous Page"
                         >
                           <FaChevronLeft className="w-3.5 h-3.5" />
@@ -828,12 +847,17 @@ function FoodExplorerContent() {
                                 key={pageNum}
                                 onClick={() => {
                                   setCurrentPage(pageNum);
-                                  window.scrollTo({ top: 300, behavior: "smooth" });
+                                  if (gridContainerRef.current) {
+                                    const y = gridContainerRef.current.getBoundingClientRect().top + window.scrollY - 120;
+                                    window.scrollTo({ top: y, behavior: "smooth" });
+                                  } else {
+                                    window.scrollTo({ top: 300, behavior: "smooth" });
+                                  }
                                 }}
-                                className={`w-10 h-10 rounded-xl font-black text-sm transition-all cursor-pointer ${
+                                className={`w-10 h-10 rounded-full font-black text-sm transition-all duration-300 cursor-pointer flex items-center justify-center ${
                                   currentPage === pageNum
-                                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30 scale-105"
-                                    : "border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300"
+                                    ? "bg-gradient-to-tr from-emerald-500 to-teal-400 text-white shadow-lg shadow-emerald-500/30 scale-110"
+                                    : "bg-transparent hover:bg-gray-100/80 dark:hover:bg-slate-800/80 text-gray-600 dark:text-gray-300 hover:scale-105"
                                 }`}
                               >
                                 {pageNum}
@@ -845,7 +869,7 @@ function FoodExplorerContent() {
                             pageNum === currentPage + 3
                           ) {
                             return (
-                              <span key={pageNum} className="px-1 text-gray-400 font-bold">
+                              <span key={pageNum} className="w-6 flex justify-center text-gray-400 font-bold tracking-widest">
                                 ...
                               </span>
                             );
@@ -856,10 +880,15 @@ function FoodExplorerContent() {
                         <button
                           onClick={() => {
                             setCurrentPage((prev) => Math.min(prev + 1, totalPages));
-                            window.scrollTo({ top: 300, behavior: "smooth" });
+                            if (gridContainerRef.current) {
+                              const y = gridContainerRef.current.getBoundingClientRect().top + window.scrollY - 120;
+                              window.scrollTo({ top: y, behavior: "smooth" });
+                            } else {
+                              window.scrollTo({ top: 300, behavior: "smooth" });
+                            }
                           }}
                           disabled={currentPage === totalPages}
-                          className="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-xs text-gray-700 dark:text-gray-200"
+                          className="w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-300 shadow-sm border border-gray-100 dark:border-slate-700 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:translate-x-1"
                           aria-label="Next Page"
                         >
                           <FaChevronRight className="w-3.5 h-3.5" />

@@ -22,9 +22,11 @@ import {
   FaQrcode,
   FaChevronDown,
   FaMapMarkerAlt,
+  FaStar,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
+import ReviewList from "@/components/reviews/ReviewList";
 import { formatDate, formatTimeRemaining, formatPrice } from "@/lib/formatters";
 import { useAuth } from "@/hooks/useAuth";
 import { useMySharedFood, useDeleteFood } from "@/hooks/useFoodQueries";
@@ -37,7 +39,7 @@ import {
 // Types
 // ---------------------------------------------------------------------------
 
-type FoodTab = "active" | "reserved" | "expired";
+type FoodTab = "active" | "reserved" | "expired" | "reviews";
 
 interface DashboardStats {
   mealsShared: number;
@@ -227,17 +229,18 @@ export default function RestaurantDashboard() {
       const hasReservations = reservedQty > 0 || food.quantity > food.availableQty;
       const hasPending = (food.pendingCount ?? 0) > 0;
       const hasAvailable = food.availableQty > 0;
+      const isFoodActive = food.isActive;
 
       if (activeTab === "expired") {
         return isExpired;
       }
 
       if (activeTab === "reserved") {
-        return !isExpired && (hasReservations || hasPending);
+        return !isExpired && hasReservations;
       }
 
       if (activeTab === "active") {
-        return !isExpired && hasAvailable;
+        return (isFoodActive && !isExpired && hasAvailable) || hasPending;
       }
 
       return false;
@@ -254,7 +257,7 @@ export default function RestaurantDashboard() {
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-linear-to-r from-blue-600 via-indigo-600 to-emerald-600 rounded-3xl shadow-2xl p-6 sm:p-8 mb-8 text-white relative overflow-hidden"
+          className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 dark:from-blue-600/50 dark:via-indigo-600/50 dark:to-emerald-600/50 backdrop-blur-3xl rounded-3xl shadow-2xl p-6 sm:p-8 mb-8 text-white relative overflow-hidden dark:border dark:border-white/5"
         >
           <div className="absolute inset-0 opacity-15 pointer-events-none">
             <div className="absolute -top-24 -right-24 w-80 h-80 bg-white rounded-full blur-2xl" />
@@ -303,25 +306,42 @@ export default function RestaurantDashboard() {
             </div>
           </div>
 
-          {/* Quick Stat Pill Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mt-8 pt-6 border-t border-white/20">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-white/15">
-              <div className="text-xl sm:text-2xl font-black">{stats.mealsShared}</div>
-              <div className="text-[11px] sm:text-xs text-blue-100 font-medium">Total Listings</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-white/15">
-              <div className="text-xl sm:text-2xl font-black">{stats.peopleFed}</div>
-              <div className="text-[11px] sm:text-xs text-blue-100 font-medium">Est. People Fed</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-white/15">
-              <div className="text-xl sm:text-2xl font-black">₹{stats.earnings}</div>
-              <div className="text-[11px] sm:text-xs text-blue-100 font-medium">Value Generated</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-white/15">
-              <div className="text-xl sm:text-2xl font-black">
-                {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "New"} ⭐
+          {/* Bento Box Metrics Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 mt-8 pt-6 border-t border-white/20 relative z-10">
+            {/* Hero Metric - Spans 2 cols */}
+            <div className="col-span-2 bg-white/10 backdrop-blur-xl rounded-[2rem] p-5 sm:p-6 border border-white/20 shadow-inner hover:scale-[1.02] hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-300 ease-out group flex flex-col justify-between cursor-default">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[11px] sm:text-xs text-blue-100 font-extrabold uppercase tracking-widest drop-shadow-sm">Total Listings</span>
+                <FaStore className="text-blue-300 w-5 h-5 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300" />
               </div>
-              <div className="text-[11px] sm:text-xs text-blue-100 font-medium">Quality Rating</div>
+              <div className="text-4xl sm:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-white via-blue-100 to-indigo-300 drop-shadow-sm">
+                {stats.mealsShared}
+              </div>
+            </div>
+
+            {/* Sub Metric 1 */}
+            <div className="bg-white/5 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-white/10 hover:-translate-y-1 hover:bg-white/10 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-default">
+              <span className="text-[11px] sm:text-xs text-emerald-100/70 font-bold tracking-wider uppercase">Est. People Fed</span>
+              <div className="text-2xl sm:text-3xl font-black mt-3 text-white flex items-baseline gap-1 drop-shadow-sm">
+                {stats.peopleFed}
+              </div>
+            </div>
+
+            {/* Sub Metric 2 */}
+            <div className="bg-white/5 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-white/10 hover:-translate-y-1 hover:bg-white/10 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-default">
+              <span className="text-[11px] sm:text-xs text-yellow-100/70 font-bold tracking-wider uppercase">Value Generated</span>
+              <div className="text-2xl sm:text-3xl font-black mt-3 text-white flex items-center gap-1.5 drop-shadow-sm">
+                ₹{stats.earnings}
+              </div>
+            </div>
+
+            {/* Sub Metric 3 */}
+            <div className="bg-white/5 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-white/10 hover:-translate-y-1 hover:bg-white/10 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-default">
+              <span className="text-[11px] sm:text-xs text-pink-100/70 font-bold tracking-wider uppercase">Quality Rating</span>
+              <div className="text-2xl sm:text-3xl font-black mt-3 text-white flex items-center gap-1.5 drop-shadow-sm">
+                {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "New"}
+                <FaStar className="text-yellow-400 w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
             </div>
           </div>
         </motion.div>
@@ -345,9 +365,9 @@ export default function RestaurantDashboard() {
         </div>
 
         {/* Action Header & Tabs */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div className="overflow-x-auto custom-scrollbar pb-1 max-w-full">
-            <div className="flex items-center gap-2 bg-gray-100/90 dark:bg-slate-800/90 p-1.5 rounded-2xl w-max border border-gray-200/60 dark:border-slate-700/60">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 w-full min-w-0">
+          <div className="w-full overflow-x-auto scroll-smooth custom-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-gray-100/90 dark:bg-slate-800/90 p-1.5 rounded-2xl w-max border border-gray-200/60 dark:border-slate-700/60">
               <button
                 onClick={() => setActiveTab("active")}
                 className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
@@ -370,16 +390,11 @@ export default function RestaurantDashboard() {
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                 }`}
               >
-                <span>Reserved &amp; Pending</span>
+                <span>Reserved</span>
                 <span className="px-2 py-0.5 text-xs rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-black">
                   {stats.reserved}
                 </span>
-                {stats.pendingRequests > 0 && (
-                  <span className="flex h-2.5 w-2.5 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
-                  </span>
-                )}
+
               </button>
 
               <button
@@ -395,18 +410,41 @@ export default function RestaurantDashboard() {
                   {stats.expired}
                 </span>
               </button>
+
+              <button
+                onClick={() => setActiveTab("reviews")}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                  activeTab === "reviews"
+                    ? "bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-xs"
+                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                }`}
+              >
+                <span>Reviews</span>
+                <span className="px-2 py-0.5 text-xs rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 font-black">
+                  {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "New"}
+                </span>
+              </button>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-              Showing {filteredFoods.length} listing{filteredFoods.length === 1 ? "" : "s"}
-            </span>
+            {activeTab !== "reviews" && (
+              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                Showing {filteredFoods.length} listing{filteredFoods.length === 1 ? "" : "s"}
+              </span>
+            )}
           </div>
         </div>
 
+        {/* Reviews Content */}
+        {activeTab === "reviews" && (
+          <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-xs">
+            <ReviewList supplierId={user?.id} viewerRole={user?.role} />
+          </div>
+        )}
+
         {/* Listings Content */}
-        {filteredFoods.length === 0 ? (
+        {activeTab !== "reviews" && filteredFoods.length === 0 ? (
           <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800/80 rounded-3xl p-12 text-center shadow-xs">
             <div className="w-20 h-20 mx-auto bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-3xl flex items-center justify-center mb-4 text-3xl shadow-inner">
               <FaUtensils />
@@ -431,176 +469,10 @@ export default function RestaurantDashboard() {
               </button>
             )}
           </div>
-        ) : (
+        ) : activeTab !== "reviews" ? (
           <div>
-            {/* MOBILE VIEW: Beautiful Responsive Card List (sm:hidden) */}
-            <div className="block sm:hidden space-y-4">
-              {filteredFoods.map((food, index) => {
-                const expired = isFoodExpired(food) || !food.isActive;
-                const reservedPortions =
-                  food.confirmedQty !== undefined
-                    ? food.confirmedQty
-                    : Math.max(0, food.quantity - food.availableQty);
-                const pendingCount = food.pendingCount ?? 0;
-                const hasPending = pendingCount > 0;
-                const isFullyReserved = food.availableQty === 0 && reservedPortions > 0;
-                const isPartiallyReserved = food.availableQty > 0 && (reservedPortions > 0 || hasPending);
-
-                const primaryImage =
-                  food.images && food.images.length > 0
-                    ? (food.images.find((img) => img.isPrimary) || food.images[0]).url
-                    : null;
-
-                const availablePct = Math.min(100, Math.max(0, (food.availableQty / (food.quantity || 1)) * 100));
-                const reservedPct = Math.min(100 - availablePct, Math.max(0, (reservedPortions / (food.quantity || 1)) * 100));
-
-                return (
-                  <motion.div
-                    key={food.id}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.03 }}
-                    onClick={() => {
-                      if (activeTab === "reserved" || hasPending) {
-                        router.push(`/protected/food/${food.id}/requests`);
-                      } else {
-                        router.push(`/protected/food/${food.id}`);
-                      }
-                    }}
-                    className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-md p-4 space-y-3 cursor-pointer hover:border-blue-500/50 transition-all"
-                  >
-                    {/* Top Bar: Thumbnail + Title + Status Pill */}
-                    <div className="flex items-start gap-3">
-                      <div className="shrink-0 h-16 w-16 bg-linear-to-br from-blue-100 to-indigo-100 dark:from-slate-800 dark:to-slate-700 rounded-2xl overflow-hidden shadow-xs relative">
-                        {primaryImage ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={primaryImage}
-                            alt={food.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            <FaUtensils className="w-6 h-6" />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-1.5">
-                          <h4 className="text-base font-extrabold text-gray-900 dark:text-white truncate">
-                            {food.name}
-                          </h4>
-                          <span className="shrink-0 text-sm font-black text-gray-900 dark:text-white">
-                            {food.isDonation ? (
-                              <span className="text-emerald-600 dark:text-emerald-400 text-xs font-black">Free</span>
-                            ) : (
-                              formatPrice(food.price)
-                            )}
-                          </span>
-                        </div>
-
-                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">
-                          {food.description || "Fresh surplus meal"}
-                        </p>
-
-                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                          {expired ? (
-                            <span className="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200">
-                              Expired
-                            </span>
-                          ) : isFullyReserved ? (
-                            <span className="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200">
-                              Fully Claimed
-                            </span>
-                          ) : isPartiallyReserved ? (
-                            <span className="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300 border border-blue-200">
-                              Partially Claimed ({food.availableQty} Left)
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200">
-                              Active & Available
-                            </span>
-                          )}
-
-                          {hasPending && (
-                            <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-black animate-pulse flex items-center gap-1">
-                              <span>🔔</span>
-                              <span>{pendingCount} Pending</span>
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Portions Progress Meter */}
-                    <div className="p-3 bg-gray-50 dark:bg-slate-800/60 rounded-2xl border border-gray-100 dark:border-slate-800 space-y-1.5">
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="text-gray-500 dark:text-gray-400 text-[11px]">Portions</span>
-                        <span className="text-gray-900 dark:text-white">
-                          <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">{food.availableQty}</span>
-                          <span className="text-gray-400 font-normal"> / {food.quantity} {food.quantityUnit} left</span>
-                          {reservedPortions > 0 && (
-                            <span className="text-amber-600 dark:text-amber-400 ml-1">({reservedPortions} reserved)</span>
-                          )}
-                        </span>
-                      </div>
-
-                      <div className="w-full h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden flex">
-                        <div
-                          className="bg-emerald-500 h-full transition-all duration-500"
-                          style={{ width: `${availablePct}%` }}
-                        />
-                        <div
-                          className="bg-amber-500 h-full transition-all duration-500"
-                          style={{ width: `${reservedPct}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Expiry Countdown & Actions Row */}
-                    <div className="flex items-center justify-between gap-2 pt-1">
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                        <FaClock className="text-emerald-500 shrink-0 w-3 h-3" />
-                        <span className={expired ? "text-rose-500 font-bold" : "text-gray-700 dark:text-gray-300 font-medium text-[11px]"}>
-                          {formatTimeRemaining(food.expiresAt)}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        {(reservedPortions > 0 || hasPending) && (
-                          <button
-                            type="button"
-                            onClick={() => router.push(`/protected/food/${food.id}/requests`)}
-                            className={`px-3 py-1.5 rounded-xl font-bold text-xs shadow-xs transition-colors flex items-center gap-1 cursor-pointer ${
-                              hasPending
-                                ? "bg-amber-500 hover:bg-amber-600 text-white"
-                                : "bg-blue-600 hover:bg-blue-700 text-white"
-                            }`}
-                          >
-                            <span>{hasPending ? "Review Requests" : "Requests"}</span>
-                            <FaChevronRight className="w-2.5 h-2.5" />
-                          </button>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={() => deleteFood(food.id)}
-                          disabled={isDeleting}
-                          className="p-2 rounded-xl text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/50 cursor-pointer disabled:opacity-40 transition-colors"
-                          title="Delete listing"
-                        >
-                          <FaTrash className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            {/* TABLET / DESKTOP VIEW: Data Table (hidden sm:block) */}
-            <div className="hidden sm:block">
+            {/* ALL SCREENS VIEW: Data Table (horizontally scrollable on mobile) */}
+            <div className="block w-full min-w-0">
               <ScrollableContainer>
                 <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-xl overflow-hidden">
                   <div className="overflow-x-auto custom-scrollbar">
@@ -678,11 +550,11 @@ export default function RestaurantDashboard() {
                                     )}
                                   </div>
                                   <div>
-                                    <div className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                      <span>{food.name}</span>
+                                    <div className="text-sm font-bold text-gray-900 dark:text-white flex flex-wrap items-center gap-2">
+                                      <span className="line-clamp-1 max-w-[150px] lg:max-w-[200px]">{food.name}</span>
                                       {hasPending && (
-                                        <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-black border border-amber-500/30">
-                                          {pendingCount} Pending Request{pendingCount === 1 ? "" : "s"}
+                                        <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[9px] font-black uppercase tracking-wider border border-amber-500/30 whitespace-nowrap shrink-0">
+                                          {pendingCount} Waitlisted
                                         </span>
                                       )}
                                     </div>
@@ -800,14 +672,14 @@ export default function RestaurantDashboard() {
                                       onClick={() =>
                                         router.push(`/protected/food/${food.id}/requests`)
                                       }
-                                      className={`px-3 py-1.5 rounded-xl font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer ${
+                                      className={`px-3 py-1.5 rounded-xl font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                                         hasPending
                                           ? "bg-amber-500 hover:bg-amber-600 text-white"
                                           : "bg-blue-600 hover:bg-blue-700 text-white"
                                       }`}
                                       title="Manage requests and reservations"
                                     >
-                                      <span>{hasPending ? "Confirm Request" : "Manage"}</span>
+                                      <span>{hasPending ? "Review" : "Manage"}</span>
                                       <FaChevronRight className="w-2.5 h-2.5" />
                                     </button>
                                   )}
@@ -833,7 +705,7 @@ export default function RestaurantDashboard() {
               </ScrollableContainer>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Safety Note Card */}
         <div className="mt-8 bg-blue-50 dark:bg-slate-900 border border-blue-200 dark:border-blue-900/60 p-5 rounded-2xl shadow-sm flex items-start gap-4">

@@ -22,9 +22,11 @@ import {
   FaChevronDown,
   FaUtensils,
   FaMapMarkerAlt,
+  FaStar,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
+import ReviewList from "@/components/reviews/ReviewList";
 import { formatDate, formatPrice } from "@/lib/formatters";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -37,7 +39,7 @@ import type { ReservationDTO } from "@/types/reservation";
 // Types & Stat helpers
 // ---------------------------------------------------------------------------
 
-type NGOTab = "upcoming" | "completed" | "cancelled" | "all";
+type NGOTab = "upcoming" | "completed" | "cancelled" | "all" | "reviews";
 
 interface NGOStats {
   totalMeals: number;
@@ -217,6 +219,10 @@ export default function NGODashboard() {
         return completedReservations;
       case "cancelled":
         return cancelledReservations;
+      case "all":
+        return reservations;
+      case "reviews":
+        return [];
       default:
         return reservations;
     }
@@ -275,9 +281,9 @@ export default function NGODashboard() {
 
         {/* Hero Impact Banner */}
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-purple-700 via-indigo-700 to-emerald-700 rounded-3xl shadow-2xl p-8 mb-8 text-white relative overflow-hidden"
+          className="bg-gradient-to-r from-purple-700 via-indigo-700 to-emerald-700 dark:from-purple-700/50 dark:via-indigo-700/50 dark:to-emerald-700/50 backdrop-blur-3xl rounded-3xl shadow-2xl p-8 mb-8 text-white relative overflow-hidden dark:border dark:border-white/5"
         >
           <div className="absolute inset-0 opacity-15 pointer-events-none">
             <div className="absolute -top-24 -right-24 w-80 h-80 bg-white rounded-full blur-2xl" />
@@ -505,6 +511,18 @@ export default function NGODashboard() {
                     {reservations.length}
                   </span>
                 </button>
+
+                <button
+                  onClick={() => setActiveTab("reviews")}
+                  className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
+                    activeTab === "reviews"
+                      ? "bg-amber-500 text-white shadow-md shadow-amber-500/30"
+                      : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <FaStar className={activeTab === "reviews" ? "text-white" : "text-amber-500"} />
+                  <span>Reviews</span>
+                </button>
               </div>
             </div>
 
@@ -518,7 +536,15 @@ export default function NGODashboard() {
           </div>
         </div>
 
+        {/* Reviews Content */}
+        {activeTab === "reviews" && (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-xl p-6 sm:p-8 mb-8">
+            <ReviewList supplierId={user?.id} viewerRole={user?.role} />
+          </div>
+        )}
+
         {/* Recent Distributions Card */}
+        {activeTab !== "reviews" && (
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-xl overflow-hidden mb-8">
           <div className="p-5 sm:p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center">
             <div>
@@ -742,11 +768,12 @@ export default function NGODashboard() {
             </div>
           )}
         </div>
+        )}
 
         {/* Environmental & Quick Actions Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Environmental Metrics */}
-          <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-8 text-white shadow-xl">
+          <div className="bg-gradient-to-br from-emerald-600 to-teal-700 dark:from-emerald-600/50 dark:to-teal-700/50 backdrop-blur-3xl rounded-3xl p-8 text-white shadow-xl dark:border dark:border-white/5">
             <h3 className="text-xl font-black mb-6 flex items-center gap-2">
               <FaLeaf />
               Environmental Impact Metrics

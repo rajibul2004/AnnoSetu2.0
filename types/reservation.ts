@@ -28,7 +28,10 @@ export interface ReservationDTO {
   createdAt: string;
   food: ReservationFoodSummary;
   reserverName?: string;
+  reserverId?: string;
   reserverPhone?: string | null;
+  hasRatedUser?: boolean;
+  hasReviewedFood?: boolean;
 }
  
 // ---------------------------------------------------------------------

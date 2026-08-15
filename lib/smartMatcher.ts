@@ -27,6 +27,7 @@ export interface MatchResultItem {
   images: { id: string; url: string }[];
   
   availableQty: number;
+  pendingCount?: number;
   quantityUnit: QuantityUnit;
   isDonation: boolean;
   price: number;
@@ -100,6 +101,7 @@ export function calculateFoodMatchScore(
     reviewCount: number;
     images: { id: string; url: string }[];
     availableQty: number;
+    pendingCount?: number;
     quantityUnit: QuantityUnit;
     isDonation: boolean;
     price: number;
@@ -265,6 +267,7 @@ export function calculateFoodMatchScore(
     reviewCount: food.reviewCount,
     images: food.images,
     availableQty: food.availableQty,
+    pendingCount: food.pendingCount,
     quantityUnit: food.quantityUnit,
     isDonation: food.isDonation,
     price: food.price,

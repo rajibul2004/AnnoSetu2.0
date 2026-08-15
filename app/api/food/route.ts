@@ -122,6 +122,13 @@ export async function GET(request: NextRequest) {
             ngoProfile: { select: { ngoName: true } },
           },
         },
+        _count: {
+          select: {
+            reservations: {
+              where: { status: "pending" },
+            },
+          },
+        },
       },
     });
 
@@ -156,6 +163,7 @@ export async function GET(request: NextRequest) {
         images: food.images,
         averageRating: food.averageRating,
         reviewCount: food.reviewCount,
+        pendingCount: food._count?.reservations || 0,
         distance,
       };
     });

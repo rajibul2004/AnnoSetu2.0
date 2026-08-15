@@ -88,6 +88,10 @@ model User {
   foodReports        FoodReport[]
   notification       Notification[]
 
+  reviewReactions ReviewReaction[]
+  ratingsReceived UserRating[]     @relation("ConsumerRatings")
+  ratingsGiven    UserRating[]     @relation("SupplierRatings")
+
   @@index([role, isActive])
   @@index([deletedAt])
   @@map("users")
@@ -112,6 +116,9 @@ model IndividualProfile {
   foodSafetyStatus String  @default("unverified")
   govtIdDoc        String?
   govtIdStatus     String  @default("unverified")
+
+  averageRating    Float   @default(0)
+  ratingCount      Int     @default(0)
 
   latitude  Float?
   longitude Float?
@@ -308,6 +315,7 @@ model Reservation {
   reserver User    @relation("reserver", fields: [reserverId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   supplier User    @relation("supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   review   Review?
+  userRating UserRating?
   conversation Conversation?
 
   @@index([foodId])
@@ -328,9 +336,11 @@ model Review {
 
   rating  Int
   comment String? @db.VarChar(1000)
-
-  isVisible Boolean   @default(true)
-  deletedAt DateTime?
+  
+  isVisible     Boolean   @default(true)
+  deletedAt     DateTime?
+  supplierReply String?
+  helpfulCount  Int       @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -338,12 +348,43 @@ model Review {
   food        Food        @relation(fields: [foodId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   reviewer    User        @relation(fields: [reviewerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  reactions   ReviewReaction[]
 
   @@index([foodId])
   @@index([reviewerId])
   @@index([reservationId])
   @@index([isVisible, deletedAt])
   @@map("reviews")
+}
+
+model ReviewReaction {
+  id        String   @id @default(cuid())
+  reviewId  String
+  userId    String
+  type      String   // e.g., "helpful"
+  createdAt DateTime @default(now())
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId])
+  @@map("review_reactions")
+}
+
+model UserRating {
+  id            String   @id @default(cuid())
+  consumerId    String
+  supplierId    String
+  reservationId String   @unique
+  rating        Int
+  comment       String?
+  createdAt     DateTime @default(now())
+
+  consumer      User        @relation("ConsumerRatings", fields: [consumerId], references: [id], onDelete: Cascade)
+  supplier      User        @relation("SupplierRatings", fields: [supplierId], references: [id], onDelete: Cascade)
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@map("user_ratings")
 }
 
 model FoodReport {

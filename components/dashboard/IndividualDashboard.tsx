@@ -38,6 +38,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import Button from "@/components/common/Button";
+import ReviewModal from "@/components/reviews/ReviewModal";
 import { formatDate, formatTimeRemaining, formatPrice } from "@/lib/formatters";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -188,7 +189,7 @@ export default function UserDashboard() {
   const activeSupplierListings = useMemo(
     () =>
       userSharedFood.filter(
-        (f) => !isFoodExpired(f) && f.isActive && f.availableQty > 0,
+        (f) => (!isFoodExpired(f) && f.isActive && f.availableQty > 0) || (f.pendingCount ?? 0) > 0,
       ),
     [userSharedFood],
   );
@@ -202,8 +203,7 @@ export default function UserDashboard() {
             ? food.confirmedQty
             : Math.max(0, food.quantity - food.availableQty);
         const hasReservations = reservedQty > 0 || food.quantity > food.availableQty;
-        const hasPending = (food.pendingCount ?? 0) > 0;
-        return !isExpired && (hasReservations || hasPending);
+        return !isExpired && hasReservations;
       }),
     [userSharedFood],
   );
@@ -243,7 +243,7 @@ export default function UserDashboard() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative rounded-3xl p-6 sm:p-10 mb-8 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-700 text-white shadow-2xl overflow-hidden border border-white/15"
+          className="relative rounded-3xl p-6 sm:p-10 mb-8 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-700 dark:from-pink-600/50 dark:via-purple-600/50 dark:to-indigo-700/50 backdrop-blur-3xl text-white shadow-2xl overflow-hidden border border-white/15 dark:border-white/5"
         >
           {/* Subtle Ambient Light Gradients */}
           <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 bg-pink-400/20 rounded-full blur-3xl pointer-events-none" />
@@ -274,53 +274,64 @@ export default function UserDashboard() {
             </div>
 
             {/* Badges & Actions */}
-            <div className="flex flex-col sm:flex-row w-full lg:w-auto items-stretch sm:items-center gap-2.5 sm:gap-3">
+            <div className="flex flex-col sm:flex-row w-full lg:w-auto items-stretch sm:items-center gap-3">
               <Link href="/public/food" className="w-full sm:w-auto">
-                <Button className="w-full bg-white text-gray-900 hover:bg-white/90 font-bold shadow-lg text-xs sm:text-sm rounded-xl py-3 sm:py-2.5">
-                  <FaShoppingBag className="mr-2 text-pink-600" />
+                <Button className="w-full bg-white text-gray-900 hover:bg-gray-50 font-black shadow-xl shadow-white/10 text-xs sm:text-sm rounded-2xl py-3.5 sm:py-3 hover:scale-[1.03] hover:-translate-y-1 transition-all duration-300">
+                  <FaShoppingBag className="mr-2.5 text-emerald-500 w-4 h-4" />
                   Save Food
                 </Button>
               </Link>
               <Link href="/protected/add-food?role=individual" className="w-full sm:w-auto">
-                <Button className="w-full bg-white/20 hover:bg-white/30 text-white font-bold backdrop-blur-md border border-white/30 shadow-lg text-xs sm:text-sm rounded-xl py-3 sm:py-2.5">
-                  <FaPlus className="mr-2 text-yellow-300" />
+                <Button className="w-full bg-white/15 hover:bg-white/25 text-white font-black backdrop-blur-md border border-white/30 shadow-xl shadow-white/5 text-xs sm:text-sm rounded-2xl py-3.5 sm:py-3 hover:scale-[1.03] hover:-translate-y-1 transition-all duration-300">
+                  <FaPlus className="mr-2.5 text-yellow-300 w-4 h-4" />
                   Share Meals
                 </Button>
               </Link>
               <Link href="/protected/reservation/pickup" className="w-full sm:w-auto">
-                <Button className="w-full bg-emerald-500/80 hover:bg-emerald-500 text-white font-bold backdrop-blur-md border border-white/20 shadow-lg text-xs sm:text-sm rounded-xl py-3 sm:py-2.5">
-                  <FaQrcode className="mr-2" />
-                  Pickup Scanner
+                <Button className="w-full bg-emerald-500/90 hover:bg-emerald-400 text-white font-black backdrop-blur-md border border-emerald-400/50 shadow-xl shadow-emerald-500/20 text-xs sm:text-sm rounded-2xl py-3.5 sm:py-3 hover:scale-[1.03] hover:-translate-y-1 transition-all duration-300">
+                  <FaQrcode className="mr-2.5 w-4 h-4" />
+                  Scanner
                 </Button>
               </Link>
             </div>
           </div>
 
-          {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 mt-8 pt-6 border-t border-white/15 relative z-10">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 hover:bg-white/15 transition-all">
-              <span className="text-[11px] sm:text-xs text-pink-100/80 font-medium">Total Impact</span>
-              <div className="text-xl sm:text-3xl font-extrabold mt-0.5">
-                {stats.totalImpact} <span className="text-xs sm:text-sm font-normal">Meals</span>
+          {/* Bento Box Metrics Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 mt-8 pt-6 border-t border-white/15 relative z-10">
+            {/* Hero Metric - Spans 2 cols */}
+            <div className="col-span-2 bg-white/10 backdrop-blur-xl rounded-[2rem] p-5 sm:p-6 border border-white/20 shadow-inner hover:scale-[1.02] hover:-translate-y-1 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 ease-out group flex flex-col justify-between cursor-default">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[11px] sm:text-xs text-emerald-100 font-extrabold uppercase tracking-widest drop-shadow-sm">Total Impact</span>
+                <FaLeaf className="text-emerald-300 w-5 h-5 opacity-80 group-hover:opacity-100 group-hover:rotate-12 group-hover:scale-110 transition-all duration-300" />
+              </div>
+              <div className="text-4xl sm:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-white via-emerald-100 to-teal-300 drop-shadow-sm">
+                {stats.totalImpact} <span className="text-sm sm:text-lg font-bold text-emerald-100/80">Meals</span>
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 hover:bg-white/15 transition-all">
-              <span className="text-[11px] sm:text-xs text-pink-100/80 font-medium">CO₂ Saved</span>
-              <div className="text-xl sm:text-3xl font-extrabold mt-0.5 text-emerald-300">
-                {stats.co2Reduced} <span className="text-xs sm:text-sm font-normal">kg</span>
+
+            {/* Sub Metric 1 */}
+            <div className="bg-white/5 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-white/10 hover:-translate-y-1 hover:bg-white/10 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-default">
+              <span className="text-[11px] sm:text-xs text-emerald-100/70 font-bold tracking-wider uppercase">CO₂ Saved</span>
+              <div className="text-2xl sm:text-3xl font-black mt-3 text-white flex items-baseline gap-1 drop-shadow-sm">
+                {stats.co2Reduced} <span className="text-xs sm:text-sm font-semibold text-emerald-200/80">kg</span>
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 hover:bg-white/15 transition-all">
-              <span className="text-[11px] sm:text-xs text-pink-100/80 font-medium">Community Rank</span>
-              <div className="text-xl sm:text-3xl font-extrabold mt-0.5 text-yellow-300">
+
+            {/* Sub Metric 2 */}
+            <div className="bg-white/5 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-white/10 hover:-translate-y-1 hover:bg-white/10 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-default">
+              <span className="text-[11px] sm:text-xs text-yellow-100/70 font-bold tracking-wider uppercase">Community Rank</span>
+              <div className="text-2xl sm:text-3xl font-black mt-3 text-white flex items-center gap-1.5 drop-shadow-sm">
+                <FaMedal className="text-yellow-400 w-5 h-5 sm:w-6 sm:h-6" />
                 #{stats.communityRank}
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 hover:bg-white/15 transition-all">
-              <span className="text-[11px] sm:text-xs text-pink-100/80 font-medium">Cook Rating</span>
-              <div className="text-xl sm:text-3xl font-extrabold mt-0.5 flex items-center gap-1.5">
+
+            {/* Sub Metric 3 */}
+            <div className="bg-white/5 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-white/10 hover:-translate-y-1 hover:bg-white/10 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-default">
+              <span className="text-[11px] sm:text-xs text-pink-100/70 font-bold tracking-wider uppercase">Cook Rating</span>
+              <div className="text-2xl sm:text-3xl font-black mt-3 text-white flex items-center gap-1.5 drop-shadow-sm">
                 {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "New"}
-                <FaStar className="text-yellow-300 text-sm sm:text-base" />
+                <FaStar className="text-yellow-400 w-5 h-5 sm:w-6 sm:h-6" />
               </div>
             </div>
           </div>
@@ -487,33 +498,37 @@ export default function UserDashboard() {
               )}
 
               {/* Insights Panel */}
-              <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800/80 rounded-3xl p-6 shadow-sm">
-                <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <FaChartLine className="text-blue-600 dark:text-blue-400" />
+              {/* Insights Panel */}
+              <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-gray-200/80 dark:border-slate-800/80 rounded-[2rem] p-6 sm:p-8 shadow-xl shadow-blue-500/5">
+                <h3 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white mb-6 flex items-center gap-3 tracking-tight">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-xl">
+                    <FaChartLine className="text-blue-600 dark:text-blue-400 w-5 h-5" />
+                  </div>
                   <span>Your Food Saver Insights</span>
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-100 dark:border-slate-700/50">
-                    <div className="text-2xl font-extrabold text-blue-600 dark:text-blue-400">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+                  <div className="p-5 bg-white dark:bg-slate-800/90 rounded-3xl border border-gray-100 dark:border-slate-700/50 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
+                    <div className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-500 to-indigo-600 group-hover:scale-105 transition-transform origin-left">
                       {stats.favoriteRestaurants}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <div className="text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 mt-2 uppercase tracking-wider">
                       Suppliers Visited
                     </div>
                   </div>
-                  <div className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-100 dark:border-slate-700/50">
-                    <div className="text-2xl font-extrabold text-purple-600 dark:text-purple-400">
+                  <div className="p-5 bg-white dark:bg-slate-800/90 rounded-3xl border border-gray-100 dark:border-slate-700/50 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
+                    <div className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-purple-500 to-pink-600 group-hover:scale-105 transition-transform origin-left">
                       {userReservations.length}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <div className="text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 mt-2 uppercase tracking-wider">
                       Total Reservations
                     </div>
                   </div>
-                  <div className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-100 dark:border-slate-700/50">
-                    <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                      ₹{(stats.moneySaved / (stats.mealsConsumed || 1)).toFixed(0)}
+                  <div className="p-5 bg-white dark:bg-slate-800/90 rounded-3xl border border-gray-100 dark:border-slate-700/50 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
+                    <div className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-br from-emerald-500 to-teal-600 group-hover:scale-105 transition-transform origin-left flex items-center">
+                      <FaRupeeSign className="text-xl sm:text-2xl" />
+                      {(stats.moneySaved / (stats.mealsConsumed || 1)).toFixed(0)}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <div className="text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 mt-2 uppercase tracking-wider">
                       Avg Savings per Meal
                     </div>
                   </div>
@@ -531,7 +546,7 @@ export default function UserDashboard() {
               className="space-y-6"
             >
               {/* Sharer Header CTA */}
-              <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-600/50 dark:to-pink-600/50 backdrop-blur-3xl rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 dark:border dark:border-white/5">
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-2xl shrink-0">
                     <FaGift />
@@ -667,31 +682,33 @@ export default function UserDashboard() {
               )}
 
               {/* Performance Section */}
-              <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800/80 rounded-3xl p-6 shadow-sm">
-                <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <FaChartLine className="text-purple-600 dark:text-purple-400" />
+              <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-gray-200/80 dark:border-slate-800/80 rounded-[2rem] p-6 sm:p-8 shadow-xl shadow-purple-500/5">
+                <h3 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white mb-6 flex items-center gap-3 tracking-tight">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-xl">
+                    <FaChartLine className="text-purple-600 dark:text-purple-400 w-5 h-5" />
+                  </div>
                   <span>Home Cook Reputation &amp; Badges</span>
                 </h3>
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="px-4 py-2.5 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 rounded-2xl text-xs font-bold flex items-center gap-2 border border-purple-100 dark:border-purple-900/40">
-                    <FaMedal className="text-purple-600 dark:text-purple-400" />
-                    <span>Verified Home Cook</span>
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                  <div className="px-5 py-3 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-2.5 border border-purple-100 dark:border-purple-800/30 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all duration-300 cursor-default">
+                    <FaMedal className="text-purple-600 dark:text-purple-400 w-4 h-4" />
+                    <span className="tracking-wide uppercase">Verified Home Cook</span>
                   </div>
                   {stats.mealsShared > 5 && (
-                    <div className="px-4 py-2.5 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 rounded-2xl text-xs font-bold flex items-center gap-2 border border-blue-100 dark:border-blue-900/40">
-                      <FaAward className="text-blue-600 dark:text-blue-400" />
-                      <span>Pro Sharer</span>
+                    <div className="px-5 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-2.5 border border-blue-100 dark:border-blue-800/30 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all duration-300 cursor-default">
+                      <FaAward className="text-blue-600 dark:text-blue-400 w-4 h-4" />
+                      <span className="tracking-wide uppercase">Pro Sharer</span>
                     </div>
                   )}
                   {stats.avgRating > 4.5 && (
-                    <div className="px-4 py-2.5 bg-yellow-50 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-300 rounded-2xl text-xs font-bold flex items-center gap-2 border border-yellow-100 dark:border-yellow-900/40">
-                      <FaStar className="text-yellow-500" />
-                      <span>Top Rated (4.5+ ★)</span>
+                    <div className="px-5 py-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-2.5 border border-yellow-100 dark:border-yellow-800/30 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all duration-300 cursor-default">
+                      <FaStar className="text-yellow-500 w-4 h-4" />
+                      <span className="tracking-wide uppercase">Top Rated (4.5+ ★)</span>
                     </div>
                   )}
-                  <div className="px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-2xl text-xs font-bold flex items-center gap-2 border border-emerald-100 dark:border-emerald-900/40">
-                    <FaLeaf className="text-emerald-600 dark:text-emerald-400" />
-                    <span>{stats.peopleFed} Neighbors Fed</span>
+                  <div className="px-5 py-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-2.5 border border-emerald-100 dark:border-emerald-800/30 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all duration-300 cursor-default">
+                    <FaLeaf className="text-emerald-600 dark:text-emerald-400 w-4 h-4" />
+                    <span className="tracking-wide uppercase">{stats.peopleFed} Neighbors Fed</span>
                   </div>
                 </div>
               </div>
@@ -786,8 +803,10 @@ function ConsumerReservationCard({
   const router = useRouter();
   const { cancelReservation, isCancelling } = useCancelReservation();
   const [copied, setCopied] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   const handleCancel = async (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (!window.confirm("Are you sure you want to cancel this reservation?")) return;
     try {
@@ -990,18 +1009,41 @@ function ConsumerReservationCard({
             )}
 
             {isPickedUp && (
-              <Link
-                href={`/protected/food/${reservation.food?.id}`}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-xl text-xs py-2.5"
+              <>
+                {!reservation.hasReviewedFood && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/50 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-xl text-xs py-2.5"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsReviewModalOpen(true);
+                    }}
+                  >
+                    <FaStar className="mr-1.5" />
+                    Leave Review
+                  </Button>
+                )}
+                <Link
+                  href={`/protected/food/${reservation.food?.id}`}
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  Order Again
-                </Button>
-              </Link>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-xl text-xs py-2.5"
+                  >
+                    Order Again
+                  </Button>
+                </Link>
+                <ReviewModal
+                  isOpen={isReviewModalOpen}
+                  onClose={() => setIsReviewModalOpen(false)}
+                  reservationId={reservation.id}
+                  foodName={reservation.food?.name || "Food"}
+                />
+              </>
             )}
           </div>
         </div>

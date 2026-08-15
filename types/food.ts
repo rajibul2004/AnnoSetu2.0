@@ -94,6 +94,7 @@ export interface PublicFoodDTO {
   images: FoodImageDTO[];
   averageRating: number;
   reviewCount: number;
+  pendingCount?: number;
   distance: number | null;
 }
  
@@ -110,6 +111,7 @@ export interface FoodReviewDTO {
   comment: string | null;
   createdAt: string;
   reviewerName: string;
+  supplierReply: string | null;
 }
  
 export interface FoodDetailDTO extends PublicFoodDTO {

@@ -27,6 +27,8 @@ import { useFoodDetails } from "@/hooks/useFoodQueries";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { formatDate, formatPrice } from "@/lib/formatters";
 import Button from "@/components/common/Button";
+import UserRatingModal from "@/components/reviews/UserRatingModal";
+import toast from "react-hot-toast";
 
 export default function RequestsContent() {
   const params = useParams();
@@ -38,6 +40,14 @@ export default function RequestsContent() {
   const { confirmReservation, isConfirming } = useConfirmReservationRequest();
 
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+
+  // State for user rating modal
+  const [ratingModalOpen, setRatingModalOpen] = useState(false);
+  const [selectedRatingData, setSelectedRatingData] = useState<{
+    reservationId: string;
+    consumerId: string;
+    consumerName: string;
+  } | null>(null);
 
   const searchParams = useSearchParams();
   const initialFilter = searchParams?.get("filter") || "all";
@@ -456,13 +466,31 @@ export default function RequestsContent() {
                           </Link>
                         </>
                       ) : (
-                        <Link
-                          href={`/protected/reservation/${request.id}/confirm`}
-                          className="w-full text-center py-2 px-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-800 text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center justify-center gap-1.5 transition-colors"
-                        >
-                          <span>Manage Request Details</span>
-                          <FaArrowRight className="w-3 h-3" />
-                        </Link>
+                        <div className="flex w-full gap-2">
+                          <Link
+                            href={`/protected/reservation/${request.id}/confirm`}
+                            className="flex-1 text-center py-2 px-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-800 text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center justify-center gap-1.5 transition-colors"
+                          >
+                            <span>Manage Request Details</span>
+                            <FaArrowRight className="w-3 h-3" />
+                          </Link>
+                          {isPickedUp && !request.hasRatedUser && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedRatingData({
+                                  reservationId: request.id,
+                                  consumerId: request.reserverId || "",
+                                  consumerName: request.reserverName || "Consumer",
+                                });
+                                setRatingModalOpen(true);
+                              }}
+                              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                            >
+                              Rate User
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </motion.div>
@@ -472,6 +500,19 @@ export default function RequestsContent() {
           </div>
         )}
       </div>
+
+      {selectedRatingData && (
+        <UserRatingModal
+          isOpen={ratingModalOpen}
+          onClose={() => {
+            setRatingModalOpen(false);
+            setTimeout(() => setSelectedRatingData(null), 200);
+          }}
+          reservationId={selectedRatingData.reservationId}
+          consumerId={selectedRatingData.consumerId}
+          consumerName={selectedRatingData.consumerName}
+        />
+      )}
     </div>
   );
 }

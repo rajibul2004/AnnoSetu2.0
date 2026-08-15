@@ -31,6 +31,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
+import ReactionBar from "@/components/reviews/ReactionBar";
 import Button from "@/components/common/Button";
 import { formatTimeRemaining, formatPrice, formatDate } from "@/lib/formatters";
 import { useAuth } from "@/hooks/useAuth";
@@ -574,6 +575,21 @@ export default function FoodDetailsPage() {
                           {review.comment}
                         </p>
                       )}
+
+                      {review.supplierReply && (
+                        <div className="mt-3 ml-10 p-3 bg-slate-100/50 dark:bg-slate-800/80 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
+                          <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
+                            Reply from {food.supplierName || "Supplier"}
+                          </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-300">
+                            {review.supplierReply}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="-ml-10">
+                        <ReactionBar reviewId={review.id} initialHelpfulCount={(review as any).helpfulCount || 0} />
+                      </div>
                     </div>
                   ))}
                 </div>

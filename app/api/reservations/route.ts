@@ -47,6 +47,8 @@ export async function GET(request: NextRequest) {
           images: { select: { id: true, url: true, isPrimary: true, displayOrder: true } },
         },
       },
+      userRating: true,
+      review: true,
     },
   });
  
@@ -69,7 +71,10 @@ export async function GET(request: NextRequest) {
       images: (r.food as any).images,
     },
     reserverName: isIncoming && "reserver" in r && r.reserver ? resolveSupplierName(r.reserver as any) : undefined,
+    reserverId: isIncoming && "reserver" in r && r.reserver ? r.reserverId : undefined,
     reserverPhone: isIncoming && "reserver" in r && r.reserver ? resolveSupplierPhone(r.reserver as any) : undefined,
+    hasRatedUser: !!r.userRating,
+    hasReviewedFood: !!r.review,
   }));
  
   return NextResponse.json({ success: true, data });
@@ -154,7 +159,6 @@ export async function POST(request: NextRequest) {
     prisma.food.update({
       where: { id: food.id },
       data: {
-        availableQty: { decrement: quantity },
         reservationCount: { increment: 1 },
       },
     }),

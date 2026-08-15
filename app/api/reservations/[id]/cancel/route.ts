@@ -52,7 +52,7 @@ export async function PUT(
     );
   }
 
-  const [reservation] = await prisma.$transaction([
+  const operations: any[] = [
     prisma.reservation.update({
       where: { id },
       data: {
@@ -62,12 +62,18 @@ export async function PUT(
         cancellationNote: note,
       },
     }),
+  ];
 
-    prisma.food.update({
-      where: { id: existing.foodId },
-      data: { availableQty: { increment: existing.quantity } },
-    }),
-  ]);
+  if (existing.status === "confirmed") {
+    operations.push(
+      prisma.food.update({
+        where: { id: existing.foodId },
+        data: { availableQty: { increment: existing.quantity } },
+      })
+    );
+  }
+
+  const [reservation] = await prisma.$transaction(operations);
 
   // Notify the OTHER party about the cancellation (non-blocking).
   // - Supplier cancelled → notify the reserver
