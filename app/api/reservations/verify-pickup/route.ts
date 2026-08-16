@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notifyPickupCompleted } from "@/services/notificationService";
+import { processPickupImpact, POINTS_PER_MEAL, CARBON_KG_PER_MEAL } from "@/services/impactService";
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -51,12 +52,23 @@ export async function POST(request: NextRequest) {
     reservation.id,
   );
 
+  // Process impact
+  const impactResult = await processPickupImpact(
+    reservation.id,
+    reservation.quantity,
+    reservation.reserverId,
+    reservation.supplierId
+  );
+
   return NextResponse.json({
     success: true,
     data: {
       id: updated.id,
       foodName: reservation.food.name,
       quantity: reservation.quantity,
+      pointsEarned: reservation.quantity * POINTS_PER_MEAL,
+      carbonSaved: reservation.quantity * CARBON_KG_PER_MEAL,
+      newBadges: impactResult.success && impactResult.newBadges ? impactResult.newBadges : [],
     },
   });
 }

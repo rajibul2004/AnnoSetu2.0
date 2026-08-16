@@ -22,6 +22,7 @@ import {
   FaCompass,
   FaCommentDots,
   FaMagic,
+  FaTrophy,
 } from "react-icons/fa";
 
 export default function Navbar() {
@@ -109,6 +110,14 @@ export default function Navbar() {
               <span>Explore Food</span>
             </Link>
 
+            <Link
+              href="/protected/leaderboard"
+              className="px-3.5 py-2 font-semibold text-sm rounded-xl text-gray-700 dark:text-gray-200 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50/80 dark:hover:bg-white/10 transition-all duration-200 flex items-center gap-2"
+            >
+              <FaTrophy className="text-base text-amber-500" />
+              <span>Leaderboard</span>
+            </Link>
+
             <div className="h-5 w-px bg-gray-200 dark:bg-slate-700 mx-1" />
 
             <ThemeToggle />
@@ -191,7 +200,7 @@ export default function Navbar() {
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                     >
                       <FaUserCircle className="text-base text-gray-400" />
-                      <span>Profile Settings</span>
+                      <span>Public Profile</span>
                     </Link>
 
                     {(isRestaurant || isIndividual) && addFoodLink && (
@@ -284,74 +293,99 @@ export default function Navbar() {
                   </div>
                 )}
 
-                <Link
-                  href="/"
-                  className="flex items-center gap-3 px-4 py-3 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <FaHome className="text-emerald-500" />
-                  <span>Home</span>
-                </Link>
+                {/* Group: Discover */}
+                <div className="px-3 pt-2 pb-1">
+                  <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Discover</p>
+                  <div className="space-y-1">
+                    <Link
+                      href="/"
+                      className="flex items-center gap-3 px-3 py-2.5 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <FaHome className="text-emerald-500 w-4 h-4" />
+                      <span>Home</span>
+                    </Link>
 
-                <Link
-                  href="/public/food"
-                  className="flex items-center gap-3 px-4 py-3 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <FaCompass className="text-emerald-500" />
-                  <span>Explore Food</span>
-                </Link>
+                    <Link
+                      href="/public/food"
+                      className="flex items-center gap-3 px-3 py-2.5 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <FaCompass className="text-emerald-500 w-4 h-4" />
+                      <span>Explore Food</span>
+                    </Link>
+
+                    <Link
+                      href="/protected/leaderboard"
+                      className="flex items-center gap-3 px-3 py-2.5 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-xl transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <FaTrophy className="text-amber-500 w-4 h-4" />
+                      <span>Leaderboard</span>
+                    </Link>
+                  </div>
+                </div>
 
                 {user ? (
                   <>
-                    <Link
-                      href={getDashboardLink()}
-                      className="flex items-center gap-3 px-4 py-3 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <FaUser className="text-emerald-500" />
-                      <span>Dashboard</span>
-                    </Link>
+                    <div className="h-px bg-gray-100 dark:bg-slate-800 my-2 mx-3" />
+                    
+                    {/* Group: My Account */}
+                    <div className="px-3 py-1">
+                      <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">My Account</p>
+                      <div className="space-y-1">
+                        <Link
+                          href={getDashboardLink()}
+                          className="flex items-center gap-3 px-3 py-2.5 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <FaUser className="text-emerald-500 w-4 h-4" />
+                          <span>Dashboard</span>
+                        </Link>
 
-                    {!isAdmin && (
-                      <Link
-                        href="/protected/messages"
-                        className="flex items-center gap-3 px-4 py-3 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <FaCommentDots className="text-emerald-500" />
-                        <span>Pickup Messages</span>
-                      </Link>
-                    )}
+                        <Link
+                          href={`/protected/profile/${user.id}`}
+                          className="flex items-center gap-3 px-3 py-2.5 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <FaUserCircle className="text-emerald-500 w-4 h-4" />
+                          <span>Public Profile</span>
+                        </Link>
+
+                        {!isAdmin && (
+                          <Link
+                            href="/protected/messages"
+                            className="flex items-center gap-3 px-3 py-2.5 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            <FaCommentDots className="text-emerald-500 w-4 h-4" />
+                            <span>Messages</span>
+                          </Link>
+                        )}
+
+                        <Link
+                          href="/protected/notifications"
+                          className="flex items-center gap-3 px-3 py-2.5 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <FaBell className="text-emerald-500 w-4 h-4" />
+                          <span>Notifications</span>
+                        </Link>
+                      </div>
+                    </div>
 
                     {(isRestaurant || isIndividual) && addFoodLink && (
-                      <Link
-                        href={addFoodLink}
-                        className="flex items-center gap-3 px-4 py-3 font-semibold text-sm bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl shadow-md"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <FaUtensils />
-                        <span>Donate / Add Food</span>
-                      </Link>
+                      <div className="px-3 py-2">
+                        <Link
+                          href={addFoodLink}
+                          className="flex items-center justify-center gap-3 px-4 py-3 font-semibold text-sm bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl shadow-md"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <FaUtensils className="w-4 h-4" />
+                          <span>Donate / Add Food</span>
+                        </Link>
+                      </div>
                     )}
-
-                    <Link
-                      href="/protected/profile"
-                      className="flex items-center gap-3 px-4 py-3 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <FaUserCircle className="text-emerald-500" />
-                      <span>Profile</span>
-                    </Link>
-
-                    <Link
-                      href="/protected/notifications"
-                      className="flex items-center gap-3 px-4 py-3 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <FaBell className="text-emerald-500" />
-                      <span>Notifications</span>
-                    </Link>
 
                     <button
                       onClick={() => {

@@ -297,12 +297,12 @@ export default function ChatWindow({
   return (
     <div className="flex flex-col h-full bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-2xl overflow-hidden relative select-text">
       {/* 1. Context Header */}
-      <div className="p-3.5 sm:px-6 bg-white/95 dark:bg-slate-900/95 border-b border-gray-200/80 dark:border-slate-800 backdrop-blur-md z-10 shrink-0 shadow-xs">
+      <div className="p-4 sm:px-6 bg-white/60 dark:bg-slate-900/60 border-b border-white/50 dark:border-white/5 backdrop-blur-3xl z-10 shrink-0">
         <div className="flex items-center justify-between gap-3">
           {/* Other Participant Info */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <div className="relative shrink-0">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-600 flex items-center justify-center text-white font-black text-sm shadow-md">
+              <div className="w-11 h-11 rounded-full bg-slate-900 dark:bg-emerald-500 flex items-center justify-center text-white font-black text-[15px] shadow-[0_4px_14px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_14px_rgba(16,185,129,0.2)]">
                 {conversation.otherParticipant.name.charAt(0).toUpperCase()}
               </div>
               <span
@@ -310,7 +310,7 @@ export default function ChatWindow({
                   isOtherTyping
                     ? "bg-emerald-400 animate-ping"
                     : conversation.otherParticipant.isOnline
-                    ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.9)]"
+                    ? "bg-emerald-500"
                     : "bg-gray-300 dark:bg-slate-600"
                 }`}
                 title={
@@ -325,7 +325,7 @@ export default function ChatWindow({
 
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-gray-900 dark:text-white text-sm sm:text-base leading-tight truncate">
+                <h3 className="font-bold tracking-tight text-gray-900 dark:text-white text-[15px] sm:text-base leading-tight truncate">
                   {conversation.otherParticipant.name}
                 </h3>
                 {/* Real-Time Stream Status Badge */}
@@ -423,10 +423,10 @@ export default function ChatWindow({
             {onClose && (
               <button
                 onClick={onClose}
-                className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="p-2 sm:p-2.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-full hover:bg-white dark:hover:bg-white/10 transition-colors cursor-pointer ml-1"
                 title="Close chat"
               >
-                <FaTimes size={16} />
+                <FaTimes size={18} />
               </button>
             )}
           </div>
@@ -466,15 +466,17 @@ export default function ChatWindow({
 
         {/* Food & Pickup Context Strip */}
         {conversation.foodInfo && (
-          <div className="mt-2.5 pt-2 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+          <div className="mt-3 pt-3 border-t border-gray-200/50 dark:border-white/5 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
             <div className="flex items-center gap-2 truncate">
-              <FaMapMarkerAlt className="text-emerald-500 shrink-0" />
-              <span className="truncate">
+              <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center shrink-0">
+                <FaMapMarkerAlt className="text-[10px] text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <span className="truncate font-medium">
                 {conversation.foodInfo.pickupAddress || "Pickup location in reservation ticket"}
               </span>
             </div>
             {conversation.foodInfo.pickupTime && (
-              <div className="flex items-center gap-1 font-bold text-gray-700 dark:text-gray-300 shrink-0 ml-2">
+              <div className="flex items-center gap-1.5 font-bold text-gray-700 dark:text-gray-300 shrink-0 ml-3 bg-white/50 dark:bg-white/5 px-2.5 py-1 rounded-full shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
                 <FaClock className="text-amber-500" />
                 <span>
                   {format(new Date(conversation.foodInfo.pickupTime), "h:mm a")}
@@ -509,8 +511,8 @@ export default function ChatWindow({
           groupedMessages.map((group) => (
             <div key={group.dateKey} className="space-y-3">
               {/* Date Header Pill */}
-              <div className="flex justify-center my-3 sticky top-1 z-5">
-                <span className="px-3 py-1 text-[11px] font-bold text-gray-500 dark:text-gray-400 bg-white/90 dark:bg-slate-900/90 border border-gray-200/80 dark:border-slate-800 rounded-full shadow-2xs backdrop-blur-md">
+              <div className="flex justify-center my-4 sticky top-2 z-5">
+                <span className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 bg-white/60 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 rounded-full shadow-sm backdrop-blur-xl">
                   {group.dateKey}
                 </span>
               </div>
@@ -520,7 +522,7 @@ export default function ChatWindow({
                 if (msg.messageType === "system") {
                   return (
                     <div key={msg.id || index} className="flex justify-center my-2">
-                      <span className="px-3.5 py-1.5 text-[11px] font-medium text-gray-600 dark:text-gray-400 bg-gray-100/90 dark:bg-slate-800/90 border border-gray-200/60 dark:border-slate-700/60 rounded-xl shadow-2xs text-center max-w-md">
+                      <span className="px-4 py-2 text-[11px] font-medium text-gray-500 dark:text-gray-400 bg-white/40 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 rounded-2xl shadow-sm text-center max-w-md backdrop-blur-md">
                         {msg.content}
                       </span>
                     </div>
@@ -543,14 +545,14 @@ export default function ChatWindow({
                     className={`group flex flex-col ${isSelf ? "items-end" : "items-start"}`}
                   >
                     <div
-                      className={`max-w-[88%] sm:max-w-[72%] rounded-2xl p-3.5 shadow-xs relative transition-all ${
+                      className={`max-w-[88%] sm:max-w-[72%] rounded-2xl p-3.5 shadow-sm relative transition-all ${
                         isSelf
-                          ? "bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 text-white rounded-tr-xs"
+                          ? "bg-slate-900 dark:bg-emerald-500 text-white rounded-tr-xs shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(16,185,129,0.15)]"
                           : msg.messageType === "eta_share"
-                          ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-tl-xs shadow-md"
+                          ? "bg-amber-500 text-white rounded-tl-xs shadow-[0_8px_30px_rgb(245,158,11,0.2)]"
                           : msg.messageType === "quick_chip"
-                          ? "bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/70 text-emerald-950 dark:text-emerald-100 rounded-tl-xs"
-                          : "bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 text-gray-900 dark:text-gray-100 rounded-tl-xs"
+                          ? "bg-white/60 dark:bg-white/5 backdrop-blur-xl border border-gray-200/50 dark:border-white/5 text-gray-800 dark:text-gray-200 rounded-tl-xs shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+                          : "bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-100 dark:border-white/10 text-gray-900 dark:text-white rounded-tl-xs shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
                       }`}
                     >
                       {/* ETA Header Badge */}
@@ -576,7 +578,9 @@ export default function ChatWindow({
                       >
                         <button
                           onClick={() => handleCopyText(msg.content)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:text-white dark:hover:text-white cursor-pointer mr-1"
+                          className={`opacity-0 group-hover:opacity-100 transition-opacity p-0.5 cursor-pointer mr-1 ${
+                            isSelf ? "hover:text-white/100" : "hover:text-gray-700 dark:hover:text-white"
+                          }`}
                           title="Copy message"
                         >
                           <FaCopy size={9} />
@@ -618,10 +622,10 @@ export default function ChatWindow({
               <div className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center text-xs font-bold shrink-0">
                 {conversation.otherParticipant.name.charAt(0).toUpperCase()}
               </div>
-              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl rounded-tl-xs px-4 py-3 shadow-xs flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: "300ms" }} />
+              <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-100 dark:border-white/5 rounded-2xl rounded-tl-xs px-4 py-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-300 animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-300 animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-300 animate-bounce" style={{ animationDelay: "300ms" }} />
               </div>
             </motion.div>
           )}
@@ -699,18 +703,20 @@ export default function ChatWindow({
       </AnimatePresence>
 
       {/* 5. Text Input & Fast Send Form */}
-      <div className="p-2.5 sm:p-3.5 bg-white dark:bg-slate-900 border-t border-gray-200/80 dark:border-slate-800 shrink-0">
-        <form onSubmit={handleSend} className="flex items-center gap-2">
+      <div className="p-3 sm:p-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-3xl border-t border-white/50 dark:border-white/5 shrink-0">
+        <form onSubmit={handleSend} className="flex items-center gap-2 max-w-4xl mx-auto">
           {/* Emoji Toggle */}
           <button
             type="button"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className={`p-2.5 rounded-2xl transition-colors cursor-pointer text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 ${
-              showEmojiPicker ? "text-emerald-600 dark:text-emerald-400" : ""
+            className={`p-3 rounded-full transition-all cursor-pointer ${
+              showEmojiPicker 
+                ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" 
+                : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-white dark:hover:bg-white/5"
             }`}
             title="Add emoji"
           >
-            <FaSmile size={18} />
+            <FaSmile size={20} />
           </button>
 
           <input
@@ -720,15 +726,15 @@ export default function ChatWindow({
             value={inputMessage}
             onChange={handleInputChange}
             onBlur={handleUserStopTyping}
-            className="flex-1 px-4 py-3 bg-gray-100/90 dark:bg-slate-800/90 border border-gray-200 dark:border-slate-700 focus:border-emerald-500 dark:focus:border-emerald-500 rounded-2xl text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+            className="flex-1 px-5 py-3.5 bg-white/80 dark:bg-black/20 border border-gray-200/50 dark:border-white/5 rounded-full text-[15px] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-transparent transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
           />
 
           <button
             type="submit"
             disabled={!inputMessage.trim()}
-            className="px-4.5 sm:px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-emerald-500/20 transition-all cursor-pointer disabled:cursor-not-allowed shrink-0"
+            className="w-12 h-12 sm:w-auto sm:px-6 rounded-full bg-slate-900 dark:bg-emerald-500 hover:bg-slate-800 dark:hover:bg-emerald-400 disabled:opacity-40 disabled:hover:bg-slate-900 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_14px_rgba(16,185,129,0.2)] dark:hover:shadow-[0_6px_20px_rgba(16,185,129,0.3)] transition-all cursor-pointer disabled:cursor-not-allowed shrink-0"
           >
-            <FaPaperPlane className="text-xs" />
+            <FaPaperPlane className="text-sm ml-0.5 sm:ml-0" />
             <span className="hidden sm:inline">Send</span>
           </button>
         </form>

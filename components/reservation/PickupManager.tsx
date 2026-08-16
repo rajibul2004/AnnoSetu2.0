@@ -22,6 +22,7 @@ import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import toast from "react-hot-toast";
 import { useVerifyPickup, useRecentPickups } from "@/hooks/useReservationQueries";
+import { useGamification } from "@/context/GamificationContext";
 import { formatDate } from "@/lib/formatters";
 import type { PickupVerificationResult } from "@/types/reservation";
 
@@ -47,7 +48,24 @@ export default function PickupManager() {
   const webcamRef = useRef<Webcam>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { verifyPickup, isVerifying, reset } = useVerifyPickup();
+  const { showXP, showBadgeUnlock } = useGamification();
+
+  const { verifyPickup, isVerifying, reset } = useVerifyPickup((data) => {
+    // Show XP popup (suppliers get points too! we can show a general message here)
+    if (data.pointsEarned) {
+      showXP(data.pointsEarned, "Pickup Confirmed");
+    }
+    
+    // Show badge celebrations if any new badges were unlocked
+    if (data.newBadges && data.newBadges.length > 0) {
+      // If multiple badges unlock at once, they'll queue up in the context
+      // but for simplicity we'll just show the first one or we can let context handle it
+      data.newBadges.forEach((badgeId, index) => {
+        setTimeout(() => showBadgeUnlock(badgeId), index * 6000); // staggering if multiple
+      });
+    }
+  });
+
   const { recentPickups, isLoading: pickupsLoading, refetch: refetchRecent } = useRecentPickups();
 
   const handleVerifyCode = async (codeToVerify: string) => {

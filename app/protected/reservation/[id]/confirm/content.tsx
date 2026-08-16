@@ -64,9 +64,8 @@ export default function ConfirmReservationContent() {
     if (!reservation) return;
     try {
       await confirmReservation(reservation.id);
-      toast.success("Reservation confirmed! Pickup code generated.");
     } catch (err: any) {
-      toast.error(err.message || "Failed to confirm reservation");
+      // Toast handled by mutation hook
     }
   };
 
@@ -74,11 +73,10 @@ export default function ConfirmReservationContent() {
     if (!reservation) return;
     try {
       await cancelReservation({ id: reservation.id, note: cancelNote });
-      toast.success("Reservation cancelled.");
       setShowCancelPrompt(false);
       router.push("/protected/dashboard");
     } catch (err: any) {
-      toast.error(err.message || "Failed to cancel reservation");
+      // Toast handled by mutation hook
     }
   };
 

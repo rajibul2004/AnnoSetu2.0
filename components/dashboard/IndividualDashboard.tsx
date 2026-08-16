@@ -37,6 +37,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
+import CommunityLog from "./CommunityLog";
+import { useImpact } from "@/hooks/useImpact";
 import Button from "@/components/common/Button";
 import ReviewModal from "@/components/reviews/ReviewModal";
 import { formatDate, formatTimeRemaining, formatPrice } from "@/lib/formatters";
@@ -46,6 +48,10 @@ import {
   useCancelReservation,
 } from "@/hooks/useReservationQueries";
 import { useMySharedFood, useDeleteFood } from "@/hooks/useFoodQueries";
+import LevelProgressBar from "@/components/gamification/LevelProgressBar";
+import StreakWidget from "@/components/gamification/StreakWidget";
+import NextBadgeProgress from "@/components/gamification/NextBadgeProgress";
+import { getBadge, RARITY_STYLES } from "@/lib/badges";
 import type { ReservationDTO } from "@/types/reservation";
 import { isFoodExpired, type SharedFoodDTO } from "@/types/food";
 
@@ -62,7 +68,6 @@ interface DashboardStats {
   earnings: number;
   avgRating: number;
   totalImpact: number;
-  communityRank: number;
   impactBadges: string[];
 }
 
@@ -117,7 +122,6 @@ function calculateStats(
     earnings: totalEarnings,
     avgRating,
     totalImpact: totalMealsConsumed + totalMealsShared,
-    communityRank: 42,
     impactBadges: [
       totalMealsConsumed > 0 && "food-saver",
       totalMealsShared > 0 && "food-sharer",
@@ -137,6 +141,7 @@ export default function UserDashboard() {
     useMyReservations();
   const { mySharedFood: userSharedFood, isLoading: isMySharedLoading } =
     useMySharedFood();
+  const { data: impactData, isLoading: isImpactLoading } = useImpact();
 
   const isLoading = isReservationsLoading || isMySharedLoading;
 
@@ -243,102 +248,190 @@ export default function UserDashboard() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative rounded-3xl p-6 sm:p-10 mb-8 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-700 dark:from-pink-600/50 dark:via-purple-600/50 dark:to-indigo-700/50 backdrop-blur-3xl text-white shadow-2xl overflow-hidden border border-white/15 dark:border-white/5"
+          className="relative rounded-3xl p-5 sm:p-6 mb-6 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-700 dark:from-pink-600/50 dark:via-purple-600/50 dark:to-indigo-700/50 backdrop-blur-3xl text-white shadow-2xl overflow-hidden border border-white/15 dark:border-white/5"
         >
           {/* Subtle Ambient Light Gradients */}
           <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 bg-pink-400/20 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-80 h-80 bg-blue-400/20 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+          <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div className="flex items-center gap-4 sm:gap-5">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/15 backdrop-blur-md rounded-2xl p-1 border border-white/20 flex items-center justify-center text-3xl shadow-inner shrink-0">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/15 backdrop-blur-md rounded-2xl p-1 border border-white/20 flex items-center justify-center text-xl shadow-inner shrink-0">
                 {stats.avgRating >= 4.5 ? (
-                  <FaTrophy className="text-yellow-300 w-8 h-8 sm:w-10 sm:h-10 drop-shadow-md" />
+                  <FaTrophy className="text-yellow-300 w-6 h-6 sm:w-7 sm:h-7 drop-shadow-md" />
                 ) : (
-                  <FaHeart className="text-pink-200 w-8 h-8 sm:w-10 sm:h-10 drop-shadow-md" />
+                  <FaHeart className="text-pink-200 w-6 h-6 sm:w-7 sm:h-7 drop-shadow-md" />
                 )}
               </div>
               <div>
-                <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-[11px] sm:text-xs font-semibold uppercase tracking-wider mb-1.5 sm:mb-2 border border-white/20">
-                  <FaShieldAlt className="text-emerald-300" />
-                  <span>Individual Partner • Saver &amp; Sharer</span>
+                <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2 py-0.5 bg-white/15 backdrop-blur-md rounded-full text-[10px] font-semibold uppercase tracking-wider mb-1 border border-white/20">
+                  <FaShieldAlt className="text-emerald-300 w-3 h-3" />
+                  <span>Individual Partner</span>
                 </div>
-                <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">
                   Welcome back, {firstName}! ✨
                 </h1>
-                <p className="text-pink-100/90 text-xs sm:text-base mt-1 flex items-center gap-2 font-medium">
-                  <FaExchangeAlt className="opacity-80 shrink-0" />
-                  Making a greener difference in your local community
-                </p>
               </div>
             </div>
 
-            {/* Badges & Actions */}
-            <div className="flex flex-col sm:flex-row w-full lg:w-auto items-stretch sm:items-center gap-3">
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row w-full lg:w-auto items-stretch sm:items-center gap-2">
               <Link href="/public/food" className="w-full sm:w-auto">
-                <Button className="w-full bg-white text-gray-900 hover:bg-gray-50 font-black shadow-xl shadow-white/10 text-xs sm:text-sm rounded-2xl py-3.5 sm:py-3 hover:scale-[1.03] hover:-translate-y-1 transition-all duration-300">
-                  <FaShoppingBag className="mr-2.5 text-emerald-500 w-4 h-4" />
-                  Save Food
+                <Button className="w-full bg-white text-gray-900 hover:bg-gray-50 font-black shadow-lg text-xs rounded-xl py-2 px-4 hover:scale-[1.03] hover:-translate-y-0.5 transition-all duration-300">
+                  <FaShoppingBag className="mr-2 text-emerald-500 w-3.5 h-3.5" />
+                  Save
                 </Button>
               </Link>
               <Link href="/protected/add-food?role=individual" className="w-full sm:w-auto">
-                <Button className="w-full bg-white/15 hover:bg-white/25 text-white font-black backdrop-blur-md border border-white/30 shadow-xl shadow-white/5 text-xs sm:text-sm rounded-2xl py-3.5 sm:py-3 hover:scale-[1.03] hover:-translate-y-1 transition-all duration-300">
-                  <FaPlus className="mr-2.5 text-yellow-300 w-4 h-4" />
-                  Share Meals
+                <Button className="w-full bg-white/15 hover:bg-white/25 text-white font-black backdrop-blur-md border border-white/30 shadow-lg text-xs rounded-xl py-2 px-4 hover:scale-[1.03] hover:-translate-y-0.5 transition-all duration-300">
+                  <FaPlus className="mr-2 text-yellow-300 w-3.5 h-3.5" />
+                  Share
                 </Button>
               </Link>
               <Link href="/protected/reservation/pickup" className="w-full sm:w-auto">
-                <Button className="w-full bg-emerald-500/90 hover:bg-emerald-400 text-white font-black backdrop-blur-md border border-emerald-400/50 shadow-xl shadow-emerald-500/20 text-xs sm:text-sm rounded-2xl py-3.5 sm:py-3 hover:scale-[1.03] hover:-translate-y-1 transition-all duration-300">
-                  <FaQrcode className="mr-2.5 w-4 h-4" />
-                  Scanner
+                <Button className="w-full bg-emerald-500/90 hover:bg-emerald-400 text-white font-black backdrop-blur-md border border-emerald-400/50 shadow-lg text-xs rounded-xl py-2 px-4 hover:scale-[1.03] hover:-translate-y-0.5 transition-all duration-300">
+                  <FaQrcode className="mr-2 w-3.5 h-3.5" />
+                  Scan
                 </Button>
               </Link>
             </div>
           </div>
 
-          {/* Bento Box Metrics Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 mt-8 pt-6 border-t border-white/15 relative z-10">
-            {/* Hero Metric - Spans 2 cols */}
-            <div className="col-span-2 bg-white/10 backdrop-blur-xl rounded-[2rem] p-5 sm:p-6 border border-white/20 shadow-inner hover:scale-[1.02] hover:-translate-y-1 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 ease-out group flex flex-col justify-between cursor-default">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[11px] sm:text-xs text-emerald-100 font-extrabold uppercase tracking-widest drop-shadow-sm">Total Impact</span>
-                <FaLeaf className="text-emerald-300 w-5 h-5 opacity-80 group-hover:opacity-100 group-hover:rotate-12 group-hover:scale-110 transition-all duration-300" />
-              </div>
-              <div className="text-4xl sm:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-white via-emerald-100 to-teal-300 drop-shadow-sm">
-                {stats.totalImpact} <span className="text-sm sm:text-lg font-bold text-emerald-100/80">Meals</span>
-              </div>
-            </div>
-
-            {/* Sub Metric 1 */}
-            <div className="bg-white/5 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-white/10 hover:-translate-y-1 hover:bg-white/10 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-default">
-              <span className="text-[11px] sm:text-xs text-emerald-100/70 font-bold tracking-wider uppercase">CO₂ Saved</span>
-              <div className="text-2xl sm:text-3xl font-black mt-3 text-white flex items-baseline gap-1 drop-shadow-sm">
-                {stats.co2Reduced} <span className="text-xs sm:text-sm font-semibold text-emerald-200/80">kg</span>
+          {/* Unified Compact Metrics Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mt-8 pt-6 border-t border-white/15 relative z-10">
+            {/* Metric 1 */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 hover:bg-white/15 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between shadow-sm">
+              <span className="text-[10px] sm:text-xs text-emerald-100/80 font-bold uppercase tracking-wider flex justify-between items-center">
+                Total Impact <FaLeaf className="text-emerald-300 w-3 h-3" />
+              </span>
+              <div className="text-2xl font-black mt-2 text-white drop-shadow-sm truncate">
+                {stats.totalImpact} <span className="text-xs font-semibold text-emerald-200">Meals</span>
               </div>
             </div>
 
-            {/* Sub Metric 2 */}
-            <div className="bg-white/5 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-white/10 hover:-translate-y-1 hover:bg-white/10 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-default">
-              <span className="text-[11px] sm:text-xs text-yellow-100/70 font-bold tracking-wider uppercase">Community Rank</span>
-              <div className="text-2xl sm:text-3xl font-black mt-3 text-white flex items-center gap-1.5 drop-shadow-sm">
-                <FaMedal className="text-yellow-400 w-5 h-5 sm:w-6 sm:h-6" />
-                #{stats.communityRank}
+            {/* Metric 2 */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 hover:bg-white/15 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between shadow-sm">
+              <span className="text-[10px] sm:text-xs text-emerald-100/80 font-bold uppercase tracking-wider flex justify-between items-center">
+                CO₂ Saved <FaShieldAlt className="text-emerald-300 w-3 h-3" />
+              </span>
+              <div className="text-2xl font-black mt-2 text-white drop-shadow-sm truncate">
+                {!isImpactLoading && impactData ? impactData.impact.carbonSavedKg.toFixed(1) : stats.co2Reduced.toFixed(1)} <span className="text-xs font-semibold text-emerald-200">kg</span>
               </div>
             </div>
 
-            {/* Sub Metric 3 */}
-            <div className="bg-white/5 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-white/10 hover:-translate-y-1 hover:bg-white/10 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-default">
-              <span className="text-[11px] sm:text-xs text-pink-100/70 font-bold tracking-wider uppercase">Cook Rating</span>
-              <div className="text-2xl sm:text-3xl font-black mt-3 text-white flex items-center gap-1.5 drop-shadow-sm">
-                {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "New"}
-                <FaStar className="text-yellow-400 w-5 h-5 sm:w-6 sm:h-6" />
+            {/* Metric 3 */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 hover:bg-white/15 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between shadow-sm">
+              <span className="text-[10px] sm:text-xs text-amber-100/80 font-bold uppercase tracking-wider flex justify-between items-center">
+                Impact Points <FaStar className="text-amber-300 w-3 h-3" />
+              </span>
+              <div className="text-2xl font-black mt-2 text-white drop-shadow-sm truncate">
+                {!isImpactLoading && impactData ? impactData.impact.points : 0}
+              </div>
+            </div>
+
+            {/* Metric 4 */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 hover:bg-white/15 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between shadow-sm">
+              <span className="text-[10px] sm:text-xs text-purple-100/80 font-bold uppercase tracking-wider flex justify-between items-center">
+                Badges <FaMedal className="text-purple-300 w-3 h-3" />
+              </span>
+              <div className="text-2xl font-black mt-2 text-white drop-shadow-sm truncate">
+                {!isImpactLoading && impactData ? impactData.achievements.length : 0}
+              </div>
+            </div>
+
+            {/* Metric 5 */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 hover:bg-white/15 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between shadow-sm">
+              <span className="text-[10px] sm:text-xs text-yellow-100/80 font-bold uppercase tracking-wider flex justify-between items-center">
+                Rank <FaTrophy className="text-yellow-300 w-3 h-3" />
+              </span>
+              <div className="text-2xl font-black mt-2 text-white drop-shadow-sm truncate flex items-center gap-1">
+                #{impactData?.communityRank || "New"}
+              </div>
+            </div>
+
+            {/* Metric 6 */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 hover:bg-white/15 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between shadow-sm">
+              <span className="text-[10px] sm:text-xs text-pink-100/80 font-bold uppercase tracking-wider flex justify-between items-center">
+                Cook Rating <FaHeart className="text-pink-300 w-3 h-3" />
+              </span>
+              <div className="text-2xl font-black mt-2 text-white drop-shadow-sm truncate">
+                {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "N/A"}
               </div>
             </div>
           </div>
         </motion.div>
 
+        {/* Level Progress Bar & Streak Grid */}
+        {!isImpactLoading && impactData && (
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2">
+              <LevelProgressBar points={impactData.impact.points} />
+            </div>
+            <div className="lg:col-span-1">
+              <StreakWidget 
+                currentStreak={impactData.streak?.currentStreak || 0} 
+                longestStreak={impactData.streak?.longestStreak || 0} 
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Dedicated Badges Section */}
+        {!isImpactLoading && impactData?.achievements && impactData.achievements.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-amber-200/40 dark:border-amber-900/20 rounded-[1.5rem] p-4 sm:p-5 shadow-sm"
+          >
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-sm sm:text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+                <FaMedal className="text-amber-500 w-4 h-4" />
+                Achievements & Badges
+              </h3>
+              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+                {impactData.achievements.length} Earned
+              </span>
+            </div>
+            
+            <div className="flex overflow-x-auto gap-3 pb-2 custom-scrollbar">
+              {impactData.achievements.map((ach) => {
+                const badge = getBadge(ach.badgeId);
+                const rarity = badge ? RARITY_STYLES[badge.rarity] : RARITY_STYLES.common;
+                const BadgeIcon = badge?.icon || FaMedal;
+                return (
+                  <div 
+                    key={ach.id} 
+                    className={`flex-shrink-0 flex items-center gap-2.5 px-3 py-2 bg-white dark:bg-slate-800 border ${rarity.border} rounded-xl shadow-xs hover:-translate-y-0.5 transition-all cursor-default`}
+                  >
+                    <div className={`p-1.5 rounded-lg ${badge?.imageUrl ? "" : rarity.bg}`}>
+                      {badge?.imageUrl ? (
+                        <img src={badge.imageUrl} alt={badge.title} className="w-5 h-5 object-contain" />
+                      ) : (
+                        <BadgeIcon className="w-4 h-4" />
+                      )}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-black text-gray-800 dark:text-gray-100 leading-tight">
+                        {badge?.title || ach.badgeId.replace(/_/g, " ")}
+                      </span>
+                      {badge && (
+                        <span className="text-[9px] font-bold uppercase tracking-wider opacity-70" style={{ color: rarity.border.includes('amber') ? '#d97706' : rarity.border.includes('purple') ? '#a855f7' : rarity.border.includes('blue') ? '#3b82f6' : '#6b7280' }}>
+                          {rarity.label}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Main Content */}
+        <div className="flex flex-col space-y-6">
+        
         {/* Interactive Mode Switcher with Horizontal Scroll container for mobile */}
-        <div className="relative mb-6">
+        <div className="relative">
           <div className="overflow-x-auto custom-scrollbar pb-1">
             <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/80 dark:border-slate-800/80 rounded-2xl p-1.5 flex min-w-[440px] sm:min-w-0 shadow-sm">
               <button
@@ -497,7 +590,6 @@ export default function UserDashboard() {
                 </ScrollableContainer>
               )}
 
-              {/* Insights Panel */}
               {/* Insights Panel */}
               <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-gray-200/80 dark:border-slate-800/80 rounded-[2rem] p-6 sm:p-8 shadow-xl shadow-blue-500/5">
                 <h3 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white mb-6 flex items-center gap-3 tracking-tight">
@@ -715,6 +807,12 @@ export default function UserDashboard() {
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
+
+        {/* Bottom Section: Community Log */}
+        <div className="mt-8">
+          <CommunityLog />
+        </div>
       </div>
     </div>
   );

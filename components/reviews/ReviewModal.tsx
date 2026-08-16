@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaStar, FaTimes } from "react-icons/fa";
 import { toast } from "react-hot-toast";
+import { useGamification } from "@/context/GamificationContext";
 
 interface ReviewModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export default function ReviewModal({
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const { showXP } = useGamification();
 
   useEffect(() => {
     setMounted(true);
@@ -58,6 +60,7 @@ export default function ReviewModal({
       }
 
       toast.success("Review submitted successfully!");
+      showXP(5, "Review Written");
       if (onSuccess) onSuccess();
       onClose();
     } catch (error: any) {

@@ -43,44 +43,56 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   const colorClasses = {
     green: {
-      spinner: "border-green-600 dark:border-green-400",
-      bg: "bg-green-600 dark:bg-green-400",
-      text: "text-green-600 dark:text-green-400",
+      spinner: "border-emerald-600 dark:border-emerald-400",
+      bg: "bg-emerald-600 dark:bg-emerald-400",
+      text: "from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300",
+      glow: "bg-emerald-500/20",
     },
     blue: {
       spinner: "border-blue-600 dark:border-blue-400",
       bg: "bg-blue-600 dark:bg-blue-400",
-      text: "text-blue-600 dark:text-blue-400",
+      text: "from-blue-600 to-indigo-500 dark:from-blue-400 dark:to-indigo-300",
+      glow: "bg-blue-500/20",
     },
     red: {
-      spinner: "border-red-600 dark:border-red-400",
-      bg: "bg-red-600 dark:bg-red-400",
-      text: "text-red-600 dark:text-red-400",
+      spinner: "border-rose-600 dark:border-rose-400",
+      bg: "bg-rose-600 dark:bg-rose-400",
+      text: "from-rose-600 to-orange-500 dark:from-rose-400 dark:to-orange-300",
+      glow: "bg-rose-500/20",
     },
     purple: {
       spinner: "border-purple-600 dark:border-purple-400",
       bg: "bg-purple-600 dark:bg-purple-400",
-      text: "text-purple-600 dark:text-purple-400",
+      text: "from-purple-600 to-fuchsia-500 dark:from-purple-400 dark:to-fuchsia-300",
+      glow: "bg-purple-500/20",
     },
     white: {
       spinner: "border-white",
       bg: "bg-white",
-      text: "text-white",
+      text: "from-white to-gray-200 dark:from-gray-100 dark:to-gray-300",
+      glow: "bg-white/10",
     },
   }
 
   const spinnerVariants = {
     default: (
-      <div
-        className={`
-          animate-spin 
-          rounded-full 
-          border-t-transparent
-          ${colorClasses[color].spinner}
-          ${sizes[size]}
-          ${className}
-        `}
-      />
+      <div className={`relative flex items-center justify-center ${sizes[size]}`}>
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+          className={`absolute inset-0 rounded-full border-t-2 border-r-2 ${colorClasses[color].spinner} opacity-70`}
+        />
+        <motion.div
+          animate={{ rotate: -360 }}
+          transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+          className={`absolute inset-2 rounded-full border-b-2 border-l-2 ${colorClasses[color].spinner} opacity-50`}
+        />
+        <motion.div
+          animate={{ scale: [0.8, 1.2, 0.8], opacity: [0.3, 1, 0.3] }}
+          transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+          className={`absolute w-1/3 h-1/3 rounded-full ${colorClasses[color].bg} blur-[2px]`}
+        />
+      </div>
     ),
     pulse: (
       <div className="flex space-x-1">
@@ -115,11 +127,16 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
       </div>
     ),
     ring: (
-      <div className="relative">
-        <div className={`animate-spin rounded-full border-2 border-gray-200 dark:border-gray-700 ${sizes[size]}`} />
-        <div 
-          className={`absolute inset-0 animate-spin rounded-full border-t-2 ${colorClasses[color].spinner} ${sizes[size]}`} 
-          style={{ animationDirection: "reverse", animationDuration: "0.8s" }}
+      <div className={`relative flex items-center justify-center ${sizes[size]}`}>
+        <motion.div 
+          className={`absolute inset-0 border-2 border-dashed ${colorClasses[color].spinner} rounded-full`}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+        />
+        <motion.div 
+          className={`absolute inset-1 border-2 border-dotted ${colorClasses[color].spinner} rounded-full opacity-60`}
+          animate={{ rotate: -360 }}
+          transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
         />
       </div>
     ),
@@ -146,24 +163,38 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   const content = (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.2 }}
-      className="flex flex-col items-center justify-center space-y-3"
+      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className={`flex flex-col items-center justify-center ${fullScreen || overlay ? "p-8 sm:p-12 bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/50 dark:border-white/10 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)]" : "space-y-4"}`}
     >
-      {spinnerVariants[variant]}
+      <div className="relative flex items-center justify-center p-2">
+        {/* Animated Glow Behind Spinner */}
+        <div className={`absolute inset-0 ${colorClasses[color].glow} blur-xl rounded-full animate-pulse [animation-duration:2s]`}></div>
+        
+        {/* Actual Spinner */}
+        <div className="relative z-10">
+          {spinnerVariants[variant]}
+        </div>
+      </div>
+      
       {text && (
-        <p className={`${textSizes[size]} ${colorClasses[color].text} animate-pulse font-medium`}>
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className={`${textSizes[size]} bg-clip-text text-transparent bg-gradient-to-r ${colorClasses[color].text} font-black tracking-wide animate-pulse [animation-duration:2s] text-center mt-4`}
+        >
           {text}
-        </p>
+        </motion.p>
       )}
     </motion.div>
   )
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-50">
+      <div className="fixed inset-0 flex items-center justify-center bg-white/60 dark:bg-slate-950/60 backdrop-blur-md z-[100]">
         {content}
       </div>
     )
@@ -171,7 +202,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   if (overlay) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm rounded-lg z-10">
+      <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-slate-950/50 backdrop-blur-md rounded-2xl z-10">
         {content}
       </div>
     )

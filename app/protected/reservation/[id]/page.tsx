@@ -93,9 +93,8 @@ export default function ReservationDetailPage() {
   const handleConfirm = async () => {
     try {
       await confirmReservation(reservation.id);
-      toast.success("Reservation confirmed successfully! Pickup code generated.");
     } catch (err: any) {
-      toast.error(err.message || "Failed to confirm reservation");
+      // Toast handled by mutation hook
     }
   };
 
@@ -103,10 +102,9 @@ export default function ReservationDetailPage() {
     if (!window.confirm("Are you sure you want to cancel / decline this reservation?")) return;
     try {
       await cancelReservation({ id: reservation.id });
-      toast.success("Reservation cancelled.");
       router.push("/protected/dashboard");
     } catch (err: any) {
-      toast.error(err.message || "Failed to cancel reservation");
+      // Toast handled by mutation hook
     }
   };
 
@@ -454,12 +452,14 @@ export default function ReservationDetailPage() {
                 </h3>
 
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-linear-to-br from-blue-500 to-indigo-600 text-white font-black text-lg flex items-center justify-center shadow-md">
+                  <Link href={`/protected/profile/${reservation.reserverId}`} className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-black text-lg flex items-center justify-center shadow-md hover:scale-105 transition-transform">
                     {reservation.reserver.name.charAt(0).toUpperCase()}
-                  </div>
+                  </Link>
                   <div>
                     <h4 className="text-sm font-black text-gray-900 dark:text-white">
-                      {reservation.reserver.name}
+                      <Link href={`/protected/profile/${reservation.reserverId}`} className="hover:underline hover:text-blue-500 transition-colors">
+                        {reservation.reserver.name}
+                      </Link>
                     </h4>
                     <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
                       {reservation.totalOrders} completed rescues on AnnoSetu
@@ -509,12 +509,14 @@ export default function ReservationDetailPage() {
                 </h3>
 
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-linear-to-br from-emerald-500 to-teal-600 text-white font-black text-lg flex items-center justify-center shadow-md">
+                  <Link href={`/protected/profile/${reservation.supplierId}`} className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-black text-lg flex items-center justify-center shadow-md hover:scale-105 transition-transform">
                     {reservation.supplierName.charAt(0).toUpperCase()}
-                  </div>
+                  </Link>
                   <div>
                     <h4 className="text-sm font-black text-gray-900 dark:text-white">
-                      {reservation.supplierName}
+                      <Link href={`/protected/profile/${reservation.supplierId}`} className="hover:underline hover:text-emerald-500 transition-colors">
+                        {reservation.supplierName}
+                      </Link>
                     </h4>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       Verified AnnoSetu Food Partner

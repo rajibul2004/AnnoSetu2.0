@@ -23,13 +23,21 @@ import {
   FaChevronDown,
   FaMapMarkerAlt,
   FaStar,
+  FaLeaf,
+  FaMedal,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
+import CommunityLog from "./CommunityLog";
 import ReviewList from "@/components/reviews/ReviewList";
 import { formatDate, formatTimeRemaining, formatPrice } from "@/lib/formatters";
 import { useAuth } from "@/hooks/useAuth";
 import { useMySharedFood, useDeleteFood } from "@/hooks/useFoodQueries";
+import { useImpact } from "@/hooks/useImpact";
+import LevelProgressBar from "@/components/gamification/LevelProgressBar";
+import StreakWidget from "@/components/gamification/StreakWidget";
+import NextBadgeProgress from "@/components/gamification/NextBadgeProgress";
+import { getBadge, RARITY_STYLES } from "@/lib/badges";
 import {
   isFoodExpired,
   type SharedFoodDTO,
@@ -213,8 +221,10 @@ export default function RestaurantDashboard() {
   const router = useRouter();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<FoodTab>("active");
-  const { mySharedFood, isLoading } = useMySharedFood();
+  const { mySharedFood, isLoading: isSharedLoading } = useMySharedFood();
+  const { data: impactData, isLoading: isImpactLoading } = useImpact();
   const { deleteFood, isDeleting } = useDeleteFood();
+  const isLoading = isSharedLoading;
 
   const stats = useMemo(() => calculateStats(mySharedFood), [mySharedFood]);
 
@@ -305,46 +315,98 @@ export default function RestaurantDashboard() {
               </button>
             </div>
           </div>
-
-          {/* Bento Box Metrics Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 mt-8 pt-6 border-t border-white/20 relative z-10">
-            {/* Hero Metric - Spans 2 cols */}
-            <div className="col-span-2 bg-white/10 backdrop-blur-xl rounded-[2rem] p-5 sm:p-6 border border-white/20 shadow-inner hover:scale-[1.02] hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-300 ease-out group flex flex-col justify-between cursor-default">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[11px] sm:text-xs text-blue-100 font-extrabold uppercase tracking-widest drop-shadow-sm">Total Listings</span>
-                <FaStore className="text-blue-300 w-5 h-5 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300" />
-              </div>
-              <div className="text-4xl sm:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-white via-blue-100 to-indigo-300 drop-shadow-sm">
-                {stats.mealsShared}
-              </div>
+          {/* Compact Metrics Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-5 border-t border-white/20 relative z-10">
+            {/* Metric 1 */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 hover:bg-white/15 transition-all">
+              <span className="text-[10px] sm:text-xs text-blue-100/80 font-bold tracking-wider uppercase">Meals Rescued</span>
+              <div className="text-xl sm:text-2xl font-black mt-1 text-white">{stats.mealsShared}</div>
             </div>
 
-            {/* Sub Metric 1 */}
-            <div className="bg-white/5 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-white/10 hover:-translate-y-1 hover:bg-white/10 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-default">
-              <span className="text-[11px] sm:text-xs text-emerald-100/70 font-bold tracking-wider uppercase">Est. People Fed</span>
-              <div className="text-2xl sm:text-3xl font-black mt-3 text-white flex items-baseline gap-1 drop-shadow-sm">
-                {stats.peopleFed}
-              </div>
+            {/* Metric 2 */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 hover:bg-white/15 transition-all">
+              <span className="text-[10px] sm:text-xs text-emerald-100/80 font-bold tracking-wider uppercase">Est. People Fed</span>
+              <div className="text-xl sm:text-2xl font-black mt-1 text-white">{stats.peopleFed}</div>
             </div>
 
-            {/* Sub Metric 2 */}
-            <div className="bg-white/5 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-white/10 hover:-translate-y-1 hover:bg-white/10 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-default">
-              <span className="text-[11px] sm:text-xs text-yellow-100/70 font-bold tracking-wider uppercase">Value Generated</span>
-              <div className="text-2xl sm:text-3xl font-black mt-3 text-white flex items-center gap-1.5 drop-shadow-sm">
-                ₹{stats.earnings}
-              </div>
+            {/* Metric 3 */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 hover:bg-white/15 transition-all">
+              <span className="text-[10px] sm:text-xs text-yellow-100/80 font-bold tracking-wider uppercase">Value Generated</span>
+              <div className="text-xl sm:text-2xl font-black mt-1 text-white">₹{stats.earnings}</div>
             </div>
 
-            {/* Sub Metric 3 */}
-            <div className="bg-white/5 backdrop-blur-md rounded-3xl p-4 sm:p-5 border border-white/10 hover:-translate-y-1 hover:bg-white/10 hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-default">
-              <span className="text-[11px] sm:text-xs text-pink-100/70 font-bold tracking-wider uppercase">Quality Rating</span>
-              <div className="text-2xl sm:text-3xl font-black mt-3 text-white flex items-center gap-1.5 drop-shadow-sm">
+            {/* Metric 4 */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 hover:bg-white/15 transition-all">
+              <span className="text-[10px] sm:text-xs text-pink-100/80 font-bold tracking-wider uppercase">Quality Rating</span>
+              <div className="text-xl sm:text-2xl font-black mt-1 text-white flex items-center gap-1.5">
                 {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "New"}
-                <FaStar className="text-yellow-400 w-5 h-5 sm:w-6 sm:h-6" />
+                <FaStar className="text-yellow-400 w-4 h-4" />
               </div>
             </div>
           </div>
         </motion.div>
+        {/* Gamification & Impact Section */}
+        {!isImpactLoading && impactData && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-8"
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Level Progress (Takes 1 col on LG, full width on smaller) */}
+              <div className="lg:col-span-1 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200/60 dark:border-slate-800/60 rounded-[2rem] p-5 shadow-xs flex flex-col justify-center">
+                <LevelProgressBar points={impactData.impact.points} />
+                <div className="mt-4 flex items-center justify-between px-2 text-xs font-semibold text-gray-500">
+                  <div className="flex items-center gap-1.5"><FaLeaf className="text-emerald-500" /> {impactData.impact.carbonSavedKg.toFixed(1)}kg CO₂</div>
+                  <div className="flex items-center gap-1.5"><FaUtensils className="text-blue-500" /> {impactData.impact.mealsDonated} Meals</div>
+                </div>
+              </div>
+
+              {/* Streak Widget */}
+              <div className="lg:col-span-1">
+                <StreakWidget 
+                  currentStreak={impactData.streak?.currentStreak || 0} 
+                  longestStreak={impactData.streak?.longestStreak || 0} 
+                />
+              </div>
+
+              {/* Badges Overview */}
+              <div className="lg:col-span-1 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-amber-200/50 dark:border-amber-900/30 rounded-[2rem] p-5 shadow-xs flex flex-col justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+                    <FaMedal className="text-amber-500" /> Impact Badges ({impactData.achievements.length})
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {impactData.achievements.slice(0, 4).map((ach) => {
+                      const badge = getBadge(ach.badgeId);
+                      const rarity = badge ? RARITY_STYLES[badge.rarity] : RARITY_STYLES.common;
+                      const BadgeIcon = badge?.icon || FaMedal;
+                      return (
+                        <div key={ach.id} title={badge?.title} className={`p-2 rounded-xl border ${rarity.border} ${rarity.bg}`}>
+                          <BadgeIcon className="w-4 h-4" />
+                        </div>
+                      );
+                    })}
+                    {impactData.achievements.length > 4 && (
+                      <div className="p-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-gray-500">
+                        +{impactData.achievements.length - 4}
+                      </div>
+                    )}
+                    {impactData.achievements.length === 0 && (
+                      <div className="text-xs text-gray-500 italic">No badges yet. Keep sharing!</div>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <Link href={`/protected/profile/${user?.id}`} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                    View Public Profile <FaChevronRight className="w-3 h-3" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Informative Workflow Banner */}
         <div className="p-4 mb-6 rounded-2xl bg-blue-50/80 dark:bg-slate-900/90 border border-blue-200/80 dark:border-blue-900/40 flex items-start gap-3 text-xs text-gray-600 dark:text-gray-300 shadow-xs">
@@ -717,6 +779,9 @@ export default function RestaurantDashboard() {
             All surplus food must adhere to local safety regulations. Once a reservation is confirmed by you, the consumer will receive a secure pickup code to present at your restaurant.
           </p>
         </div>
+
+
+        <CommunityLog />
       </div>
     </div>
   );

@@ -327,12 +327,13 @@ export default function FoodDetailsPage() {
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 pb-6 border-b border-gray-100 dark:border-slate-800">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 ${supplier.bg}`}
+                      <Link
+                        href={`/protected/profile/${food.supplierId}`}
+                        className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 hover:scale-105 transition-transform cursor-pointer ${supplier.bg}`}
                       >
                         <supplier.icon className="w-3.5 h-3.5" />
-                        <span>{food.supplierName}</span>
-                      </span>
+                        <span className="hover:underline">{food.supplierName}</span>
+                      </Link>
 
                       {food.cuisineType && (
                         <span className="px-3 py-1 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 text-xs font-bold">
@@ -789,14 +790,17 @@ export default function FoodDetailsPage() {
                 </h4>
 
                 <div className="flex items-center gap-3">
-                  <div
-                    className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-xs ${supplier.bg}`}
+                  <Link
+                    href={`/protected/profile/${food.supplierId}`}
+                    className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-xs hover:scale-105 transition-transform ${supplier.bg}`}
                   >
                     <supplier.icon className="w-4 h-4" />
-                  </div>
+                  </Link>
                   <div className="min-w-0 flex-1">
                     <div className="text-xs font-black text-gray-900 dark:text-white truncate">
-                      {food.supplierName}
+                      <Link href={`/protected/profile/${food.supplierId}`} className="hover:underline hover:text-emerald-500 transition-colors">
+                        {food.supplierName}
+                      </Link>
                     </div>
                     <div className="text-[10px] text-gray-400 capitalize">
                       {supplier.label}

@@ -37,6 +37,7 @@ import { useAddFood } from "@/hooks/useFoodQueries";
 import type { Allergen, QuantityUnit } from "@/types/food";
 import VoiceListingButton from "@/components/food/VoiceListingButton";
 import type { ParsedFoodListing } from "@/lib/ai/foodParser";
+import { useGamification } from "@/context/GamificationContext";
 
 interface AddFoodFormProps {
   userType: "individual" | "restaurant";
@@ -101,6 +102,7 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
   const isDark = theme === "dark";
   const router = useRouter();
   const { addFood, isAdding } = useAddFood();
+  const { showXP } = useGamification();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [images, setImages] = useState<ImagePreview[]>([]);
@@ -392,6 +394,11 @@ export default function AddFoodForm({ userType }: AddFoodFormProps) {
     try {
       await addFood(payload);
       toast.success("Food listed successfully! Community notified 🎉");
+      
+      // Trigger gamification XP (10 points per meal)
+      const mealsCount = parseInt(formData.quantity, 10) || 1;
+      showXP(mealsCount * 10, "Food Shared");
+      
       router.push(
         isRestaurant
           ? "/protected/dashboard?role=restaurant"

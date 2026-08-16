@@ -124,7 +124,7 @@ export function useConfirmReservationRequest() {
   const mutation = useMutation({
     mutationFn: confirmReservationRequest,
     onSuccess: (_data, id) => {
-      toast.success("Reservation confirmed");
+      toast.success("Reservation confirmed! Pickup code generated.");
       queryClient.invalidateQueries({ queryKey: ["reservation", id] });
       queryClient.invalidateQueries({ queryKey: ["myreservations"] });
       queryClient.invalidateQueries({ queryKey: ["incoming-reservations"] });
@@ -184,16 +184,19 @@ async function verifyPickupRequest(pickupCode: string): Promise<PickupVerificati
 // always "succeeded" without decoding anything) and its OTP tab (no
 // schema support, no working handler) with one real, working
 // verification path used by both manual code entry and actual QR decode.
-export function useVerifyPickup() {
+export function useVerifyPickup(onGamification?: (data: PickupVerificationResult) => void) {
   const queryClient = useQueryClient();
  
   const mutation = useMutation({
     mutationFn: verifyPickupRequest,
-    onSuccess: () => {
-      toast.success("Pickup verified successfully!");
+    onSuccess: (data) => {
+      toast.success("Pickup verified successfully! 🎉");
       queryClient.invalidateQueries({ queryKey: ["recentPickups"] });
       queryClient.invalidateQueries({ queryKey: ["mysharedfood"] });
       queryClient.invalidateQueries({ queryKey: ["incoming-reservations"] });
+      queryClient.invalidateQueries({ queryKey: ["userImpact"] });
+      // Trigger gamification callback for XP popups and badge celebrations
+      if (onGamification) onGamification(data);
     },
     onError: (error: Error) => toast.error(error.message || "Verification failed"),
   });

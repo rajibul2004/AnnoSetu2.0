@@ -8,6 +8,9 @@ import Footer from "@/components/layout/Footer";
 import ModernToaster from "@/components/common/ModernToaster";
 import InitialSplashScreen from "@/components/common/InitialSplashScreen";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
+import { GamificationProvider } from "@/context/GamificationContext";
+import XPPopup from "@/components/gamification/XPPopup";
+import BadgeUnlockModal from "@/components/gamification/BadgeUnlockModal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,12 +40,16 @@ export default function RootLayout({
       >
         <QueryProvider>
           <ThemeProvider>
-            <InitialSplashScreen />
-            <Navbar />
-            <main className="pb-20 md:pb-0">{children}</main>
-            <Footer />
-            <MobileBottomNav />
-            <ModernToaster />
+            <GamificationProvider>
+              <InitialSplashScreen />
+              <Navbar />
+              <main className="pb-20 md:pb-0">{children}</main>
+              <Footer />
+              <MobileBottomNav />
+              <ModernToaster />
+              <XPPopup />
+              <BadgeUnlockModal />
+            </GamificationProvider>
           </ThemeProvider>
         </QueryProvider>
       </body>

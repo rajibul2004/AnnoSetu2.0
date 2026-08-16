@@ -23,9 +23,12 @@ import {
   FaUtensils,
   FaMapMarkerAlt,
   FaStar,
+  FaMedal,
+  FaGlobe,
 } from "react-icons/fa";
 import toast from "react-hot-toast";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
+import CommunityLog from "./CommunityLog";
 import ReviewList from "@/components/reviews/ReviewList";
 import { formatDate, formatPrice } from "@/lib/formatters";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,6 +36,11 @@ import {
   useMyReservations,
   useCancelReservation,
 } from "@/hooks/useReservationQueries";
+import { useImpact } from "@/hooks/useImpact";
+import LevelProgressBar from "@/components/gamification/LevelProgressBar";
+import StreakWidget from "@/components/gamification/StreakWidget";
+import NextBadgeProgress from "@/components/gamification/NextBadgeProgress";
+import { getBadge, RARITY_STYLES } from "@/lib/badges";
 import type { ReservationDTO } from "@/types/reservation";
 
 // ---------------------------------------------------------------------------
@@ -170,8 +178,10 @@ function ScrollableContainer({
 export default function NGODashboard() {
   const router = useRouter();
   const { user } = useAuth();
-  const { reservations, isLoading } = useMyReservations();
+  const { reservations, isLoading: isResLoading } = useMyReservations();
+  const { data: impactData, isLoading: isImpactLoading } = useImpact();
   const { cancelReservation, isCancelling } = useCancelReservation();
+  const isLoading = isResLoading;
   const [activeTab, setActiveTab] = useState<NGOTab>("upcoming");
 
   const stats = useMemo(() => computeStats(reservations), [reservations]);
@@ -354,6 +364,129 @@ export default function NGODashboard() {
             </div>
           </div>
         </motion.div>
+
+        {/* NGO Impact Overview Section */}
+        {!isImpactLoading && impactData && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-8"
+          >
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 px-2">Your Environmental Impact</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-3xl border border-white/50 dark:border-white/5 rounded-3xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg mb-3 shadow-sm">
+                  <FaLeaf />
+                </div>
+                <div className="text-3xl font-black text-gray-900 dark:text-white mb-1">
+                  {impactData.impact.carbonSavedKg.toFixed(1)} <span className="text-base font-semibold text-gray-500">kg</span>
+                </div>
+                <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Carbon Prevented</div>
+              </div>
+
+              <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-3xl border border-white/50 dark:border-white/5 rounded-3xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col">
+                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg mb-3 shadow-sm">
+                  <FaUtensils />
+                </div>
+                <div className="text-3xl font-black text-gray-900 dark:text-white mb-1">
+                  {impactData.impact.mealsDonated}
+                </div>
+                <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Meals Rescued</div>
+              </div>
+
+              <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-3xl border border-white/50 dark:border-white/5 rounded-3xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col">
+                <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg mb-3 shadow-sm">
+                  <FaStar />
+                </div>
+                <div className="text-3xl font-black text-gray-900 dark:text-white mb-1">
+                  {impactData.impact.points}
+                </div>
+                <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Impact Points</div>
+              </div>
+
+              <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-3xl border border-white/50 dark:border-white/5 rounded-3xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col">
+                <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center text-lg mb-3 shadow-sm">
+                  <FaMedal />
+                </div>
+                <div className="text-3xl font-black text-gray-900 dark:text-white mb-1">
+                  {impactData.achievements.length}
+                </div>
+                <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Badges Unlocked</div>
+              </div>
+            </div>
+
+            {/* Level Progress Bar */}
+            <div className="mt-6">
+              <LevelProgressBar points={impactData.impact.points} />
+            </div>
+
+            {/* Streak + Next Badge Progress */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+              <StreakWidget 
+                currentStreak={impactData.streak?.currentStreak || 0} 
+                longestStreak={impactData.streak?.longestStreak || 0} 
+              />
+              <NextBadgeProgress 
+                category="meals_rescued" 
+                currentValue={impactData.impact.mealsRescued} 
+                label="Meals Rescued" 
+              />
+              <NextBadgeProgress 
+                category="carbon" 
+                currentValue={impactData.impact.carbonSavedKg} 
+                label="Carbon Saved" 
+              />
+            </div>
+
+          </motion.div>
+        )}
+
+        {/* Dedicated Badges Section */}
+        {!isImpactLoading && impactData?.achievements && impactData.achievements.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-amber-200/50 dark:border-amber-900/30 rounded-[2rem] p-6 sm:p-8 shadow-lg shadow-amber-500/5"
+          >
+            <h3 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white mb-6 flex items-center gap-3 tracking-tight">
+              <div className="p-2.5 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/40 rounded-xl">
+                <FaMedal className="text-amber-600 dark:text-amber-400 w-6 h-6" />
+              </div>
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-orange-500 dark:from-amber-400 dark:to-orange-400">
+                NGO Impact Badges
+              </span>
+            </h3>
+            
+            <div className="flex flex-wrap gap-3 sm:gap-4">
+              {impactData.achievements.map((ach) => {
+                const badge = getBadge(ach.badgeId);
+                const rarity = badge ? RARITY_STYLES[badge.rarity] : RARITY_STYLES.common;
+                const BadgeIcon = badge?.icon || FaMedal;
+                return (
+                  <div 
+                    key={ach.id} 
+                    className={`group relative flex items-center gap-3 px-5 py-3.5 bg-white dark:bg-slate-800 border-2 ${rarity.border} rounded-2xl shadow-sm ${rarity.glow ? `shadow-lg ${rarity.glow}` : ''} hover:-translate-y-1 transition-all duration-300 cursor-default`}
+                  >
+                    <div className={`p-2 rounded-full ${rarity.bg}`}>
+                      <BadgeIcon className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm sm:text-base font-black text-gray-800 dark:text-gray-100">
+                        {badge?.title || ach.badgeId.replace(/_/g, " ")}
+                      </span>
+                      {badge && (
+                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: rarity.border.includes('amber') ? '#d97706' : rarity.border.includes('purple') ? '#a855f7' : rarity.border.includes('blue') ? '#3b82f6' : '#6b7280' }}>
+                          {rarity.label}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
 
         {/* 4 Metric Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
@@ -861,6 +994,26 @@ export default function NGODashboard() {
             </div>
           </div>
         </div>
+
+        {/* Impact Story / Summary Card */}
+        <div className="mt-8 bg-blue-50 dark:bg-slate-900 border border-blue-200 dark:border-blue-900/60 p-5 sm:p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/40 text-blue-600 rounded-xl">
+              <FaGlobe className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="font-bold text-gray-900 dark:text-white mb-1">
+                Your Community Impact
+              </h4>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                You have rescued a total of {stats.totalMeals} meals, distributing {stats.totalMeals * 2} servings 
+                and preventing ~{Math.floor(stats.totalMeals * 2.5)}kg of CO₂ emissions. Thank you for your service!
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <CommunityLog />
       </div>
     </div>
   );

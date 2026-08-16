@@ -92,6 +92,12 @@ model User {
   ratingsReceived UserRating[]     @relation("ConsumerRatings")
   ratingsGiven    UserRating[]     @relation("SupplierRatings")
 
+  impact       UserImpact?
+  achievements UserAchievement[]
+  streak       UserStreak?
+  followers    Follow[] @relation("following")
+  following    Follow[] @relation("followers")
+
   @@index([role, isActive])
   @@index([deletedAt])
   @@map("users")
@@ -629,4 +635,55 @@ model Message {
   @@index([senderId])
   @@index([isRead])
   @@map("messages")
+}
+
+model UserImpact {
+  id            String @id @default(cuid())
+  userId        String @unique
+  points        Int    @default(0)
+  mealsRescued  Int    @default(0)
+  mealsDonated  Int    @default(0)
+  carbonSavedKg Float  @default(0.0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_impacts")
+}
+
+model UserAchievement {
+  id         String   @id @default(cuid())
+  userId     String
+  badgeId    String
+  unlockedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, badgeId])
+  @@map("user_achievements")
+}
+
+model UserStreak {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  currentStreak   Int       @default(0)
+  longestStreak   Int       @default(0)
+  lastActiveDate  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("user_streaks")
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("followers", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
 }

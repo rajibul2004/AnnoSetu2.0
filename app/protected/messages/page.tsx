@@ -67,7 +67,7 @@ function MessagesInboxContent() {
 
   return (
     <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-6 h-[calc(100dvh-7.5rem)] md:h-[calc(100vh-6rem)]">
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl rounded-2xl sm:rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-2xl overflow-hidden h-full flex flex-col md:flex-row">
+      <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-3xl rounded-3xl border border-white/40 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] overflow-hidden h-full flex flex-col md:flex-row">
         
         {/* ================= LEFT PANE: CONVERSATION LIST ================= */}
         <div
@@ -76,8 +76,8 @@ function MessagesInboxContent() {
           }`}
         >
           {/* Header & Search */}
-          <div className="p-4 border-b border-gray-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
-            <div className="flex items-center justify-between mb-3">
+          <div className="p-5 border-b border-gray-200/50 dark:border-white/5 bg-transparent">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm font-bold">
                   <FaCommentDots />
@@ -127,14 +127,20 @@ function MessagesInboxContent() {
                   <button
                     key={conv.id}
                     onClick={() => handleSelectConv(conv.id)}
-                    className={`w-full text-left p-3 rounded-2xl transition-all duration-200 flex items-start gap-3 cursor-pointer ${
+                    className={`w-full text-left p-3.5 rounded-2xl transition-all duration-300 flex items-start gap-3.5 cursor-pointer relative overflow-hidden group ${
                       isSelected
-                        ? "bg-emerald-500 text-white shadow-md"
+                        ? "bg-white/80 dark:bg-white/10 shadow-sm border border-gray-200/50 dark:border-white/5"
                         : hasUnread
-                        ? "bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 hover:bg-emerald-100/50"
-                        : "hover:bg-gray-100/80 dark:hover:bg-slate-800/60 text-gray-700 dark:text-gray-300"
+                        ? "bg-emerald-50/50 dark:bg-emerald-500/10 hover:bg-emerald-50 dark:hover:bg-emerald-500/20"
+                        : "hover:bg-white/50 dark:hover:bg-white/5 border border-transparent"
                     }`}
                   >
+                    {isSelected && (
+                      <motion.div
+                        layoutId="active-chat-indicator"
+                        className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-emerald-500 rounded-r-full"
+                      />
+                    )}
                     {/* User Avatar & Online Indicator */}
                     <div className="relative shrink-0 mt-0.5">
                       <div
@@ -149,8 +155,8 @@ function MessagesInboxContent() {
                       {conv.otherParticipant.isOnline && (
                         <span
                           className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 border-2 ${
-                            isSelected ? "border-emerald-600" : "border-white dark:border-slate-900"
-                          } bg-emerald-500 rounded-full shadow-[0_0_6px_rgba(16,185,129,0.8)]`}
+                            isSelected ? "border-white dark:border-slate-800" : "border-slate-50 dark:border-slate-900"
+                          } bg-emerald-500 rounded-full`}
                           title="Online now"
                         />
                       )}
@@ -163,10 +169,10 @@ function MessagesInboxContent() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1 mb-0.5">
                         <h4
-                          className={`text-xs font-extrabold truncate ${
+                          className={`text-sm font-bold tracking-tight truncate ${
                             isSelected
-                              ? "text-white"
-                              : "text-gray-900 dark:text-white"
+                              ? "text-gray-900 dark:text-white"
+                              : "text-gray-700 dark:text-gray-200"
                           }`}
                         >
                           {conv.otherParticipant.name}
@@ -189,10 +195,10 @@ function MessagesInboxContent() {
                       {/* Food Tag Pill */}
                       {conv.foodInfo && (
                         <div
-                          className={`flex items-center gap-1 text-[11px] font-semibold truncate mb-1 ${
+                          className={`flex items-center gap-1.5 text-[11px] font-medium truncate mb-1.5 ${
                             isSelected
-                              ? "text-white/90"
-                              : "text-emerald-600 dark:text-emerald-400"
+                              ? "text-gray-500 dark:text-gray-400"
+                              : "text-gray-500 dark:text-gray-400"
                           }`}
                         >
                           <FaUtensils className="text-[9px] shrink-0" />
@@ -214,11 +220,11 @@ function MessagesInboxContent() {
                         </p>
                       ) : (
                         <p
-                          className={`text-xs truncate ${
+                          className={`text-[13px] leading-snug truncate ${
                             isSelected
-                              ? "text-white/80"
+                              ? "text-gray-600 dark:text-gray-300"
                               : hasUnread
-                              ? "font-bold text-gray-900 dark:text-white"
+                              ? "font-semibold text-gray-900 dark:text-white"
                               : "text-gray-500 dark:text-gray-400"
                           }`}
                         >
@@ -265,18 +271,18 @@ function MessagesInboxContent() {
               <ChatWindow conversationId={selectedConvId} />
             </div>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/40 dark:bg-slate-950/30">
-              <div className="w-20 h-20 rounded-3xl bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-3xl mb-4 shadow-lg">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-transparent">
+              <div className="w-24 h-24 rounded-full bg-white/50 dark:bg-white/5 border border-white/60 dark:border-white/10 text-emerald-600 dark:text-emerald-500 flex items-center justify-center text-4xl mb-6 shadow-sm backdrop-blur-md">
                 <FaCommentDots />
               </div>
-              <h2 className="text-xl font-black text-gray-900 dark:text-white mb-2">
+              <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white mb-3">
                 Your Food Pickup Messages
               </h2>
-              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-md mb-6 leading-relaxed">
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mb-8 leading-relaxed">
                 Coordinate smoothly with food donors, chefs, and reservers. Share arrival ETAs, packaging requests, and pickup updates in real time.
               </p>
               <Link href="/public/food">
-                <button className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-2xl text-xs shadow-md transition-all cursor-pointer">
+                <button className="px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-105 hover:shadow-xl font-bold rounded-full text-sm transition-all cursor-pointer">
                   Explore Surplus Meals
                 </button>
               </Link>

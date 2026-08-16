@@ -85,6 +85,9 @@ export interface PickupVerificationResult {
   id: string;
   foodName: string;
   quantity: number;
+  pointsEarned?: number;
+  carbonSaved?: number;
+  newBadges?: string[];
 }
  
 export interface RecentPickupDTO {
