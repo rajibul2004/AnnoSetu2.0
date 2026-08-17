@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePublicProfile, useFollowUser, useUnfollowUser } from "@/hooks/useSocial";
 import StreakWidget from "@/components/gamification/StreakWidget";
+import LevelProgressBar from "@/components/gamification/LevelProgressBar";
+import CommunityLog from "@/components/dashboard/CommunityLog";
 import { BADGE_REGISTRY, getBadge, RARITY_STYLES } from "@/lib/badges";
 import { 
   FaUserPlus, 
@@ -15,7 +17,8 @@ import {
   FaBoxOpen, 
   FaLock, 
   FaStar,
-  FaMedal
+  FaMedal,
+  FaShieldAlt
 } from "react-icons/fa";
 
 export default function PublicProfilePage() {
@@ -74,115 +77,160 @@ export default function PublicProfilePage() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative rounded-[2rem] overflow-hidden bg-white dark:bg-slate-900/60 backdrop-blur-xl border border-gray-200/60 dark:border-white/10 p-5 sm:p-6 md:p-8 shadow-2xl shadow-gray-200/50 dark:shadow-none"
+          className="relative rounded-[2.5rem] overflow-hidden bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 dark:from-emerald-800 dark:via-teal-800 dark:to-cyan-900 p-6 sm:p-8 md:p-10 shadow-2xl border border-white/10"
         >
-          <div className="flex flex-col md:flex-row items-center md:items-start gap-5 sm:gap-6">
+          {/* Subtle Ambient Light Gradients */}
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 bg-teal-400/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-80 h-80 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 sm:gap-8">
             {/* Avatar */}
-            <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-[2rem] bg-gradient-to-tr from-emerald-400 to-teal-400 p-1 flex-shrink-0 shadow-lg shadow-emerald-500/20 rotate-3 hover:rotate-0 transition-transform duration-300">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-36 md:h-36 rounded-[2rem] bg-white/20 backdrop-blur-md p-1.5 flex-shrink-0 shadow-lg border border-white/30 rotate-3 hover:rotate-0 transition-transform duration-300">
               <div className="w-full h-full rounded-[1.75rem] bg-white dark:bg-neutral-900 flex items-center justify-center overflow-hidden">
                 {profile.avatarUrl ? (
                   <img src={profile.avatarUrl} alt={profile.name} className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-3xl sm:text-4xl font-black text-gray-300 dark:text-neutral-600">{profile.name.charAt(0)}</span>
+                  <span className="text-4xl sm:text-5xl font-black text-emerald-500/50">{profile.name.charAt(0)}</span>
                 )}
               </div>
             </div>
 
             {/* User Info */}
-            <div className="flex-1 text-center md:text-left space-y-3 w-full">
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 justify-between w-full">
+            <div className="flex-1 text-center md:text-left space-y-4 w-full">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 justify-between w-full">
                 <div>
-                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-black bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-neutral-400 bg-clip-text text-transparent tracking-tight">
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight drop-shadow-sm">
                     {profile.name}
                   </h1>
-                  <p className="text-emerald-600 dark:text-emerald-400 font-bold mt-1 text-xs sm:text-sm uppercase tracking-widest">{profile.role}</p>
+                  <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-[10px] sm:text-xs font-semibold text-white uppercase tracking-wider mt-2 border border-white/20">
+                    <FaShieldAlt className="w-3 h-3 text-teal-200" />
+                    <span>{profile.role === 'restaurant' ? 'Restaurant Partner' : 'Individual Partner'}</span>
+                  </div>
                 </div>
                 
                 {/* Follow Button */}
                 <button
                   onClick={handleFollowToggle}
                   disabled={isMutating}
-                  className={`w-full sm:w-auto px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold transition-all shadow-sm ${
+                  className={`w-full sm:w-auto px-6 py-3 rounded-2xl flex items-center justify-center gap-2 text-sm font-black transition-all duration-300 shadow-xl border ${
                     profile.isFollowing 
-                      ? "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700 border border-gray-200 dark:border-white/10" 
-                      : "bg-emerald-500 text-white hover:bg-emerald-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/25 active:translate-y-0"
+                      ? "bg-white/10 text-white hover:bg-white/20 border-white/20 backdrop-blur-md" 
+                      : "bg-white text-emerald-600 hover:bg-gray-50 border-white hover:scale-[1.03] hover:-translate-y-0.5"
                   }`}
                 >
                   {isMutating ? (
                     <FaSpinner className="animate-spin w-4 h-4" />
                   ) : profile.isFollowing ? (
-                    <><FaUserMinus className="w-3.5 h-3.5" /> Unfollow</>
+                    <><FaUserMinus className="w-4 h-4" /> Unfollow</>
                   ) : (
-                    <><FaUserPlus className="w-3.5 h-3.5" /> Follow</>
+                    <><FaUserPlus className="w-4 h-4" /> Follow</>
                   )}
                 </button>
               </div>
 
               {profile.bio && (
-                <p className="text-gray-600 dark:text-neutral-300 max-w-2xl text-xs sm:text-sm leading-relaxed mx-auto md:mx-0">
+                <p className="text-emerald-50 max-w-2xl text-sm sm:text-base leading-relaxed mx-auto md:mx-0 font-medium">
                   {profile.bio}
                 </p>
               )}
 
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 justify-center md:justify-start pt-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-lg sm:text-xl font-black">{profile.followersCount}</span>
-                  <span className="text-gray-500 dark:text-neutral-400 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Followers</span>
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6 justify-center md:justify-start pt-2">
+                <div className="flex items-center gap-2 text-white">
+                  <span className="text-xl sm:text-2xl font-black drop-shadow-md">{profile.followersCount}</span>
+                  <span className="text-emerald-100 text-xs font-bold uppercase tracking-wider">Followers</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-lg sm:text-xl font-black">{profile.followingCount}</span>
-                  <span className="text-gray-500 dark:text-neutral-400 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Following</span>
-                </div>
-                <div className="hidden sm:block h-6 w-px bg-gray-200 dark:bg-white/10 mx-1"></div>
-                <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-400/10 px-3 py-1.5 rounded-lg text-xs font-black border border-amber-200 dark:border-amber-400/20 shadow-sm">
-                  <FaStar className="w-3 h-3" />
-                  <span>Level {profile.level?.number || 1}: {profile.level?.title || 'Seed'}</span>
+                <div className="flex items-center gap-2 text-white">
+                  <span className="text-xl sm:text-2xl font-black drop-shadow-md">{profile.followingCount}</span>
+                  <span className="text-emerald-100 text-xs font-bold uppercase tracking-wider">Following</span>
                 </div>
               </div>
             </div>
           </div>
         </motion.div>
 
-        {/* Stats Row */}
+        {/* Unified Compact Metrics Grid */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mt-6"
         >
-          {[
-            { label: "Points", value: profile.points, icon: FaStar, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-100 dark:bg-amber-400/10" },
-            { label: "Rescued", value: profile.mealsRescued, icon: FaBoxOpen, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100 dark:bg-blue-400/10" },
-            { label: "Shared", value: profile.mealsShared, icon: FaUtensils, color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-100 dark:bg-orange-400/10" },
-            { label: "Saved", value: `${profile.carbonSaved}kg`, icon: FaLeaf, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-400/10" },
-          ].map((stat, idx) => (
-            <div key={idx} className="bg-white dark:bg-slate-900/60 backdrop-blur-md border border-gray-200/60 dark:border-white/5 rounded-2xl p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col items-center justify-center text-center">
-              <div className={`p-2.5 rounded-xl ${stat.bg} ${stat.color} mb-2 shadow-sm`}>
-                <stat.icon className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white">{typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}</h3>
-              <p className="text-gray-500 dark:text-neutral-400 text-[10px] sm:text-xs font-bold mt-0.5 uppercase tracking-wider">{stat.label}</p>
+          {/* Metric 1 */}
+          <div className="bg-emerald-50 dark:bg-emerald-900/20 backdrop-blur-md rounded-2xl p-4 border border-emerald-100 dark:border-emerald-800/30 flex flex-col justify-between shadow-sm">
+            <span className="text-[10px] sm:text-xs text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-wider flex justify-between items-center">
+              Total Impact <FaLeaf className="text-emerald-500 w-3 h-3" />
+            </span>
+            <div className="text-2xl font-black mt-2 text-gray-900 dark:text-white drop-shadow-sm truncate">
+              {(profile.mealsRescued + profile.mealsShared).toLocaleString()} <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-500">Meals</span>
             </div>
-          ))}
+          </div>
+
+          {/* Metric 2 */}
+          <div className="bg-white dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-4 border border-gray-200/60 dark:border-white/5 flex flex-col justify-between shadow-sm">
+            <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider flex justify-between items-center">
+              CO₂ Saved <FaShieldAlt className="text-gray-400 w-3 h-3" />
+            </span>
+            <div className="text-2xl font-black mt-2 text-gray-900 dark:text-white drop-shadow-sm truncate">
+              {profile.carbonSaved.toFixed(1)} <span className="text-xs font-semibold text-gray-500">kg</span>
+            </div>
+          </div>
+
+          {/* Metric 3 */}
+          <div className="bg-amber-50 dark:bg-amber-900/20 backdrop-blur-md rounded-2xl p-4 border border-amber-100 dark:border-amber-800/30 flex flex-col justify-between shadow-sm">
+            <span className="text-[10px] sm:text-xs text-amber-700 dark:text-amber-400 font-bold uppercase tracking-wider flex justify-between items-center">
+              Impact Points <FaStar className="text-amber-500 w-3 h-3" />
+            </span>
+            <div className="text-2xl font-black mt-2 text-gray-900 dark:text-white drop-shadow-sm truncate">
+              {profile.points.toLocaleString()}
+            </div>
+          </div>
+
+          {/* Metric 4 */}
+          <div className="bg-purple-50 dark:bg-purple-900/20 backdrop-blur-md rounded-2xl p-4 border border-purple-100 dark:border-purple-800/30 flex flex-col justify-between shadow-sm">
+            <span className="text-[10px] sm:text-xs text-purple-700 dark:text-purple-400 font-bold uppercase tracking-wider flex justify-between items-center">
+              Badges <FaMedal className="text-purple-500 w-3 h-3" />
+            </span>
+            <div className="text-2xl font-black mt-2 text-gray-900 dark:text-white drop-shadow-sm truncate">
+              {profile.badges.length}
+            </div>
+          </div>
+
+          {/* Metric 5 */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 backdrop-blur-md rounded-2xl p-4 border border-blue-100 dark:border-blue-800/30 flex flex-col justify-between shadow-sm">
+            <span className="text-[10px] sm:text-xs text-blue-700 dark:text-blue-400 font-bold uppercase tracking-wider flex justify-between items-center">
+              Meals Rescued <FaBoxOpen className="text-blue-500 w-3 h-3" />
+            </span>
+            <div className="text-2xl font-black mt-2 text-gray-900 dark:text-white drop-shadow-sm truncate">
+              {profile.mealsRescued.toLocaleString()}
+            </div>
+          </div>
+
+          {/* Metric 6 */}
+          <div className="bg-orange-50 dark:bg-orange-900/20 backdrop-blur-md rounded-2xl p-4 border border-orange-100 dark:border-orange-800/30 flex flex-col justify-between shadow-sm">
+            <span className="text-[10px] sm:text-xs text-orange-700 dark:text-orange-400 font-bold uppercase tracking-wider flex justify-between items-center">
+              Meals Shared <FaUtensils className="text-orange-500 w-3 h-3" />
+            </span>
+            <div className="text-2xl font-black mt-2 text-gray-900 dark:text-white drop-shadow-sm truncate">
+              {profile.mealsShared.toLocaleString()}
+            </div>
+          </div>
         </motion.div>
 
-        {/* Middle Row: Streak & Activity */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex flex-col gap-5 sm:gap-6"
-          >
-            {/* Streak Widget Wrapper */}
-            <div className="flex-1">
-              <StreakWidget 
-                currentStreak={profile.currentStreak} 
-                longestStreak={profile.longestStreak} 
-              />
-            </div>
-          </motion.div>
+        {/* Level Progress Bar & Streak Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <LevelProgressBar points={profile.points} />
+          </div>
+          <div className="lg:col-span-1">
+            <StreakWidget 
+              currentStreak={profile.currentStreak} 
+              longestStreak={profile.longestStreak} 
+            />
+          </div>
+        </div>
 
+        {/* Middle Row: Activity */}
+        <div className="grid grid-cols-1 gap-5 sm:gap-6">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -257,6 +305,11 @@ export default function PublicProfilePage() {
               ))}
             </div>
           </motion.div>
+      </div>
+      
+      {/* Community Log at bottom */}
+      <div className="mt-12 max-w-7xl mx-auto w-full">
+        <CommunityLog />
       </div>
     </div>
   );
