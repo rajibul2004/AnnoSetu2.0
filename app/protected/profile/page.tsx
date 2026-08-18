@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import Link from "next/link";
 import {
   FaUser,
   FaEnvelope,
@@ -29,6 +30,9 @@ import {
   FaUtensils,
   FaCertificate,
   FaCheckCircle,
+  FaBoxOpen,
+  FaLeaf,
+  FaMedal,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -39,7 +43,12 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import VerificationBadgesShelf from "@/components/profile/VerificationBadgesShelf";
 import DocumentVerificationSection from "@/components/profile/DocumentVerificationSection";
 import CustomDietaryTagManager from "@/components/profile/CustomDietaryTagManager";
+import StreakWidget from "@/components/gamification/StreakWidget";
+import LevelProgressBar from "@/components/gamification/LevelProgressBar";
 import { useProfile, useUpdateProfile } from "@/hooks/useProfileQueries";
+import { usePublicProfile } from "@/hooks/useSocial";
+import Cropper from "react-easy-crop";
+import getCroppedImg from "@/utils/cropImage";
 import type { ProfileDTO, BadgeId } from "@/types/profile";
 
 type TabKey = "profile" | "verification" | "dietary" | "security" | "preferences";
@@ -131,18 +140,24 @@ export default function ProfilePage() {
   const { theme, setTheme } = useTheme();
   const isDark = theme === "dark";
   const { profile, isLoading: profileLoading } = useProfile();
+  const { data: publicProfile } = usePublicProfile(profile?.id || "");
   const { updateProfile, isUpdating } = useUpdateProfile();
 
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("profile");
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-
-  // Pending document uploads
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [pendingDocFiles, setPendingDocFiles] = useState<Record<string, File | null>>({});
 
   const [formData, setFormData] = useState<ProfileFormData | null>(null);
   const [originalData, setOriginalData] = useState<ProfileFormData | null>(null);
+
+  // Cropper State
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -175,8 +190,26 @@ export default function ProfilePage() {
       toast.error("Image size should be less than 5MB");
       return;
     }
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      setCropSrc(reader.result?.toString() || "");
+      setIsCropModalOpen(true);
+    });
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const saveCroppedImage = async () => {
+    try {
+      const croppedImage = await getCroppedImg(cropSrc!, croppedAreaPixels);
+      if (croppedImage) {
+        setImageFile(croppedImage);
+        setImagePreview(URL.createObjectURL(croppedImage));
+        setIsCropModalOpen(false);
+      }
+    } catch (e) {
+      toast.error("Failed to crop image");
+    }
   };
 
   const removeImage = () => {
@@ -293,7 +326,11 @@ export default function ProfilePage() {
       payload.append("website", formData.website);
     }
 
-    if (imageFile) payload.append("profileImage", imageFile);
+    if (imageFile) {
+      payload.append("profileImage", imageFile);
+    } else if (imagePreview === null && profile.profileImage) {
+      payload.append("removeProfileImage", "true");
+    }
 
     // Append any document files
     Object.entries(pendingDocFiles).forEach(([key, file]) => {
@@ -385,160 +422,200 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setTheme(isDark ? "light" : "dark")}
-            className="w-10 h-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl flex items-center justify-center border border-gray-200/80 dark:border-gray-700/80 hover:bg-white dark:hover:bg-gray-700 shadow-sm transition-all cursor-pointer"
-            aria-label="Toggle Theme"
-          >
-            {isDark ? (
-              <FaSun className="w-4 h-4 text-amber-400" />
+          <div className="flex items-center gap-3">
+            {/* Action Button */}
+            {!isEditing ? (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="hidden sm:flex bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl px-4 py-2 font-bold shadow-sm transition-all items-center gap-2 cursor-pointer"
+              >
+                <FaEdit className="w-4 h-4" />
+                <span>Edit Profile</span>
+              </button>
             ) : (
-              <FaMoon className="w-4 h-4 text-indigo-600" />
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="hidden sm:flex bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-2xl px-4 py-2 font-semibold transition-all items-center gap-2 cursor-pointer"
+              >
+                <FaTimesCircle className="w-4 h-4" />
+                <span>Cancel</span>
+              </button>
             )}
-          </button>
+
+            <button
+              type="button"
+              onClick={() => setTheme(isDark ? "light" : "dark")}
+              className="w-10 h-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl flex items-center justify-center border border-gray-200/80 dark:border-gray-700/80 hover:bg-white dark:hover:bg-gray-700 shadow-sm transition-all cursor-pointer"
+              aria-label="Toggle Theme"
+            >
+              {isDark ? (
+                <FaSun className="w-4 h-4 text-amber-400" />
+              ) : (
+                <FaMoon className="w-4 h-4 text-indigo-600" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Main Grid Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Sidebar */}
-          <div className="lg:col-span-4 static lg:sticky lg:top-28 z-20">
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
+        
+        {/* --- INJECTED PUBLIC PROFILE PREVIEW --- */}
+        {publicProfile && (
+          <div className="mb-10 space-y-6">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-5 sm:p-8 rounded-3xl bg-white/85 dark:bg-gray-900/85 backdrop-blur-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-xl"
+              className={`relative rounded-[2.5rem] overflow-hidden bg-gradient-to-r ${styles.gradient} p-6 sm:p-8 md:p-10 shadow-2xl border border-white/10`}
             >
-              {/* Avatar Frame */}
-              <div className="relative mb-6 mx-auto w-32 h-32">
-                <div
-                  className={`w-32 h-32 rounded-3xl bg-gradient-to-tr ${styles.gradient} p-1 shadow-lg`}
-                >
-                  <div className="w-full h-full rounded-[22px] overflow-hidden bg-white dark:bg-gray-950 flex items-center justify-center">
+              {/* Subtle Ambient Light Gradients */}
+              <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 bg-white/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-80 h-80 bg-black/10 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 sm:gap-8">
+                {/* Avatar (Remains editable on click if isEditing) */}
+                <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-36 md:h-36 rounded-[2rem] bg-white/20 backdrop-blur-md p-1.5 flex-shrink-0 shadow-lg border border-white/30 rotate-3 hover:rotate-0 transition-transform duration-300 relative">
+                  <div className="w-full h-full rounded-[1.75rem] bg-white dark:bg-neutral-900 flex items-center justify-center overflow-hidden relative">
                     {imagePreview ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={imagePreview}
-                        alt={displayName}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={imagePreview} alt={displayName} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                        <FaUser className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+                      <span className="text-4xl sm:text-5xl font-black text-white/50">{displayName.charAt(0)}</span>
+                    )}
+                  </div>
+                  
+                  {isEditing && (
+                    <div className="absolute -bottom-2 right-0 flex gap-1.5 z-30">
+                      <label className="w-8 h-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center cursor-pointer shadow-md transition-transform hover:scale-110">
+                        <FaCamera className="w-3.5 h-3.5" />
+                        <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                      </label>
+                      {imagePreview && (
+                        <button onClick={removeImage} type="button" className="w-8 h-8 bg-rose-600 hover:bg-rose-700 text-white rounded-full flex items-center justify-center shadow-md transition-transform hover:scale-110 cursor-pointer">
+                          <FaTrash className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* User Info */}
+                <div className="flex-1 text-center md:text-left space-y-4 w-full">
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 justify-between w-full">
+                    <div>
+                      <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight drop-shadow-sm">
+                        {displayName}
+                      </h1>
+                      <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-[10px] sm:text-xs font-semibold text-white uppercase tracking-wider mt-2 border border-white/20">
+                        <FaShieldAlt className="w-3 h-3 text-teal-200" />
+                        <span>{profile.role === 'restaurant' ? 'Restaurant Partner' : 'Individual Partner'}</span>
                       </div>
-                    )}
+                    </div>
+                    
+                    {/* View Public Profile Link */}
+                    <Link
+                      href={`/protected/profile/${profile.id}`}
+                      className="w-full sm:w-auto px-6 py-3 rounded-2xl flex items-center justify-center gap-2 text-sm font-black transition-all duration-300 shadow-xl border bg-white/20 text-white hover:bg-white/30 border-white/30 backdrop-blur-md"
+                    >
+                      <FaUser className="w-4 h-4" /> Preview Public Profile
+                    </Link>
                   </div>
-                </div>
 
-                {isEditing && (
-                  <div className="absolute -bottom-2 right-0 flex gap-1.5 z-30">
-                    <label className="w-8 h-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center cursor-pointer shadow-md transition-transform hover:scale-110">
-                      <FaCamera className="w-3.5 h-3.5" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                      />
-                    </label>
-                    {imagePreview && (
-                      <button
-                        onClick={removeImage}
-                        type="button"
-                        className="w-8 h-8 bg-rose-600 hover:bg-rose-700 text-white rounded-full flex items-center justify-center shadow-md transition-transform hover:scale-110 cursor-pointer"
-                      >
-                        <FaTrash className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+                  {profile.bio && (
+                    <p className="text-white/90 max-w-2xl text-sm sm:text-base leading-relaxed mx-auto md:mx-0 font-medium">
+                      {profile.bio}
+                    </p>
+                  )}
 
-              {/* Identity & Status */}
-              <div className="text-center mb-6">
-                <h2 className="text-xl font-black text-gray-900 dark:text-white">
-                  {displayName}
-                </h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center justify-center gap-1">
-                  <FaEnvelope className="w-3 h-3" />
-                  <span>{profile.email}</span>
-                </p>
-              </div>
-
-              {/* Trust Badges Shelf Preview */}
-              <div className="mb-6 p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200/60 dark:border-gray-700/60">
-                <div className="flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-200 mb-2">
-                  <span className="flex items-center gap-1.5">
-                    <FaShieldAlt className="text-emerald-500" />
-                    Trust & Verification
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("verification")}
-                    className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold"
-                  >
-                    View All &rarr;
-                  </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div
-                    title="Food Safety Verification"
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs ${
-                      isFoodSafetyVerified
-                        ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/30"
-                        : "bg-gray-200 dark:bg-slate-700 text-gray-400"
-                    }`}
-                  >
-                    <FaShieldAlt />
-                  </div>
-                  <div
-                    title="Business / Entity License"
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs ${
-                      isLicensed
-                        ? "bg-blue-500 text-white shadow-sm shadow-blue-500/30"
-                        : "bg-gray-200 dark:bg-slate-700 text-gray-400"
-                    }`}
-                  >
-                    <FaCertificate />
-                  </div>
-                  <div
-                    title="Community Hero"
-                    className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center text-xs shadow-sm shadow-rose-500/30"
-                  >
-                    <FaStar />
-                  </div>
-                  <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 ml-1">
-                    {earnedBadges.length > 0 ? `${earnedBadges.length} Badges active` : "Basic Member"}
+                  <div className="flex flex-wrap items-center gap-4 sm:gap-6 justify-center md:justify-start pt-2">
+                    <div className="flex items-center gap-2 text-white">
+                      <span className="text-xl sm:text-2xl font-black drop-shadow-md">{publicProfile.followersCount}</span>
+                      <span className="text-white/80 text-xs font-bold uppercase tracking-wider">Followers</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-white">
+                      <span className="text-xl sm:text-2xl font-black drop-shadow-md">{publicProfile.followingCount}</span>
+                      <span className="text-white/80 text-xs font-bold uppercase tracking-wider">Following</span>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* Action Button */}
-              {!isEditing ? (
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(true)}
-                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl py-3.5 font-bold shadow-lg shadow-emerald-500/20 hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <FaEdit className="w-4 h-4" />
-                  <span>Edit Profile Details</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-2xl py-3 font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <FaTimesCircle className="w-4 h-4" />
-                  <span>Cancel Editing</span>
-                </button>
-              )}
             </motion.div>
-          </div>
 
-          {/* Right Main Content Card */}
-          <div className="lg:col-span-8 relative z-10">
+            {/* Unified Compact Metrics Grid */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mt-6"
+            >
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 backdrop-blur-md rounded-2xl p-4 border border-emerald-100 dark:border-emerald-800/30 flex flex-col justify-between shadow-sm">
+                <span className="text-[10px] sm:text-xs text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-wider flex justify-between items-center">
+                  Total Impact <FaLeaf className="text-emerald-500 w-3 h-3" />
+                </span>
+                <div className="text-2xl font-black mt-2 text-gray-900 dark:text-white drop-shadow-sm truncate">
+                  {(publicProfile.mealsRescued + publicProfile.mealsShared).toLocaleString()} <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-500">Meals</span>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-4 border border-gray-200/60 dark:border-white/5 flex flex-col justify-between shadow-sm">
+                <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider flex justify-between items-center">
+                  CO₂ Saved <FaShieldAlt className="text-gray-400 w-3 h-3" />
+                </span>
+                <div className="text-2xl font-black mt-2 text-gray-900 dark:text-white drop-shadow-sm truncate">
+                  {publicProfile.carbonSaved.toFixed(1)} <span className="text-xs font-semibold text-gray-500">kg</span>
+                </div>
+              </div>
+              <div className="bg-amber-50 dark:bg-amber-900/20 backdrop-blur-md rounded-2xl p-4 border border-amber-100 dark:border-amber-800/30 flex flex-col justify-between shadow-sm">
+                <span className="text-[10px] sm:text-xs text-amber-700 dark:text-amber-400 font-bold uppercase tracking-wider flex justify-between items-center">
+                  Impact Points <FaStar className="text-amber-500 w-3 h-3" />
+                </span>
+                <div className="text-2xl font-black mt-2 text-gray-900 dark:text-white drop-shadow-sm truncate">
+                  {publicProfile.points.toLocaleString()}
+                </div>
+              </div>
+              <div className="bg-purple-50 dark:bg-purple-900/20 backdrop-blur-md rounded-2xl p-4 border border-purple-100 dark:border-purple-800/30 flex flex-col justify-between shadow-sm">
+                <span className="text-[10px] sm:text-xs text-purple-700 dark:text-purple-400 font-bold uppercase tracking-wider flex justify-between items-center">
+                  Badges <FaMedal className="text-purple-500 w-3 h-3" />
+                </span>
+                <div className="text-2xl font-black mt-2 text-gray-900 dark:text-white drop-shadow-sm truncate">
+                  {publicProfile.badges.length}
+                </div>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 backdrop-blur-md rounded-2xl p-4 border border-blue-100 dark:border-blue-800/30 flex flex-col justify-between shadow-sm">
+                <span className="text-[10px] sm:text-xs text-blue-700 dark:text-blue-400 font-bold uppercase tracking-wider flex justify-between items-center">
+                  Meals Rescued <FaBoxOpen className="text-blue-500 w-3 h-3" />
+                </span>
+                <div className="text-2xl font-black mt-2 text-gray-900 dark:text-white drop-shadow-sm truncate">
+                  {publicProfile.mealsRescued.toLocaleString()}
+                </div>
+              </div>
+              <div className="bg-orange-50 dark:bg-orange-900/20 backdrop-blur-md rounded-2xl p-4 border border-orange-100 dark:border-orange-800/30 flex flex-col justify-between shadow-sm">
+                <span className="text-[10px] sm:text-xs text-orange-700 dark:text-orange-400 font-bold uppercase tracking-wider flex justify-between items-center">
+                  Meals Shared <FaUtensils className="text-orange-500 w-3 h-3" />
+                </span>
+                <div className="text-2xl font-black mt-2 text-gray-900 dark:text-white drop-shadow-sm truncate">
+                  {publicProfile.mealsShared.toLocaleString()}
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Level Progress Bar & Streak Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-2">
+                <LevelProgressBar points={publicProfile.points} />
+              </div>
+              <div className="lg:col-span-1">
+                <StreakWidget currentStreak={publicProfile.currentStreak} longestStreak={publicProfile.longestStreak} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Main Content Area */}
+          <div className="lg:col-span-12 relative z-10">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1082,6 +1159,75 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Crop Modal */}
+      <AnimatePresence>
+        {isCropModalOpen && cropSrc && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-gray-900 rounded-3xl overflow-hidden shadow-2xl w-full max-w-lg"
+            >
+              <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Adjust Profile Picture</h3>
+                <button
+                  type="button"
+                  onClick={() => setIsCropModalOpen(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
+                >
+                  <FaTimesCircle className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="relative w-full h-[400px] bg-gray-900">
+                <Cropper
+                  image={cropSrc}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1}
+                  cropShape="round"
+                  showGrid={false}
+                  onCropChange={setCrop}
+                  onCropComplete={(_, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels)}
+                  onZoomChange={setZoom}
+                />
+              </div>
+              <div className="p-4 sm:p-6 bg-gray-50 dark:bg-gray-800/50">
+                <div className="flex items-center gap-4 mb-6">
+                  <span className="text-xs font-bold text-gray-500">Zoom</span>
+                  <input
+                    type="range"
+                    value={zoom}
+                    min={1}
+                    max={3}
+                    step={0.1}
+                    aria-labelledby="Zoom"
+                    onChange={(e) => setZoom(Number(e.target.value))}
+                    className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsCropModalOpen(false)}
+                    className="flex-1 px-4 py-3 rounded-2xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveCroppedImage}
+                    className="flex-1 px-4 py-3 rounded-2xl bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/30 hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <FaCheckCircle className="w-4 h-4" /> Save Crop
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

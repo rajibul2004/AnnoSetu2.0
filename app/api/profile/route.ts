@@ -205,6 +205,7 @@ export async function PATCH(request: NextRequest) {
     }
     profileImageUrl = await uploadProfileImage(imageFile);
   }
+  const removeProfileImage = get("removeProfileImage") === "true";
 
   // Helper for document uploads
   const uploadDoc = async (key: string): Promise<string | undefined> => {
@@ -243,7 +244,7 @@ export async function PATCH(request: NextRequest) {
           ...(phone !== undefined ? { phone } : {}),
           ...(address !== undefined ? { address } : {}),
           ...(bio !== undefined ? { bio } : {}),
-          ...(profileImageUrl ? { profileImage: profileImageUrl } : {}),
+          ...(profileImageUrl ? { profileImage: profileImageUrl } : removeProfileImage ? { profileImage: null } : {}),
           ...(get("gender") ? { gender: get("gender") as never } : {}),
           ...(get("dateOfBirth") ? { dateOfBirth: new Date(get("dateOfBirth")!) } : {}),
           ...(get("cookingExpertise") !== undefined
@@ -277,7 +278,7 @@ export async function PATCH(request: NextRequest) {
           ...(phone !== undefined ? { phone } : {}),
           ...(address !== undefined ? { address } : {}),
           ...(bio !== undefined ? { bio } : {}),
-          ...(profileImageUrl ? { profileImage: profileImageUrl } : {}),
+          ...(profileImageUrl ? { profileImage: profileImageUrl } : removeProfileImage ? { profileImage: null } : {}),
           ...(get("fssaiLicense") !== undefined ? { fssaiLicense: get("fssaiLicense") } : {}),
           ...(fssaiDocUrl ? { fssaiDocument: fssaiDocUrl } : {}),
           ...(fssaiStatus ? { fssaiStatus } : {}),
@@ -322,7 +323,7 @@ export async function PATCH(request: NextRequest) {
           ...(phone !== undefined ? { phone } : {}),
           ...(address !== undefined ? { address } : {}),
           ...(bio !== undefined ? { bio } : {}),
-          ...(profileImageUrl ? { profileImage: profileImageUrl } : {}),
+          ...(profileImageUrl ? { profileImage: profileImageUrl } : removeProfileImage ? { profileImage: null } : {}),
           ...(get("website") !== undefined ? { website: get("website") } : {}),
         },
       });

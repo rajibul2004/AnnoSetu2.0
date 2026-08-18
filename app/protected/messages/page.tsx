@@ -271,19 +271,25 @@ function MessagesInboxContent() {
               <ChatWindow conversationId={selectedConvId} />
             </div>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-transparent">
-              <div className="w-24 h-24 rounded-full bg-white/50 dark:bg-white/5 border border-white/60 dark:border-white/10 text-emerald-600 dark:text-emerald-500 flex items-center justify-center text-4xl mb-6 shadow-sm backdrop-blur-md">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/30 dark:bg-slate-950/20 relative overflow-hidden">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-400/10 dark:bg-emerald-500/5 blur-[100px] rounded-full pointer-events-none" />
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="w-24 h-24 rounded-3xl bg-white/80 dark:bg-slate-900/80 border border-emerald-100 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-4xl mb-6 shadow-xl shadow-emerald-500/10 backdrop-blur-xl relative z-10"
+              >
                 <FaCommentDots />
-              </div>
-              <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white mb-3">
-                Your Food Pickup Messages
+              </motion.div>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white mb-3 relative z-10">
+                Your Pickup Inbox
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mb-8 leading-relaxed">
-                Coordinate smoothly with food donors, chefs, and reservers. Share arrival ETAs, packaging requests, and pickup updates in real time.
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 max-w-sm mb-8 leading-relaxed relative z-10">
+                Coordinate smoothly with food donors, chefs, and reservers. Share your QR Pass, arrival ETAs, and pickup updates in real time.
               </p>
-              <Link href="/public/food">
-                <button className="px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-105 hover:shadow-xl font-bold rounded-full text-sm transition-all cursor-pointer">
-                  Explore Surplus Meals
+              <Link href="/public/food" className="relative z-10">
+                <button className="px-8 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-600/30 text-white font-black rounded-2xl text-sm transition-all hover:-translate-y-0.5 cursor-pointer flex items-center gap-2">
+                  <FaUtensils />
+                  <span>Explore Surplus Meals</span>
                 </button>
               </Link>
             </div>

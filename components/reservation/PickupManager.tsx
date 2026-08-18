@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaQrcode,
@@ -38,8 +39,11 @@ interface QrPayload {
 }
 
 export default function PickupManager() {
+  const searchParams = useSearchParams();
+  const initialCode = searchParams.get("code");
+
   const [verificationMethod, setVerificationMethod] = useState<VerificationMethod>("code");
-  const [pickupCode, setPickupCode] = useState("");
+  const [pickupCode, setPickupCode] = useState(initialCode || "");
   const [scanning, setScanning] = useState(false);
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [lastVerified, setLastVerified] = useState<PickupVerificationResult | null>(null);
@@ -69,7 +73,20 @@ export default function PickupManager() {
   const { recentPickups, isLoading: pickupsLoading, refetch: refetchRecent } = useRecentPickups();
 
   const handleVerifyCode = async (codeToVerify: string) => {
-    const cleanCode = codeToVerify.trim().toUpperCase();
+    let cleanCode = codeToVerify.trim();
+    
+    // Check if the user pasted the raw JSON payload from the QR code
+    try {
+      const parsed: QrPayload = JSON.parse(cleanCode);
+      if (parsed.pickupCode || parsed.code) {
+        cleanCode = (parsed.pickupCode || parsed.code) as string;
+      }
+    } catch {
+      // Not a JSON payload, proceed with raw string
+    }
+    
+    cleanCode = cleanCode.toUpperCase();
+
     if (!cleanCode) {
       toast.error("Please enter a valid pickup code");
       return;
@@ -86,22 +103,30 @@ export default function PickupManager() {
     }
   };
 
-  const decodeFrame = useCallback((): string | null => {
-    const screenshot = webcamRef.current?.getScreenshot();
-    if (!screenshot) return null;
+  // Auto-verify if code is present in URL
+  const hasAutoVerified = useRef(false);
+  useEffect(() => {
+    if (initialCode && !hasAutoVerified.current) {
+      hasAutoVerified.current = true;
+      handleVerifyCode(initialCode);
+    }
+  }, [initialCode]);
 
-    const image = new Image();
-    image.src = screenshot;
+  const decodeFrame = useCallback((): string | null => {
+    const video = webcamRef.current?.video;
+    if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) return null;
 
     const canvas = document.createElement("canvas");
-    canvas.width = image.width || 640;
-    canvas.height = image.height || 480;
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return null;
 
-    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const decoded = jsQR(imageData.data, imageData.width, imageData.height);
+    const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: "dontInvert",
+    });
 
     if (!decoded || !decoded.data) return null;
 
@@ -298,6 +323,28 @@ export default function PickupManager() {
                     </div>
                   </div>
                 </div>
+
+                {/* Gamification Celebration */}
+                {lastVerified.pointsEarned && (
+                  <motion.div
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", bounce: 0.5, delay: 0.2 }}
+                    className="mt-6 mx-auto flex items-center justify-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-500 rounded-2xl shadow-xl shadow-amber-500/30 text-white max-w-fit"
+                  >
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+                      <FaStar className="w-5 h-5 text-amber-100" />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-amber-100">
+                        Impact Points Earned
+                      </div>
+                      <div className="text-xl font-black">
+                        +{lastVerified.pointsEarned} XP
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
 
                 <div className="mt-6 flex justify-center">
                   <Button

@@ -2,9 +2,10 @@
 
 import React from "react"
 import { motion } from "framer-motion"
+import { FaLeaf } from "react-icons/fa"
 
 export type SpinnerSize = "xs" | "sm" | "md" | "lg" | "xl"
-export type SpinnerVariant = "default" | "pulse" | "dots" | "ring" | "scale" | "bar"
+export type SpinnerVariant = "default" | "pulse" | "dots" | "ring" | "scale" | "bar" | "premium" | "bento"
 
 export interface LoadingSpinnerProps {
   size?: SpinnerSize
@@ -18,7 +19,7 @@ export interface LoadingSpinnerProps {
 
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   size = "md",
-  variant = "default",
+  variant = "premium",
   text = "Loading...",
   fullScreen = false,
   overlay = false,
@@ -26,11 +27,19 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   color = "green",
 }) => {
   const sizes: Record<SpinnerSize, string> = {
-    xs: "h-3 w-3 border",
-    sm: "h-5 w-5 border-2",
-    md: "h-8 w-8 border-2",
-    lg: "h-12 w-12 border-3",
-    xl: "h-16 w-16 border-4",
+    xs: "h-4 w-4",
+    sm: "h-6 w-6",
+    md: "h-10 w-10",
+    lg: "h-16 w-16",
+    xl: "h-20 w-20",
+  }
+
+  const borderSizes: Record<SpinnerSize, string> = {
+    xs: "border",
+    sm: "border-2",
+    md: "border-2",
+    lg: "border-3",
+    xl: "border-4",
   }
 
   const textSizes: Record<SpinnerSize, string> = {
@@ -94,6 +103,44 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
         />
       </div>
     ),
+    premium: (
+      <div className={`relative flex items-center justify-center ${sizes[size]}`}>
+        {/* Outer glowing organic ring 1 */}
+        <motion.div
+          animate={{ 
+            rotate: [0, 360], 
+            borderRadius: ["40% 60% 70% 30% / 40% 50% 60% 50%", "60% 40% 30% 70% / 50% 60% 50% 40%", "40% 60% 70% 30% / 40% 50% 60% 50%"] 
+          }}
+          transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
+          className={`absolute inset-0 border-2 ${colorClasses[color].spinner} opacity-40 blur-[0.5px]`}
+        />
+        {/* Outer glowing organic ring 2 */}
+        <motion.div
+          animate={{ 
+            rotate: [360, 0], 
+            borderRadius: ["60% 40% 30% 70% / 50% 60% 50% 40%", "40% 60% 70% 30% / 40% 50% 60% 50%", "60% 40% 30% 70% / 50% 60% 50% 40%"] 
+          }}
+          transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+          className={`absolute inset-0 border-[2px] ${colorClasses[color].spinner} opacity-60`}
+        />
+        {/* Inner pulsing leaf */}
+        <motion.div
+          animate={{ scale: [0.7, 1, 0.7], opacity: [0.6, 1, 0.6] }}
+          transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+          className={`absolute inset-0 flex items-center justify-center text-transparent bg-clip-text bg-gradient-to-r ${colorClasses[color].text}`}
+        >
+          <FaLeaf className="w-1/2 h-1/2 drop-shadow-md text-emerald-500" />
+        </motion.div>
+      </div>
+    ),
+    bento: (
+      <div className={`grid grid-cols-2 gap-1 ${sizes[size]}`}>
+        <motion.div animate={{ scale: [1, 0.6, 1], borderRadius: ["20%", "50%", "20%"] }} transition={{ repeat: Infinity, duration: 1.5, delay: 0 }} className={`w-full h-full bg-gradient-to-br ${colorClasses[color].text} shadow-sm`} />
+        <motion.div animate={{ scale: [1, 0.6, 1], borderRadius: ["20%", "50%", "20%"] }} transition={{ repeat: Infinity, duration: 1.5, delay: 0.3 }} className={`w-full h-full bg-gradient-to-br ${colorClasses[color].text} shadow-sm`} />
+        <motion.div animate={{ scale: [1, 0.6, 1], borderRadius: ["20%", "50%", "20%"] }} transition={{ repeat: Infinity, duration: 1.5, delay: 0.9 }} className={`w-full h-full bg-gradient-to-br ${colorClasses[color].text} shadow-sm`} />
+        <motion.div animate={{ scale: [1, 0.6, 1], borderRadius: ["20%", "50%", "20%"] }} transition={{ repeat: Infinity, duration: 1.5, delay: 0.6 }} className={`w-full h-full bg-gradient-to-br ${colorClasses[color].text} shadow-sm`} />
+      </div>
+    ),
     pulse: (
       <div className="flex space-x-1">
         <div 
@@ -129,12 +176,12 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
     ring: (
       <div className={`relative flex items-center justify-center ${sizes[size]}`}>
         <motion.div 
-          className={`absolute inset-0 border-2 border-dashed ${colorClasses[color].spinner} rounded-full`}
+          className={`absolute inset-0 ${borderSizes[size]} border-dashed ${colorClasses[color].spinner} rounded-full`}
           animate={{ rotate: 360 }}
           transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
         />
         <motion.div 
-          className={`absolute inset-1 border-2 border-dotted ${colorClasses[color].spinner} rounded-full opacity-60`}
+          className={`absolute inset-1 ${borderSizes[size]} border-dotted ${colorClasses[color].spinner} rounded-full opacity-60`}
           animate={{ rotate: -360 }}
           transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
         />

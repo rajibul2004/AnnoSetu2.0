@@ -39,7 +39,6 @@ export function useUpdateProfile() {
   const mutation = useMutation({
     mutationFn: updateProfileRequest,
     onSuccess: async () => {
-      toast.success("Profile updated successfully! 🎉");
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       // Refreshes the NextAuth session so the Navbar/session.user picks
       // up a changed display name immediately, without requiring a

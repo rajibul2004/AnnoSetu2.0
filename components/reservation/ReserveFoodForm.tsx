@@ -831,8 +831,33 @@ export default function ReserveFoodForm() {
                     </div>
                   </div>
 
+                  {/* Gamified Impact Preview */}
+                  <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30 rounded-2xl border border-emerald-100 dark:border-emerald-800/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/30">
+                        <FaLeaf className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black text-emerald-900 dark:text-emerald-100 uppercase tracking-wider">
+                          Projected Impact
+                        </h4>
+                        <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                          Rescuing {quantity} {food.quantityUnit} of surplus
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right w-full sm:w-auto">
+                      <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 animate-pulse">
+                        +{quantity * 10}
+                      </div>
+                      <div className="text-[10px] font-bold text-emerald-700 dark:text-emerald-500 uppercase tracking-widest">
+                        Impact Points
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Terms & Conditions Checkbox */}
-                  <div>
+                  <div className="bg-gray-50/80 dark:bg-slate-800/80 p-3.5 rounded-xl border border-gray-100 dark:border-slate-700">
                     <label className="flex items-start gap-2.5 cursor-pointer group">
                       <input
                         type="checkbox"
@@ -856,7 +881,7 @@ export default function ReserveFoodForm() {
                         size="lg"
                         fullWidth
                         variant="secondary"
-                        className="font-black py-3.5 text-sm rounded-2xl bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl shadow-emerald-600/30 transition-all cursor-pointer"
+                        className="font-black py-3.5 text-sm rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl shadow-emerald-600/30 transition-all cursor-pointer hover:shadow-emerald-500/50 hover:scale-[1.02]"
                       >
                         <FaCheckCircle className="mr-2" />
                         <span>Confirm Reservation Request</span>

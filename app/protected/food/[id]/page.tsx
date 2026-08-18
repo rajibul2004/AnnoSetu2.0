@@ -168,7 +168,12 @@ export default function FoodDetailsPage() {
       : 0;
 
   return (
-    <div className="min-h-screen bg-transparent py-6 pb-20">
+    <div className="min-h-screen bg-transparent py-6 pb-20 relative z-10">
+      {/* Background Ambience */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div className="absolute top-20 left-1/4 w-96 h-96 rounded-full blur-[120px] opacity-20 dark:opacity-30 bg-emerald-400" />
+        <div className="absolute bottom-20 right-1/4 w-96 h-96 rounded-full blur-[120px] opacity-20 dark:opacity-30 bg-teal-500" />
+      </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Navigation Breadcrumb */}
         <div className="flex items-center justify-between gap-4 mb-6">
@@ -210,7 +215,7 @@ export default function FoodDetailsPage() {
               className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-xl overflow-hidden border border-gray-200/80 dark:border-slate-800"
             >
               {/* Image Carousel Hero */}
-              <div className="relative h-72 sm:h-96 w-full bg-linear-to-br from-emerald-100 via-teal-50 to-amber-50 dark:from-slate-800 dark:to-slate-900 overflow-hidden group">
+              <div className="relative h-72 sm:h-96 w-full bg-gradient-to-br from-emerald-100 via-teal-50 to-amber-50 dark:from-slate-800 dark:to-slate-900 overflow-hidden group">
                 {food.images && food.images.length > 0 ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -228,19 +233,18 @@ export default function FoodDetailsPage() {
                 )}
 
                 {/* Dark Gradient Overlay */}
-                <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-black/30 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30 pointer-events-none" />
 
-                {/* Top Badges */}
                 <div className="absolute top-4 left-4 flex flex-wrap gap-2 z-10">
                   {food.isDonation ? (
-                    <span className="px-3.5 py-1.5 bg-linear-to-r from-purple-600 to-pink-600 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg flex items-center gap-1.5 border border-white/20">
+                    <div className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-purple-500/30 flex items-center gap-1.5 border border-white/20 hover:scale-105 transition-transform cursor-pointer">
                       <FaHandHoldingHeart className="w-3.5 h-3.5" />
                       FREE DONATION
-                    </span>
+                    </div>
                   ) : food.discountPct > 0 ? (
-                    <span className="px-3.5 py-1.5 bg-linear-to-r from-amber-500 to-orange-500 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg border border-white/20">
+                    <div className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-amber-500/30 border border-white/20 hover:scale-105 transition-transform cursor-pointer">
                       {food.discountPct}% OFF
-                    </span>
+                    </div>
                   ) : null}
 
                   <span
@@ -361,7 +365,7 @@ export default function FoodDetailsPage() {
                   <div className="text-left sm:text-right shrink-0">
                     <div className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white">
                       {food.isDonation ? (
-                        <span className="text-transparent bg-clip-text bg-linear-to-r from-purple-600 to-pink-600">
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
                           FREE
                         </span>
                       ) : (
@@ -390,59 +394,71 @@ export default function FoodDetailsPage() {
                   </div>
                 )}
 
-                {/* Key Metrics Grid */}
+                {/* Key Metrics Grid - Upgraded to Bento Style */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                  <div className="bg-gray-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
-                    <FaClock className="w-4 h-4 text-emerald-500 mb-1.5" />
-                    <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-                      Available Until
+                  <div className="bg-emerald-50/50 dark:bg-emerald-900/20 p-4 rounded-[1.5rem] border border-emerald-100 dark:border-emerald-800/30 flex flex-col justify-between shadow-sm hover:-translate-y-1 transition-transform">
+                    <div>
+                      <FaClock className="w-5 h-5 text-emerald-500 mb-2" />
+                      <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+                        Available Until
+                      </div>
                     </div>
-                    <div className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white truncate">
-                      {formatDate(food.expiresAt, "hh:mm a")}
-                    </div>
-                    <div className="text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-0.5">
-                      {expired
-                        ? "Expired"
-                        : formatTimeRemaining(food.expiresAt)}
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
-                    <FaTag className="w-4 h-4 text-teal-500 mb-1.5" />
-                    <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-                      Portions Left
-                    </div>
-                    <div className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white">
-                      {food.availableQty} / {food.quantity}
-                    </div>
-                    <div className="text-[10px] text-gray-400 font-medium mt-0.5">
-                      {food.quantityUnit}
+                    <div className="mt-2">
+                      <div className="font-black text-base sm:text-lg text-gray-900 dark:text-white truncate">
+                        {formatDate(food.expiresAt, "hh:mm a")}
+                      </div>
+                      <div className="text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-0.5">
+                        {expired ? "Expired" : formatTimeRemaining(food.expiresAt)}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="bg-gray-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
-                    <FaMapMarkerAlt className="w-4 h-4 text-rose-500 mb-1.5" />
-                    <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-                      Distance
+                  <div className="bg-teal-50/50 dark:bg-teal-900/20 p-4 rounded-[1.5rem] border border-teal-100 dark:border-teal-800/30 flex flex-col justify-between shadow-sm hover:-translate-y-1 transition-transform">
+                    <div>
+                      <FaTag className="w-5 h-5 text-teal-500 mb-2" />
+                      <div className="text-[11px] font-bold text-teal-700 dark:text-teal-400 uppercase tracking-wider">
+                        Portions Left
+                      </div>
                     </div>
-                    <div className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white">
-                      {food.distance !== null
-                        ? `${food.distance.toFixed(1)} km`
-                        : "Nearby"}
-                    </div>
-                    <div className="text-[10px] text-gray-400 font-medium mt-0.5">
-                      Verified Area
+                    <div className="mt-2">
+                      <div className="font-black text-base sm:text-lg text-gray-900 dark:text-white">
+                        {food.availableQty} / {food.quantity}
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-bold mt-0.5 uppercase tracking-wider">
+                        {food.quantityUnit}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="bg-gray-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800">
-                    <FaShieldAlt className="w-4 h-4 text-indigo-500 mb-1.5" />
-                    <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-                      Preparation
+                  <div className="bg-rose-50/50 dark:bg-rose-900/20 p-4 rounded-[1.5rem] border border-rose-100 dark:border-rose-800/30 flex flex-col justify-between shadow-sm hover:-translate-y-1 transition-transform">
+                    <div>
+                      <FaMapMarkerAlt className="w-5 h-5 text-rose-500 mb-2" />
+                      <div className="text-[11px] font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider">
+                        Distance
+                      </div>
                     </div>
-                    <div className="font-bold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                      <FaCheckCircle className="w-3 h-3" />
-                      {food.isRaw ? "Raw Ingredients" : "Fresh Cooked"}
+                    <div className="mt-2">
+                      <div className="font-black text-base sm:text-lg text-gray-900 dark:text-white">
+                        {food.distance !== null ? `${food.distance.toFixed(1)} km` : "Nearby"}
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-bold mt-0.5 uppercase tracking-wider">
+                        Verified Area
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-indigo-50/50 dark:bg-indigo-900/20 p-4 rounded-[1.5rem] border border-indigo-100 dark:border-indigo-800/30 flex flex-col justify-between shadow-sm hover:-translate-y-1 transition-transform">
+                    <div>
+                      <FaShieldAlt className="w-5 h-5 text-indigo-500 mb-2" />
+                      <div className="text-[11px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">
+                        Preparation
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <div className="font-black text-xs sm:text-sm text-indigo-600 dark:text-indigo-400 flex items-center gap-1 mt-1">
+                        <FaCheckCircle className="w-3.5 h-3.5" />
+                        {food.isRaw ? "Raw Ingredients" : "Fresh Cooked"}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -468,7 +484,7 @@ export default function FoodDetailsPage() {
                 )}
 
                 {/* Safety Guidelines Collapsible */}
-                <div className="p-4 rounded-2xl bg-linear-to-r from-blue-50 to-teal-50 dark:from-slate-800 dark:to-slate-800/60 border border-blue-200/80 dark:border-slate-700">
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-teal-50 dark:from-slate-800 dark:to-slate-800/60 border border-blue-200/80 dark:border-slate-700">
                   <button
                     type="button"
                     onClick={() => setShowSafetyInfo((v) => !v)}
@@ -543,7 +559,7 @@ export default function FoodDetailsPage() {
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-linear-to-br from-emerald-400 to-teal-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
                             {review.reviewerName?.charAt(0)?.toUpperCase() ||
                               "U"}
                           </div>
@@ -645,7 +661,7 @@ export default function FoodDetailsPage() {
                 </div>
                 <div className="w-full h-2.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-linear-to-r from-emerald-500 to-green-500 rounded-full transition-all duration-500"
+                    className="h-full bg-gradient-to-r from-emerald-500 to-green-500 rounded-full transition-all duration-500"
                     style={{ width: `${availablePct}%` }}
                   />
                 </div>
@@ -709,7 +725,7 @@ export default function FoodDetailsPage() {
                         <Button
                           variant="secondary"
                           fullWidth
-                          className="bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg text-xs"
+                          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg text-xs"
                         >
                           View Your Pickup Code & Pass
                         </Button>
@@ -732,6 +748,20 @@ export default function FoodDetailsPage() {
                         </div>
                       </div>
 
+                      <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-100 dark:border-emerald-800/30 flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20">
+                          <FaLeaf className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-black text-emerald-900 dark:text-emerald-100 uppercase tracking-wider mb-1">
+                            Impact Projection
+                          </h4>
+                          <p className="text-[11px] text-emerald-700 dark:text-emerald-400 leading-snug">
+                            Reserving this food will rescue <span className="font-bold">{food.availableQty} {food.quantityUnit}</span> of surplus and earn you <span className="font-bold">+{food.availableQty * 10} Points</span>!
+                          </p>
+                        </div>
+                      </div>
+
                       <Link
                         href={
                           isAuthenticated
@@ -743,7 +773,7 @@ export default function FoodDetailsPage() {
                           fullWidth
                           size="lg"
                           variant="secondary"
-                          className="bg-linear-to-r from-emerald-600 via-green-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black py-3.5 rounded-2xl shadow-xl shadow-emerald-600/30 hover:scale-102 transition-all text-xs flex items-center justify-center gap-2 cursor-pointer"
+                          className="bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black py-3.5 rounded-2xl shadow-xl shadow-emerald-600/30 hover:scale-102 transition-all text-xs flex items-center justify-center gap-2 cursor-pointer"
                         >
                           <FaTag />
                           <span>

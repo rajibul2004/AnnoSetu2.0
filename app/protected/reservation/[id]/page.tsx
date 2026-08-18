@@ -471,9 +471,9 @@ export default function ReservationDetailPage() {
                   <button
                     type="button"
                     onClick={() => setIsChatOpen(true)}
-                    className="p-3 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-xl flex items-center justify-center gap-2 font-bold cursor-pointer transition-colors border border-emerald-200 dark:border-emerald-800/80"
+                    className="p-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl flex items-center justify-center gap-2 font-black cursor-pointer shadow-lg shadow-emerald-500/30 transition-all hover:-translate-y-0.5 animate-pulse"
                   >
-                    <FaCommentDots className="text-emerald-600 dark:text-emerald-400" />
+                    <FaCommentDots className="text-white" />
                     <span>Chat with Customer</span>
                   </button>
 
@@ -528,9 +528,9 @@ export default function ReservationDetailPage() {
                   <button
                     type="button"
                     onClick={() => setIsChatOpen(true)}
-                    className="p-3 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-xl flex items-center justify-center gap-2 font-bold cursor-pointer transition-colors border border-emerald-200 dark:border-emerald-800/80"
+                    className="p-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl flex items-center justify-center gap-2 font-black cursor-pointer shadow-lg shadow-emerald-500/30 transition-all hover:-translate-y-0.5 animate-pulse"
                   >
-                    <FaCommentDots className="text-emerald-600 dark:text-emerald-400" />
+                    <FaCommentDots className="text-white" />
                     <span>Chat with Supplier</span>
                   </button>
 
@@ -659,15 +659,16 @@ export default function ReservationDetailPage() {
                   </div>
 
                   {/* QR Code Container */}
-                  <div ref={qrWrapperRef} className="flex justify-center mb-4 sm:mb-5">
-                    <div className="p-3 bg-white rounded-2xl shadow-md border border-gray-100">
+                  <div ref={qrWrapperRef} className="flex justify-center mb-4 sm:mb-5 relative group">
+                    <div className="absolute inset-0 bg-emerald-400 blur-[60px] opacity-20 group-hover:opacity-40 transition-opacity duration-500 rounded-full" />
+                    <div className="p-4 bg-white rounded-3xl shadow-2xl shadow-emerald-900/20 border-2 border-emerald-100 dark:border-emerald-500/20 relative z-10 hover:-translate-y-1 transition-transform">
                       <QRCodeCanvas
                         value={JSON.stringify({
                           id: reservation.id,
                           code: reservation.pickupCode,
                           food: reservation.food.name,
                         })}
-                        size={155}
+                        size={160}
                         level="H"
                         includeMargin
                       />

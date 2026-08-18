@@ -7,7 +7,9 @@ import { usePublicProfile, useFollowUser, useUnfollowUser } from "@/hooks/useSoc
 import StreakWidget from "@/components/gamification/StreakWidget";
 import LevelProgressBar from "@/components/gamification/LevelProgressBar";
 import CommunityLog from "@/components/dashboard/CommunityLog";
+import { useAuth } from "@/hooks/useAuth";
 import { BADGE_REGISTRY, getBadge, RARITY_STYLES } from "@/lib/badges";
+import Link from "next/link";
 import { 
   FaUserPlus, 
   FaUserMinus, 
@@ -24,6 +26,7 @@ import {
 export default function PublicProfilePage() {
   const params = useParams();
   const userId = params.id as string;
+  const { user } = useAuth();
 
   const { data: profile, isLoading, isError } = usePublicProfile(userId);
   const followMutation = useFollowUser(userId);
@@ -108,24 +111,33 @@ export default function PublicProfilePage() {
                   </div>
                 </div>
                 
-                {/* Follow Button */}
-                <button
-                  onClick={handleFollowToggle}
-                  disabled={isMutating}
-                  className={`w-full sm:w-auto px-6 py-3 rounded-2xl flex items-center justify-center gap-2 text-sm font-black transition-all duration-300 shadow-xl border ${
-                    profile.isFollowing 
-                      ? "bg-white/10 text-white hover:bg-white/20 border-white/20 backdrop-blur-md" 
-                      : "bg-white text-emerald-600 hover:bg-gray-50 border-white hover:scale-[1.03] hover:-translate-y-0.5"
-                  }`}
-                >
-                  {isMutating ? (
-                    <FaSpinner className="animate-spin w-4 h-4" />
-                  ) : profile.isFollowing ? (
-                    <><FaUserMinus className="w-4 h-4" /> Unfollow</>
-                  ) : (
-                    <><FaUserPlus className="w-4 h-4" /> Follow</>
-                  )}
-                </button>
+                {/* Follow / Edit Button */}
+                {user?.id === userId ? (
+                  <Link
+                    href="/protected/profile"
+                    className="w-full sm:w-auto px-6 py-3 rounded-2xl flex items-center justify-center gap-2 text-sm font-black transition-all duration-300 shadow-xl border bg-white/10 text-white hover:bg-white/20 border-white/20 backdrop-blur-md"
+                  >
+                    Edit Profile
+                  </Link>
+                ) : (
+                  <button
+                    onClick={handleFollowToggle}
+                    disabled={isMutating}
+                    className={`w-full sm:w-auto px-6 py-3 rounded-2xl flex items-center justify-center gap-2 text-sm font-black transition-all duration-300 shadow-xl border ${
+                      profile.isFollowing 
+                        ? "bg-white/10 text-white hover:bg-white/20 border-white/20 backdrop-blur-md" 
+                        : "bg-white text-emerald-600 hover:bg-gray-50 border-white hover:scale-[1.03] hover:-translate-y-0.5"
+                    }`}
+                  >
+                    {isMutating ? (
+                      <FaSpinner className="animate-spin w-4 h-4" />
+                    ) : profile.isFollowing ? (
+                      <><FaUserMinus className="w-4 h-4" /> Unfollow</>
+                    ) : (
+                      <><FaUserPlus className="w-4 h-4" /> Follow</>
+                    )}
+                  </button>
+                )}
               </div>
 
               {profile.bio && (

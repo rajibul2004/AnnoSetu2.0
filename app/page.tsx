@@ -161,8 +161,8 @@ export default function HomePage() {
             <source src="/donation_video.mp4" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
-          {/* Multi-layered adaptive gradient overlays: subtle bluish-navy tint with high transparency for maximum video visibility */}
-          <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/15 to-white/65 dark:from-[#0A192F]/55 dark:via-[#0c1f3d]/35 dark:to-[#0A192F]/70 transition-colors duration-500" />
+          {/* Multi-layered adaptive gradient overlays */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-emerald-900/15 to-white/65 dark:from-[#0A192F]/55 dark:via-emerald-900/30 dark:to-[#0A192F]/70 transition-colors duration-500" />
           <div className="absolute inset-0 bg-radial from-transparent via-transparent to-white/35 dark:from-transparent dark:via-transparent dark:to-[#0A192F]/40 pointer-events-none transition-colors duration-500" />
         </div>
 
@@ -301,44 +301,44 @@ export default function HomePage() {
               </Link>
             </motion.div>
 
-            {/* Stats Cards (Compact 3-column on mobile) */}
+            {/* Stats Cards (Compact grid on mobile) */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.75 }}
-              className="grid grid-cols-3 gap-2 sm:gap-6 mt-8 sm:mt-14 max-w-3xl mx-auto"
+              className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mt-8 sm:mt-14 max-w-3xl mx-auto"
             >
-              <div className="backdrop-blur-xl bg-white/50 dark:bg-black/40 border border-gray-200/70 dark:border-white/15 rounded-2xl p-2.5 sm:p-5 text-center shadow-md dark:shadow-xl hover:border-emerald-500/50 transition-all">
+              <div className="backdrop-blur-xl bg-white/70 dark:bg-black/60 border border-gray-200/70 dark:border-white/15 rounded-[1.5rem] p-3 sm:p-5 text-center shadow-lg hover:-translate-y-1 hover:border-emerald-500/50 transition-all duration-300">
                 <AnimatedNumber
                   value={12.5}
                   decimals={1}
                   suffix="K+"
                   duration={0.5}
-                  className="mb-0.5 text-lg sm:text-3xl font-black text-emerald-600 dark:text-emerald-400"
+                  className="mb-0.5 text-2xl sm:text-3xl font-black bg-gradient-to-br from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent drop-shadow-sm"
                 />
-                <div className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 leading-tight">
+                <div className="text-[11px] sm:text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                   Meals Saved
                 </div>
               </div>
-              <div className="backdrop-blur-xl bg-white/50 dark:bg-black/40 border border-gray-200/70 dark:border-white/15 rounded-2xl p-2.5 sm:p-5 text-center shadow-md dark:shadow-xl hover:border-amber-500/50 transition-all">
+              <div className="backdrop-blur-xl bg-white/70 dark:bg-black/60 border border-gray-200/70 dark:border-white/15 rounded-[1.5rem] p-3 sm:p-5 text-center shadow-lg hover:-translate-y-1 hover:border-amber-500/50 transition-all duration-300">
                 <AnimatedNumber
                   value={150}
                   duration={2}
-                  className="mb-0.5 text-lg sm:text-3xl font-black text-amber-600 dark:text-amber-400"
+                  className="mb-0.5 text-2xl sm:text-3xl font-black bg-gradient-to-br from-amber-600 to-orange-500 dark:from-amber-400 dark:to-orange-400 bg-clip-text text-transparent drop-shadow-sm"
                 />
-                <div className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 leading-tight">
+                <div className="text-[11px] sm:text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                   Partners
                 </div>
               </div>
-              <div className="backdrop-blur-xl bg-white/50 dark:bg-black/40 border border-gray-200/70 dark:border-white/15 rounded-2xl p-2.5 sm:p-5 text-center shadow-md dark:shadow-xl hover:border-teal-500/50 transition-all">
+              <div className="backdrop-blur-xl bg-white/70 dark:bg-black/60 border border-gray-200/70 dark:border-white/15 rounded-[1.5rem] p-3 sm:p-5 text-center shadow-lg hover:-translate-y-1 hover:border-blue-500/50 transition-all duration-300">
                 <AnimatedNumber
                   value={8.2}
                   decimals={1}
                   suffix="T"
                   duration={1}
-                  className="mb-0.5 text-lg sm:text-3xl font-black text-teal-600 dark:text-teal-400"
+                  className="mb-0.5 text-2xl sm:text-3xl font-black bg-gradient-to-br from-blue-600 to-cyan-500 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent drop-shadow-sm"
                 />
-                <div className="text-[10px] sm:text-sm font-semibold text-gray-700 dark:text-gray-300 leading-tight">
+                <div className="text-[11px] sm:text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                   CO₂ Cut
                 </div>
               </div>

@@ -120,6 +120,7 @@ export async function GET(
         quantityUnit: conversation.reservation.food.quantityUnit,
         pickupTime: conversation.reservation.pickupTime.toISOString(),
         pickupAddress: conversation.reservation.pickupAddress,
+        pickupCode: conversation.reservation.pickupCode,
         status: conversation.reservation.status,
         supplierId: conversation.reservation.supplierId,
         reserverId: conversation.reservation.reserverId,

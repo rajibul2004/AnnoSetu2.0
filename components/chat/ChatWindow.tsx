@@ -20,9 +20,11 @@ import {
   FaVolumeMute,
   FaSearch,
   FaCopy,
+  FaQrcode,
   FaSpinner,
 } from "react-icons/fa";
 import { format, isToday, isYesterday } from "date-fns";
+import { QRCodeCanvas } from "qrcode.react";
 import {
   useConversation,
   useSendMessage,
@@ -203,6 +205,22 @@ export default function ChatWindow({
     setTimeout(() => scrollToBottom("smooth"), 50);
   };
 
+  const handleSendQrPass = () => {
+    if (!conversation?.foodInfo?.pickupCode) return;
+    
+    handleUserStopTyping();
+    sendMessage({
+      content: "Here is my digital pickup pass.",
+      messageType: "qr_share",
+      metadata: { 
+        pickupCode: conversation.foodInfo.pickupCode,
+        reservationId: conversation.reservationId,
+        foodName: conversation.foodInfo.name
+      },
+    });
+    setTimeout(() => scrollToBottom("smooth"), 50);
+  };
+
   const handleInsertEmoji = (emoji: string) => {
     setInputMessage((prev) => prev + emoji);
     handleUserTyping();
@@ -295,7 +313,11 @@ export default function ChatWindow({
   }
 
   return (
-    <div className="flex flex-col h-full bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-2xl overflow-hidden relative select-text">
+    <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/40 relative overflow-hidden">
+      {/* Ambient Blurs */}
+      <div className="absolute top-1/4 -right-20 w-96 h-96 bg-emerald-400/10 dark:bg-emerald-500/5 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-1/4 -left-20 w-96 h-96 bg-teal-400/5 dark:bg-teal-500/5 blur-[100px] rounded-full pointer-events-none" />
+
       {/* 1. Context Header */}
       <div className="p-4 sm:px-6 bg-white/60 dark:bg-slate-900/60 border-b border-white/50 dark:border-white/5 backdrop-blur-3xl z-10 shrink-0">
         <div className="flex items-center justify-between gap-3">
@@ -550,6 +572,8 @@ export default function ChatWindow({
                           ? "bg-slate-900 dark:bg-emerald-500 text-white rounded-tr-xs shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(16,185,129,0.15)]"
                           : msg.messageType === "eta_share"
                           ? "bg-amber-500 text-white rounded-tl-xs shadow-[0_8px_30px_rgb(245,158,11,0.2)]"
+                          : msg.messageType === "qr_share"
+                          ? "bg-white dark:bg-slate-900 border-2 border-emerald-400 dark:border-emerald-500 rounded-tl-xs shadow-[0_8px_30px_rgb(16,185,129,0.2)] text-gray-900 dark:text-white"
                           : msg.messageType === "quick_chip"
                           ? "bg-white/60 dark:bg-white/5 backdrop-blur-xl border border-gray-200/50 dark:border-white/5 text-gray-800 dark:text-gray-200 rounded-tl-xs shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
                           : "bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-100 dark:border-white/10 text-gray-900 dark:text-white rounded-tl-xs shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
@@ -560,6 +584,40 @@ export default function ChatWindow({
                         <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider mb-1.5 opacity-90">
                           <FaCar className="text-sm" />
                           <span>Live ETA Arrival</span>
+                        </div>
+                      )}
+
+                      {/* QR Pass Header Badge & Code */}
+                      {msg.messageType === "qr_share" && msg.metadata?.pickupCode && (
+                        <div className="flex flex-col items-center justify-center gap-3 mb-3 p-3 bg-gray-50 dark:bg-slate-800 rounded-xl">
+                          <div className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                            <FaQrcode />
+                            <span>Digital Pickup Pass</span>
+                          </div>
+                          <div className="p-2 bg-white rounded-xl shadow-sm border border-gray-100">
+                            <QRCodeCanvas
+                              value={JSON.stringify({
+                                id: msg.metadata.reservationId,
+                                code: msg.metadata.pickupCode,
+                                food: msg.metadata.foodName,
+                              })}
+                              size={120}
+                              level="H"
+                            />
+                          </div>
+                          <div className="text-xs font-mono font-black tracking-widest text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-1 rounded-md w-full text-center mb-2">
+                            {msg.metadata.pickupCode}
+                          </div>
+
+                          {isUserSupplier && (
+                            <Link 
+                              href={`/protected/reservation/pickup?code=${msg.metadata.pickupCode}`}
+                              className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition-all active:scale-95"
+                            >
+                              <FaCheckCircle />
+                              <span>Verify Pass</span>
+                            </Link>
+                          )}
                         </div>
                       )}
 
@@ -655,14 +713,26 @@ export default function ChatWindow({
         <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
           {/* Share ETA Button - only relevant for Reserver/Customer picking up the food */}
           {!isUserSupplier && (
-            <button
-              type="button"
-              onClick={() => setShowEtaModal(true)}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
-            >
-              <FaCar className="text-xs" />
-              <span>Share ETA 🚗</span>
-            </button>
+            <>
+              {conversation.foodInfo?.pickupCode && (
+                <button
+                  type="button"
+                  onClick={handleSendQrPass}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                >
+                  <FaQrcode className="text-xs" />
+                  <span>Share QR Pass</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowEtaModal(true)}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+              >
+                <FaCar className="text-xs" />
+                <span>Share ETA 🚗</span>
+              </button>
+            </>
           )}
 
           {/* Canned Quick Chips */}

@@ -8,6 +8,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import NavbarMessagesButton from "@/components/messages/NavbarMessagesButton";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfileQueries";
 import {
   FaBars,
   FaTimes,
@@ -27,6 +28,7 @@ import {
 
 export default function Navbar() {
   const { user, isRestaurant, isIndividual, isNGO, isAdmin, logout } = useAuth();
+  const { profile } = useProfile();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const getDashboardLink = (): string => {
@@ -110,13 +112,7 @@ export default function Navbar() {
               <span>Explore Food</span>
             </Link>
 
-            <Link
-              href="/protected/leaderboard"
-              className="px-3.5 py-2 font-semibold text-sm rounded-xl text-gray-700 dark:text-gray-200 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50/80 dark:hover:bg-white/10 transition-all duration-200 flex items-center gap-2"
-            >
-              <FaTrophy className="text-base text-amber-500" />
-              <span>Leaderboard</span>
-            </Link>
+
 
             <div className="h-5 w-px bg-gray-200 dark:bg-slate-700 mx-1" />
 
@@ -153,9 +149,13 @@ export default function Navbar() {
                 <div className="relative group ml-2">
                   <button className="flex items-center gap-2.5 px-3 py-1.5 cursor-pointer rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 transition-all duration-200">
                     <div
-                      className={`w-9 h-9 rounded-full bg-gradient-to-tr ${getRoleColor()} flex items-center justify-center text-white font-bold text-sm shadow-md ring-2 ring-white/80 dark:ring-slate-800`}
+                      className={`w-9 h-9 rounded-full bg-gradient-to-tr ${getRoleColor()} flex items-center justify-center text-white font-bold text-sm shadow-md ring-2 ring-white/80 dark:ring-slate-800 overflow-hidden`}
                     >
-                      {displayName.charAt(0).toUpperCase()}
+                      {profile?.profileImage ? (
+                        <img src={profile.profileImage} alt={displayName} className="w-full h-full object-cover" />
+                      ) : (
+                        displayName.charAt(0).toUpperCase()
+                      )}
                     </div>
                     <div className="hidden lg:block text-left">
                       <p className="text-xs font-bold text-gray-900 dark:text-gray-100 max-w-[100px] truncate leading-tight">
@@ -274,9 +274,13 @@ export default function Navbar() {
                   <div className="p-3.5 bg-gray-50 dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 mb-3">
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-11 h-11 rounded-full bg-gradient-to-tr ${getRoleColor()} flex items-center justify-center text-white font-bold text-lg shadow-md`}
+                        className={`w-11 h-11 rounded-full bg-gradient-to-tr ${getRoleColor()} flex items-center justify-center text-white font-bold text-lg shadow-md overflow-hidden`}
                       >
-                        {displayName.charAt(0).toUpperCase()}
+                        {profile?.profileImage ? (
+                          <img src={profile.profileImage} alt={displayName} className="w-full h-full object-cover" />
+                        ) : (
+                          displayName.charAt(0).toUpperCase()
+                        )}
                       </div>
                       <div>
                         <p className="font-bold text-sm text-gray-900 dark:text-white">
@@ -315,14 +319,7 @@ export default function Navbar() {
                       <span>Explore Food</span>
                     </Link>
 
-                    <Link
-                      href="/protected/leaderboard"
-                      className="flex items-center gap-3 px-3 py-2.5 font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-xl transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <FaTrophy className="text-amber-500 w-4 h-4" />
-                      <span>Leaderboard</span>
-                    </Link>
+
                   </div>
                 </div>
 

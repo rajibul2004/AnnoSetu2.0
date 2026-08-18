@@ -1,4 +1,4 @@
-export type MessageType = "text" | "system" | "quick_chip" | "eta_share";
+export type MessageType = "text" | "system" | "quick_chip" | "eta_share" | "qr_share";
 
 export interface MessageDTO {
   id: string;
@@ -49,6 +49,7 @@ export interface ConversationDTO {
     quantityUnit: string;
     pickupTime?: string;
     pickupAddress?: string;
+    pickupCode?: string | null;
     status?: string;
     supplierId?: string;
     reserverId?: string;
