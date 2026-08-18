@@ -244,7 +244,7 @@ export async function PATCH(request: NextRequest) {
           ...(phone !== undefined ? { phone } : {}),
           ...(address !== undefined ? { address } : {}),
           ...(bio !== undefined ? { bio } : {}),
-          ...(profileImageUrl ? { profileImage: profileImageUrl } : removeProfileImage ? { profileImage: null } : {}),
+          ...(profileImageUrl ? { profileImage: profileImageUrl } : removeProfileImage ? { profileImage: "" } : {}),
           ...(get("gender") ? { gender: get("gender") as never } : {}),
           ...(get("dateOfBirth") ? { dateOfBirth: new Date(get("dateOfBirth")!) } : {}),
           ...(get("cookingExpertise") !== undefined
@@ -278,7 +278,7 @@ export async function PATCH(request: NextRequest) {
           ...(phone !== undefined ? { phone } : {}),
           ...(address !== undefined ? { address } : {}),
           ...(bio !== undefined ? { bio } : {}),
-          ...(profileImageUrl ? { profileImage: profileImageUrl } : removeProfileImage ? { profileImage: null } : {}),
+          ...(profileImageUrl ? { profileImage: profileImageUrl } : removeProfileImage ? { profileImage: "" } : {}),
           ...(get("fssaiLicense") !== undefined ? { fssaiLicense: get("fssaiLicense") } : {}),
           ...(fssaiDocUrl ? { fssaiDocument: fssaiDocUrl } : {}),
           ...(fssaiStatus ? { fssaiStatus } : {}),
@@ -323,7 +323,7 @@ export async function PATCH(request: NextRequest) {
           ...(phone !== undefined ? { phone } : {}),
           ...(address !== undefined ? { address } : {}),
           ...(bio !== undefined ? { bio } : {}),
-          ...(profileImageUrl ? { profileImage: profileImageUrl } : removeProfileImage ? { profileImage: null } : {}),
+          ...(profileImageUrl ? { profileImage: profileImageUrl } : removeProfileImage ? { profileImage: "" } : {}),
           ...(get("website") !== undefined ? { website: get("website") } : {}),
         },
       });

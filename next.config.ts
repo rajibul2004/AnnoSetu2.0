@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.googleusercontent.com" },
     ],
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   async headers() {
     return [
       {

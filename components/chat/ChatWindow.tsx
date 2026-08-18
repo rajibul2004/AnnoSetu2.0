@@ -22,6 +22,7 @@ import {
   FaCopy,
   FaQrcode,
   FaSpinner,
+  FaCheckCircle,
 } from "react-icons/fa";
 import { format, isToday, isYesterday } from "date-fns";
 import { QRCodeCanvas } from "qrcode.react";

@@ -16,6 +16,7 @@ import {
   FaCheck,
   FaInfoCircle,
   FaClock,
+  FaStar,
 } from "react-icons/fa";
 import Webcam from "react-webcam";
 import jsQR from "jsqr";
